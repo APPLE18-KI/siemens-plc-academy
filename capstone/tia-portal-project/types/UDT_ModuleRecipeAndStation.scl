@@ -1,0 +1,97 @@
+// ============================================================================
+// 文件名: UDT_ModuleRecipeAndStation.scl
+// 工程名: 新能源锂电模组柔性视觉分拣、热压恒温固化与立体入库工作站
+// 目标CPU: SIMATIC S7-1215C DC/DC/DC (6ES7 215-1AG40-0XB0, TIA Portal V18/V19)
+// 导入顺序: 第 1 步 (须在所有 FB/OB 之前通过“外部源文件 → 从源生成块”导入!)
+// ============================================================================
+
+TYPE "UDT_ModuleRecipe"
+VERSION : 0.1
+// 锂电模组工艺配方结构体（支持 HMI 配方下拉切换与掉电保持）
+   STRUCT
+      RecipeID : Int := 1;                     // 配方编号 (1=LFP-100Ah, 2=NCM-150Ah, 3=CTP-280Ah)
+      RecipeName : String[24] := 'LFP-100Ah';  // 模组型号名称
+      TargetTemp_C : Real := 85.0;             // 热压腔目标温度 (°C)
+      TempTolerance_C : Real := 0.5;           // 恒温允许偏差 (±°C)
+      OverTempLimit_C : Real := 95.0;          // 硬件/软件联锁超温急停阈值 (°C)
+      PressHoldTime : Time := T#5s;            // 热压恒温保压时间
+      ConveyorSpeed_Pct : Real := 65.0;        // G120 进料皮带设定转速 (%)
+      MaxInternalRes_mOhm : Real := 0.45;      // 视觉/测厚与内阻判定上限 (mΩ)
+      BatchTargetQty : DInt := 12;             // 单批立体库目标入库件数
+   END_STRUCT;
+END_TYPE
+
+TYPE "UDT_WarehouseSlot"
+VERSION : 0.1
+// 4列 × 3层 立体库单个仓位数据结构（在 Global DB 中配置 Retain 掉电保持）
+   STRUCT
+      Occupied : Bool := FALSE;                // 仓位占用标志 (TRUE=有托盘, FALSE=空仓)
+      Locked : Bool := FALSE;                  // 人工维护禁用标志
+      ModuleBarcode : String[20] := '';        // 锂电模组唯一追溯条码
+      QualityGrade : Int := 0;                 // 视觉分级 (1=A级优品, 2=B级良配, 9=NG废品)
+      PressPeakTemp_C : Real := 0.0;           // 本件热压实测峰值温度 (°C)
+      RowIndex : Int := 1;                     // 层号 Z (1..3)
+      ColIndex : Int := 1;                     // 列号 X (1..4)
+      PosX_mm : Real := 0.0;                   // V90 X轴绝对定位目标坐标 (mm)
+      PosZ_mm : Real := 0.0;                   // V90 Z轴绝对定位目标坐标 (mm)
+      EntryTimestamp : String[20] := '';       // 入库时间戳字符串 (供 HMI/MES 追溯)
+   END_STRUCT;
+END_TYPE
+
+TYPE "UDT_StationAlarmWord"
+VERSION : 0.1
+// 工业级标准化报警位汇总（与 TP700 / WinCC 离散量报警一一映射）
+   STRUCT
+      EStopPressed : Bool;                     // [ALM-001] 急停回路断开 (Safety Relay 失电)
+      SafetyDoorOpen : Bool;                   // [ALM-002] 防护安全门在自动态被打开
+      AirPressureLow : Bool;                   // [ALM-003] 压缩空气气源压力低于 0.45MPa
+      CylClamp_Timeout : Bool;                 // [ALM-004] 阻挡夹紧气缸动作超时
+      CylClamp_SensorConflict : Bool;          // [ALM-005] 阻挡夹紧气缸双磁簧同时导通互斥故障
+      CylPress_Timeout : Bool;                 // [ALM-006] 热压下压气缸动作超时
+      G120_DriveFault : Bool;                  // [ALM-007] SINAMICS G120 进料变频器报警
+      V90_AxisNotHomed : Bool;                 // [ALM-008] V90 立体库 X/Z 伺服未完成回零
+      Thermal_OverTemp : Bool;                 // [ALM-009] 热压腔超温联锁停机 (>95°C)
+      Thermal_SensorBroken : Bool;             // [ALM-010] PT100 温度传感器断线/溢出
+      Vision_CommTimeout : Bool;               // [ALM-011] 智能视觉相机 TCP/PN 触发超时
+      ASRS_WarehouseFull : Bool;               // [ALM-012] 4×3 立体库无可用空仓位
+   END_STRUCT;
+END_TYPE
+
+TYPE "UDT_StationHMI"
+VERSION : 0.1
+// HMI / SCADA 与 PLC 主控块的交互汇总接口
+   STRUCT
+      Cmd_AutoMode : Bool;                     // HMI 手/自动模式切换 (1=自动, 0=手动)
+      Cmd_Reset : Bool;                        // PackML 复位/回零指令
+      Cmd_Start : Bool;                        // PackML 启动生产指令
+      Cmd_Hold : Bool;                         // PackML 工艺暂停指令
+      Cmd_Unhold : Bool;                       // PackML 暂停恢复指令
+      Cmd_Stop : Bool;                         // PackML 正常停机指令
+      Cmd_AlarmAck : Bool;                     // 报警消音与确认复位按钮
+      Cmd_ClearWarehouse : Bool;               // 一键清空立体库出库复位
+      PackML_State : Int;                      // 当前 PackML 状态码 (0=Stopped..100=Aborted)
+      Grafcet_Step : Int;                      // Execute 内部当前工步 (10..50)
+      ActTemp_C : Real;                        // 热压腔当前实时温度 (°C)
+      PID_Output_Pct : Real;                   // PID 加热占空比输出 (0.0~100.0%)
+      TotalProduced : DInt;                    // 累计生产模组总数
+      GoodCount : DInt;                        // 合格品 (A/B级) 数量
+      RejectCount : DInt;                      // 不良品 (NG) 剔除数量
+      CycleTime_Sec : Real;                    // 最近一件模组实测节拍 (s)
+      ActiveBarcode : String[20];              // 当前工位扫码条码
+      Alarms : "UDT_StationAlarmWord";         // 标准化报警结构体
+   END_STRUCT;
+END_TYPE
+
+DATA_BLOCK "DB_StationGlobal"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+// 全站全局数据块：配方与 4×3 立体库仓位按变量级启用 RETAIN 掉电保持！
+   VAR
+      ActiveRecipe { ExternalAccessible := 'True'; ExternalVisible := 'True'; ExternalWritable := 'True' } RETAIN : "UDT_ModuleRecipe";
+      WarehouseSlots { ExternalAccessible := 'True'; ExternalVisible := 'True'; ExternalWritable := 'True' } RETAIN : Array[1..12] of "UDT_WarehouseSlot";
+      HMI { ExternalAccessible := 'True'; ExternalVisible := 'True'; ExternalWritable := 'True' } : "UDT_StationHMI";
+      SysFirstScanDone : Bool := FALSE;
+   END_VAR
+BEGIN
+END_DATA_BLOCK

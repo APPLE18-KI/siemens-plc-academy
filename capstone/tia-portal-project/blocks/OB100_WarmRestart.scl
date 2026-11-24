@@ -1,0 +1,58 @@
+// ============================================================================
+// 文件名: OB100_WarmRestart.scl
+// 组织块类型: Startup OB (CPU 从 STOP 切换到 RUN 时仅执行 1 次)
+// 核心职责:
+//   1. 安全初始化：清空所有临时运行命令，强置 PackML 进入 Stopped 稳态
+//   2. 保护掉电保持数据 (RETAIN)：绝不盲目清空 DB_StationGlobal.WarehouseSlots!
+//      而是仅初始化各仓位的固定机械坐标 (Row/Col/PosX/PosZ) 并保留 Occupied & Barcode
+//   3. 校验配方合法性（首次上电或参数越界时恢复安全默认配方 85.0°C）
+// ============================================================================
+
+ORGANIZATION_BLOCK "OB100_WarmRestart"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_TEMP
+      tempIdx : Int;
+      tempRow : Int;
+      tempCol : Int;
+   END_VAR
+
+BEGIN
+   // ── 1. 上电安全指令清零（防止上次断电遗留的 HMI 按钮粘连误启动） ────────
+   "DB_StationGlobal".HMI.Cmd_Start := FALSE;
+   "DB_StationGlobal".HMI.Cmd_Reset := FALSE;
+   "DB_StationGlobal".HMI.Cmd_Hold := FALSE;
+   "DB_StationGlobal".HMI.Cmd_Unhold := FALSE;
+   "DB_StationGlobal".HMI.Cmd_Stop := FALSE;
+   "DB_StationGlobal".HMI.Cmd_AlarmAck := FALSE;
+   "DB_StationGlobal".HMI.PackML_State := 0; // Stopped
+   "DB_StationGlobal".HMI.Grafcet_Step := 0;
+
+   // ── 2. 刷新 4列 × 3层 立体库物理坐标映射表（严禁覆盖 Occupied/Barcode!） ──
+   // 坐标布局：X轴列距 320.0 mm (起始 480.0 mm)，Z轴层高 240.0 mm (起始 180.0 mm)
+   FOR #tempIdx := 1 TO 12 DO
+       #tempRow := ((#tempIdx - 1) / 4) + 1;           // 层号 1..3
+       #tempCol := ((#tempIdx - 1) MOD 4) + 1;         // 列号 1..4
+
+       "DB_StationGlobal".WarehouseSlots[#tempIdx].RowIndex := #tempRow;
+       "DB_StationGlobal".WarehouseSlots[#tempIdx].ColIndex := #tempCol;
+       "DB_StationGlobal".WarehouseSlots[#tempIdx].PosX_mm := 480.0 + INT_TO_REAL(#tempCol - 1) * 320.0;
+       "DB_StationGlobal".WarehouseSlots[#tempIdx].PosZ_mm := 180.0 + INT_TO_REAL(#tempRow - 1) * 240.0;
+   END_FOR;
+
+   // ── 3. 校验掉电保持工艺配方合理性（防止首次空卡上电温度设定为 0°C） ──────
+   IF ("DB_StationGlobal".ActiveRecipe.TargetTemp_C < 40.0) OR
+      ("DB_StationGlobal".ActiveRecipe.TargetTemp_C > 120.0) THEN
+       "DB_StationGlobal".ActiveRecipe.RecipeID := 1;
+       "DB_StationGlobal".ActiveRecipe.RecipeName := 'LFP-100Ah';
+       "DB_StationGlobal".ActiveRecipe.TargetTemp_C := 85.0;
+       "DB_StationGlobal".ActiveRecipe.TempTolerance_C := 0.5;
+       "DB_StationGlobal".ActiveRecipe.OverTempLimit_C := 95.0;
+       "DB_StationGlobal".ActiveRecipe.PressHoldTime := T#5s;
+       "DB_StationGlobal".ActiveRecipe.ConveyorSpeed_Pct := 65.0;
+       "DB_StationGlobal".ActiveRecipe.MaxInternalRes_mOhm := 0.45;
+       "DB_StationGlobal".ActiveRecipe.BatchTargetQty := 12;
+   END_IF;
+
+   "DB_StationGlobal".SysFirstScanDone := TRUE;
+END_ORGANIZATION_BLOCK

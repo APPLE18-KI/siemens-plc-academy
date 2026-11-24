@@ -1,0 +1,845 @@
+/* ==========================================================================
+   Siemens PLC Academy — Capstone Studio (WinCC Unified & TIA Portal Style)
+   Supports Dark Industrial Console (default) & Light Reading Theme
+   ========================================================================== */
+
+.cap-root {
+  --cap-bg: var(--bg-canvas-alt, #0d131a);
+  --cap-panel: var(--bg-surface, #111821);
+  --cap-panel-alt: var(--bg-surface-2, #16202c);
+  --cap-border: var(--border-medium, rgba(148, 163, 184, 0.22));
+  --cap-border-teal: var(--siemens-teal-border, rgba(0, 153, 153, 0.45));
+  --cap-text: var(--ink-primary, #edf3f8);
+  --cap-text-muted: var(--ink-secondary, #a2b3c6);
+  --cap-teal: var(--siemens-teal, #009999);
+  --cap-teal-bright: var(--siemens-teal-bright, #14d4d4);
+  --cap-green: var(--power-green, #10b981);
+  --cap-amber: var(--alarm-amber, #f59e0b);
+  --cap-red: var(--fault-red, #ef4444);
+  --cap-blue: var(--info-cyan, #38bdf8);
+  --cap-code-bg: var(--bg-code, #0b1118);
+  --cap-mono: var(--font-mono, 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace);
+  color: var(--cap-text);
+}
+
+[data-theme='light'] .cap-root,
+.theme-light .cap-root {
+  --cap-bg: var(--bg-surface-2, #f6f8fa);
+  --cap-panel: var(--bg-surface, #ffffff);
+  --cap-panel-alt: var(--bg-surface-3, #e9eef4);
+  --cap-border: var(--border-medium, rgba(15, 23, 42, 0.16));
+  --cap-text: var(--ink-primary, #0f1722);
+  --cap-text-muted: var(--ink-secondary, #435368);
+  --cap-code-bg: var(--bg-code, #0f1722);
+}
+
+.cap-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 22px 20px 64px;
+}
+
+/* Hero Banner */
+.cap-hero {
+  background: linear-gradient(135deg, rgba(0, 153, 153, 0.2), rgba(14, 24, 38, 0.82) 60%, rgba(16, 185, 129, 0.12));
+  border: 1px solid var(--cap-border-teal);
+  border-radius: 16px;
+  padding: 24px 28px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+[data-theme='light'] .cap-hero,
+.theme-light .cap-hero {
+  background: linear-gradient(135deg, rgba(0, 153, 153, 0.14), rgba(248, 250, 252, 0.96) 65%, rgba(16, 185, 129, 0.1));
+}
+
+.cap-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--cap-teal-bright);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.cap-hero h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  line-height: 1.3;
+  color: var(--cap-text);
+}
+
+.cap-hero p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--cap-text-muted);
+  max-width: 780px;
+  line-height: 1.6;
+}
+
+.cap-hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cap-stat-pill {
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  min-width: 118px;
+}
+
+.cap-stat-label {
+  font-size: 11px;
+  color: var(--cap-text-muted);
+  margin-bottom: 3px;
+}
+
+.cap-stat-val {
+  font-family: var(--cap-mono);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--cap-teal-bright);
+}
+
+/* 5-Tab Bar */
+.cap-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 1024px) {
+  .cap-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .cap-tabs {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cap-tab-btn {
+  text-align: left;
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--cap-text);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.cap-tab-btn:hover {
+  border-color: var(--cap-teal);
+  transform: translateY(-1px);
+}
+
+.cap-tab-btn.active {
+  border-color: var(--cap-teal-bright);
+  background: linear-gradient(180deg, rgba(0, 153, 153, 0.2), var(--cap-panel));
+  box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.35);
+}
+
+.cap-tab-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: rgba(0, 153, 153, 0.15);
+  color: var(--cap-teal-bright);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cap-tab-btn.active .cap-tab-icon {
+  background: var(--cap-teal);
+  color: #ffffff;
+}
+
+.cap-tab-num {
+  font-family: var(--cap-mono);
+  font-size: 10.5px;
+  color: var(--cap-text-muted);
+  font-weight: 700;
+}
+
+.cap-tab-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+/* Shared Cards, Panels, Buttons, Badges */
+.cap-panel {
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.cap-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.cap-panel-title {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cap-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 8px;
+  border: 1px solid var(--cap-border);
+  background: var(--cap-panel-alt);
+  color: var(--cap-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cap-btn:hover:not(:disabled) {
+  border-color: var(--cap-teal-bright);
+  background: rgba(0, 153, 153, 0.16);
+}
+
+.cap-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.cap-btn.primary {
+  background: var(--cap-teal);
+  border-color: var(--cap-teal);
+  color: #ffffff;
+}
+
+.cap-btn.primary:hover:not(:disabled) {
+  background: #00b3b3;
+}
+
+.cap-btn.success {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.6);
+  color: #34d399;
+}
+
+.cap-btn.warn {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.55);
+  color: #fbbf24;
+}
+
+.cap-btn.danger {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.65);
+  color: #f87171;
+}
+
+.cap-btn.danger-solid {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
+[data-theme='light'] .cap-btn.success,
+.theme-light .cap-btn.success { color: #047857; }
+[data-theme='light'] .cap-btn.warn,
+.theme-light .cap-btn.warn { color: #b45309; }
+[data-theme='light'] .cap-btn.danger,
+.theme-light .cap-btn.danger { color: #b91c1c; }
+
+.cap-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-family: var(--cap-mono);
+}
+
+.cap-badge.teal {
+  background: rgba(0, 153, 153, 0.18);
+  color: var(--cap-teal-bright);
+  border: 1px solid rgba(0, 153, 153, 0.45);
+}
+
+.cap-badge.green {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+}
+
+.cap-badge.amber {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+}
+
+.cap-badge.red {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+.cap-badge.blue {
+  background: rgba(56, 189, 248, 0.16);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+[data-theme='light'] .cap-badge.green,
+.theme-light .cap-badge.green { color: #047857; }
+[data-theme='light'] .cap-badge.amber,
+.theme-light .cap-badge.amber { color: #b45309; }
+[data-theme='light'] .cap-badge.red,
+.theme-light .cap-badge.red { color: #b91c1c; }
+[data-theme='light'] .cap-badge.blue,
+.theme-light .cap-badge.blue { color: #0369a1; }
+
+/* Tables */
+.cap-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--cap-border);
+  border-radius: 10px;
+}
+
+.cap-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.cap-table th {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--cap-panel-alt);
+  color: var(--cap-text-muted);
+  font-weight: 700;
+  border-bottom: 1px solid var(--cap-border);
+  white-space: nowrap;
+}
+
+.cap-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--cap-border);
+  vertical-align: top;
+  line-height: 1.45;
+}
+
+.cap-table tr:last-child td {
+  border-bottom: none;
+}
+
+.cap-mono {
+  font-family: var(--cap-mono);
+}
+
+/* Tab 1: PROFINET Architecture Grid */
+.cap-topo-grid {
+  display: grid;
+  grid-template-columns: 1.45fr 0.85fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .cap-topo-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cap-svg-stage {
+  background: var(--cap-code-bg);
+  border: 1px solid var(--cap-border);
+  border-radius: 12px;
+  padding: 12px;
+  overflow-x: auto;
+}
+
+.cap-node-detail {
+  background: var(--cap-bg);
+  border: 1px solid var(--cap-border-teal);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+/* Tab 2: 5-Stage Coding Challenge Workbench */
+.cap-challenge-layout {
+  display: grid;
+  grid-template-columns: 290px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .cap-challenge-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cap-challenge-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cap-challenge-item {
+  text-align: left;
+  padding: 12px 13px;
+  border-radius: 10px;
+  background: var(--cap-bg);
+  border: 1px solid var(--cap-border);
+  color: var(--cap-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cap-challenge-item:hover {
+  border-color: var(--cap-teal);
+}
+
+.cap-challenge-item.active {
+  border-color: var(--cap-teal-bright);
+  background: rgba(0, 153, 153, 0.16);
+}
+
+.cap-challenge-item.passed {
+  border-color: rgba(16, 185, 129, 0.55);
+}
+
+.cap-code-editor {
+  width: 100%;
+  min-height: 250px;
+  background: var(--cap-code-bg);
+  color: #e2e8f0;
+  border: 1px solid var(--cap-border);
+  border-radius: 10px;
+  padding: 14px;
+  font-family: var(--cap-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.cap-code-editor:focus {
+  border-color: var(--cap-teal-bright);
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.25);
+}
+
+/* Tab 3: WinCC Unified SCADA Digital Twin */
+.cap-alarm-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 11px;
+  margin-bottom: 14px;
+  border: 1px solid var(--cap-border);
+  background: var(--cap-code-bg);
+  color: #e2e8f0;
+}
+
+.cap-alarm-bar.has-alarm {
+  border-color: #ef4444;
+  background: linear-gradient(90deg, rgba(220, 38, 38, 0.28), rgba(15, 23, 42, 0.94));
+  animation: capAlarmPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes capAlarmPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.35); }
+  50% { box-shadow: 0 0 16px 1px rgba(239, 68, 68, 0.45); }
+}
+
+.cap-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 1100px) {
+  .cap-kpi-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .cap-kpi-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.cap-kpi-card {
+  background: var(--cap-bg);
+  border: 1px solid var(--cap-border);
+  border-radius: 10px;
+  padding: 11px 12px;
+}
+
+.cap-kpi-label {
+  font-size: 11px;
+  color: var(--cap-text-muted);
+  margin-bottom: 4px;
+}
+
+.cap-kpi-value {
+  font-family: var(--cap-mono);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--cap-text);
+}
+
+.cap-scada-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 0.95fr;
+  gap: 14px;
+}
+
+@media (max-width: 1080px) {
+  .cap-scada-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cap-rack-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cap-rack-slot {
+  border: 1px solid var(--cap-border);
+  border-radius: 9px;
+  padding: 9px 8px;
+  background: var(--cap-bg);
+  cursor: pointer;
+  text-align: left;
+  color: var(--cap-text);
+  transition: all 0.16s ease;
+}
+
+.cap-rack-slot:hover {
+  border-color: var(--cap-teal-bright);
+  transform: translateY(-1px);
+}
+
+.cap-rack-slot.occupied-a {
+  background: rgba(16, 185, 129, 0.16);
+  border-color: rgba(16, 185, 129, 0.55);
+}
+
+.cap-rack-slot.occupied-b {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.55);
+}
+
+.cap-rack-slot.selected {
+  box-shadow: 0 0 0 2px var(--cap-teal-bright);
+}
+
+.cap-rack-slot.locked {
+  background: rgba(245, 158, 11, 0.12);
+  border-style: dashed;
+  border-color: rgba(245, 158, 11, 0.55);
+}
+
+/* Tab 4: Source Browser */
+.cap-ide-layout {
+  display: grid;
+  grid-template-columns: 310px 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .cap-ide-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cap-file-tree {
+  background: var(--cap-bg);
+  border: 1px solid var(--cap-border);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.cap-file-item {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--cap-text);
+  cursor: pointer;
+  font-size: 12.5px;
+  font-family: var(--cap-mono);
+  transition: all 0.14s ease;
+}
+
+.cap-file-item:hover {
+  background: var(--cap-panel-alt);
+}
+
+.cap-file-item.active {
+  background: rgba(0, 153, 153, 0.2);
+  border-color: rgba(20, 184, 166, 0.5);
+  color: var(--cap-teal-bright);
+  font-weight: 700;
+}
+
+.cap-code-viewer {
+  background: var(--cap-code-bg);
+  color: #e2e8f0;
+  border: 1px solid var(--cap-border);
+  border-radius: 10px;
+  overflow: auto;
+  max-height: 580px;
+  font-family: var(--cap-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 12px 0;
+}
+
+.cap-code-line {
+  display: flex;
+  padding: 0 14px;
+  white-space: pre;
+}
+
+.cap-code-line:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.cap-code-ln {
+  width: 34px;
+  flex-shrink: 0;
+  color: #64748b;
+  text-align: right;
+  margin-right: 14px;
+  user-select: none;
+}
+
+/* Tab 5: Resume STAR Generator & 15 Interview Q&As */
+.cap-resume-grid {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .cap-resume-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cap-resume-preview {
+  background: var(--cap-bg);
+  border: 1px solid var(--cap-border-teal);
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  font-family: inherit;
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.cap-qa-card {
+  background: var(--cap-bg);
+  border: 1px solid var(--cap-border);
+  border-radius: 11px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  transition: border-color 0.16s ease;
+}
+
+.cap-qa-card.mastered {
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.cap-qa-header {
+  width: 100%;
+  text-align: left;
+  padding: 13px 15px;
+  background: transparent;
+  border: none;
+  color: var(--cap-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cap-qa-body {
+  padding: 0 15px 15px;
+  border-top: 1px solid var(--cap-border);
+}
+
+.cap-intent-box {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.1);
+  border-left: 3px solid var(--cap-amber);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.cap-answer-box {
+  margin-top: 10px;
+  padding: 11px 13px;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.1);
+  border-left: 3px solid var(--cap-green);
+  font-size: 13px;
+  line-height: 1.68;
+}
+
+.cap-input {
+  background: var(--cap-bg);
+  border: 1px solid var(--cap-border);
+  color: var(--cap-text);
+  border-radius: 8px;
+  padding: 7px 11px;
+  font-size: 13px;
+  outline: none;
+}
+
+.cap-input:focus {
+  border-color: var(--cap-teal-bright);
+}
+
+
+/* ==========================================================================
+   Mobile & HD SVG Stage Enhancements for Capstone Studio
+   ========================================================================== */
+@media (max-width: 920px) {
+  .cap-challenge-layout,
+  .cap-resume-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .cap-container {
+    padding: 14px 12px 48px;
+  }
+
+  .cap-hero {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .cap-hero h1 {
+    font-size: 1.32rem !important;
+    line-height: 1.35 !important;
+  }
+
+  .cap-hero-stats {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px !important;
+  }
+
+  .cap-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+
+  .cap-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cap-tab-btn {
+    flex-shrink: 0;
+  }
+
+  .cap-panel {
+    padding: 14px !important;
+  }
+
+  .cap-root svg[viewBox="0 0 720 330"],
+  .cap-root svg[viewBox="0 0 640 212"],
+  .cap-root svg[viewBox="0 0 430 134"] {
+    min-width: 560px;
+  }
+}
+
+.cap-svg-stage {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 920px) {
+  .cap-scada-grid,
+  .cap-arch-grid,
+  .cap-source-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .cap-kpi-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .cap-kpi-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .cap-rack-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}

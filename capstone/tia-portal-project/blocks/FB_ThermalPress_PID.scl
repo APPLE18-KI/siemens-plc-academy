@@ -1,0 +1,116 @@
+// ============================================================================
+// 文件名: FB_ThermalPress_PID.scl
+// 功能: 热压恒温固化腔 PID 闭环温控 + 双重超温安全联锁功能块
+// 调用位置: 必须放在恒定周期循环中断组织块 OB30 (例如 100ms 周期) 中调用！
+// 原因说明: PID 积分(Ti)与微分(Td)运算依赖严格恒定的采样周期 Δt；若误放在 OB1，
+//           扫描周期随逻辑波动会导致控温超调甚至发散震荡。
+// ============================================================================
+
+FUNCTION_BLOCK "FB_ThermalPress_PID"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT
+      iEnable : Bool := FALSE;                 // 温控回路允许加热使能
+      iSafety_OK : Bool := FALSE;              // 安全回路正常 (急停=1)
+      iRawPT100 : Int := 250;                  // SM1231 RTD 模块原始通道值 (%IW96, 单位 0.1°C)
+      iSetpoint_C : Real := 85.0;              // 目标恒温设定值 (°C)
+      iTolerance_C : Real := 0.5;              // 达温判断允许容差 (±°C)
+      iOverTempLimit_C : Real := 95.0;         // 软件超温硬联锁阈值 (°C)
+      iAlarmReset : Bool := FALSE;             // 超温/断线报警复位
+      iKp : Real := 6.5;                       // 比例增益
+      iKi : Real := 0.35;                      // 积分增益 (1/s)
+      iSampleTime_s : Real := 0.1;             // OB30 循环中断固定采样周期 (0.1s = 100ms)
+   END_VAR
+
+   VAR_OUTPUT
+      qActTemp_C : Real;                       // 换算并一阶滤波后的实时温度 (°C)
+      qPID_Out_Pct : Real;                     // PID 加热占空比输出 (0.0 ~ 100.0 %)
+      qHeaterPWM_Out : Bool;                   // 固态继电器 SSR 脉宽调制开关量输出 (%Q)
+      qTempReady : Bool;                       // 温度稳定在 [Setpoint ± Tolerance] 内
+      qOverTempFault : Bool;                   // 超温锁存故障 (需人工确认复位)
+      qSensorFault : Bool;                     // PT100 断线 (32767) 或短路 (-32768) 故障
+   END_VAR
+
+   VAR
+      statFilteredTemp : Real := 25.0;         // 一阶低通滤波温度值
+      statIntegral : Real := 0.0;              // 抗饱和积分累积器
+      statOverTempLatch : Bool := FALSE;       // 超温锁存器（严禁自动恢复加热！）
+      statPwmAccum_s : Real := 0.0;            // 1.0s PWM 周期时间累加器
+      instTON_TempStable { InstructionName := 'TON_TIME'; LibVersion := '1.0' } : TON_TIME;
+   END_VAR
+
+   VAR_TEMP
+      tempRawC : Real;
+      tempError : Real;
+      tempOut : Real;
+   END_VAR
+
+BEGIN
+   // ── 1. PT100 通道断线/溢出诊断（西门子 RTD 溢出码: 32767 / -32768） ───────
+   IF (#iRawPT100 >= 32760) OR (#iRawPT100 <= -32760) THEN
+       #qSensorFault := TRUE;
+   ELSE
+       #qSensorFault := FALSE;
+       // SM1231 RTD 标准量程：原始 Int 值除以 10.0 即为摄氏度
+       #tempRawC := INT_TO_REAL(#iRawPT100) / 10.0;
+       // 一阶低通滤波 (α = 0.25) 抑制电磁干扰毛刺
+       #statFilteredTemp := #statFilteredTemp + 0.25 * (#tempRawC - #statFilteredTemp);
+   END_IF;
+
+   #qActTemp_C := #statFilteredTemp;
+
+   // ── 2. 超温安全联锁锁存（核心防呆：超温后必须人工排查并复位） ────────────
+   IF (#qActTemp_C >= #iOverTempLimit_C) OR #qSensorFault THEN
+       #statOverTempLatch := TRUE;
+   ELSIF #iAlarmReset AND (#qActTemp_C < (#iOverTempLimit_C - 5.0)) AND NOT #qSensorFault THEN
+       // 必须降温至安全回差 (Limit - 5°C) 以下才允许复位超温锁存
+       #statOverTempLatch := FALSE;
+   END_IF;
+   #qOverTempFault := #statOverTempLatch;
+
+   // ── 3. 离散位置式 PI 控制 + 积分抗饱和 (Anti-Windup) ────────────────────
+   // 说明：在真实博途工程中此处亦可直接替换为工艺指令 "PID_Compact"，
+   //       本离散实现便于零基础学员看透 PID 与防积分饱和底层算法！
+   IF #iEnable AND #iSafety_OK AND NOT #statOverTempLatch AND NOT #qSensorFault THEN
+       #tempError := #iSetpoint_C - #qActTemp_C;
+
+       // 仅当输出未饱和时才累积积分项，防止升温阶段积分过冲
+       #tempOut := (#iKp * #tempError) + #statIntegral;
+       IF (#tempOut > 0.0 AND #tempOut < 100.0) OR
+          (#tempOut >= 100.0 AND #tempError < 0.0) OR
+          (#tempOut <= 0.0 AND #tempError > 0.0) THEN
+           #statIntegral := #statIntegral + (#iKi * #tempError * #iSampleTime_s);
+       END_IF;
+
+       // 积分限幅与总输出限幅 [0.0, 100.0%]
+       IF #statIntegral > 80.0 THEN #statIntegral := 80.0; END_IF;
+       IF #statIntegral < 0.0 THEN #statIntegral := 0.0; END_IF;
+
+       #tempOut := (#iKp * #tempError) + #statIntegral;
+       IF #tempOut > 100.0 THEN
+           #tempOut := 100.0;
+       ELSIF #tempOut < 0.0 THEN
+           #tempOut := 0.0;
+       END_IF;
+
+       #qPID_Out_Pct := #tempOut;
+   ELSE
+       // 安全切断：输出归零、清积分防止二次启动猛冲
+       #qPID_Out_Pct := 0.0;
+       #statIntegral := 0.0;
+   END_IF;
+
+   // ── 4. 1.0s 周期 PWM 调制输出驱动固态继电器 (SSR) ────────────────────────
+   #statPwmAccum_s := #statPwmAccum_s + #iSampleTime_s;
+   IF #statPwmAccum_s >= 1.0 THEN
+       #statPwmAccum_s := 0.0;
+   END_IF;
+   #qHeaterPWM_Out := (#qPID_Out_Pct > 0.5) AND (#statPwmAccum_s < (#qPID_Out_Pct / 100.0));
+
+   // ── 5. 稳态达温判定 (连续 2 秒保持在容差带内) ────────────────────────────
+   #instTON_TempStable(
+       IN := (#iEnable AND NOT #statOverTempLatch AND (ABS(#iSetpoint_C - #qActTemp_C) <= #iTolerance_C)),
+       PT := T#2s
+   );
+   #qTempReady := #instTON_TempStable.Q;
+END_FUNCTION_BLOCK

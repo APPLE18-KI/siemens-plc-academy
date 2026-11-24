@@ -1,0 +1,85 @@
+// ============================================================================
+// 文件名: FB_SinamicsDrive_Tel1.scl
+// 功能: SINAMICS G120 / V90 PROFINET 标准报文 1 (2 PZD) 驱动封装块
+// 协议说明 (PROFIdrive Standard Telegram 1):
+//   PLC → Drive: PZD1 = STW1 (控制字), PZD2 = NSOLL_A (速度设定, 16#4000 = 100%)
+//   Drive → PLC: PZD1 = ZSW1 (状态字), PZD2 = NIST_A  (实际转速, 16#4000 = 100%)
+// 关键控制字编码:
+//   16#047E = 准备就绪 / OFF1 正常停机 (Bit1=OFF2, Bit2=OFF3, Bit3..6, Bit10=PLC控制)
+//   16#047F = 启动运行 (OFF1=1)
+//   16#04FE = 故障确认上升沿 (Bit7=1)
+// ============================================================================
+
+FUNCTION_BLOCK "FB_SinamicsDrive_Tel1"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT
+      iSafety_OK : Bool := FALSE;              // 安全急停回路正常 (0 时切 OFF2/OFF3)
+      iRunCmd : Bool := FALSE;                 // 运行命令 (1=正转运行, 0=斜坡停机)
+      iReverse : Bool := FALSE;                // 反转标志 (TRUE=速度设定取负)
+      iFaultAck : Bool := FALSE;               // 驱动器故障复位按钮
+      iSpeedSetpoint_Pct : Real := 0.0;        // 设定速度百分比 (0.0 ~ 100.0 %)
+      iPZD_ZSW1 : Word := 16#0000;             // 来自变频器输入映射字 (%IW256)
+      iPZD_NIST_A : Int := 0;                  // 来自变频器实际速度字 (%IW258)
+   END_VAR
+
+   VAR_OUTPUT
+      qPZD_STW1 : Word;                        // 发往变频器控制字 (%QW256)
+      qPZD_NSOLL_A : Int;                      // 发往变频器设定速度字 (%QW258)
+      qReady : Bool;                           // 变频器准备就绪 (ZSW1.Bit0 & Bit1)
+      qRunning : Bool;                         // 变频器运行中 (ZSW1.Bit2)
+      qDriveFault : Bool;                      // 变频器硬件故障 (ZSW1.Bit3)
+      qDriveWarn : Bool;                       // 变频器预警 (ZSW1.Bit7)
+      qActSpeed_Pct : Real;                    // 反馈实际转速百分比 (-100.0 ~ 100.0 %)
+   END_VAR
+
+   VAR_TEMP
+      tempClampedPct : Real;
+      tempRawSpeed : Int;
+      tempStw1 : Word;
+   END_VAR
+
+BEGIN
+   // ── 1. 解析驱动器状态字 ZSW1 (PROFIdrive 标准位定义) ────────────────────
+   #qReady := #iPZD_ZSW1.%X0 AND #iPZD_ZSW1.%X1;
+   #qRunning := #iPZD_ZSW1.%X2;
+   #qDriveFault := #iPZD_ZSW1.%X3;
+   #qDriveWarn := #iPZD_ZSW1.%X7;
+
+   // 实际速度标准化转换: 16384 (16#4000) 对应 P2000 基准转速 (100.0%)
+   #qActSpeed_Pct := (INT_TO_REAL(#iPZD_NIST_A) / 16384.0) * 100.0;
+
+   // ── 2. 速度设定限幅与方向处理 ───────────────────────────────────────────
+   #tempClampedPct := #iSpeedSetpoint_Pct;
+   IF #tempClampedPct > 100.0 THEN
+       #tempClampedPct := 100.0;
+   ELSIF #tempClampedPct < 0.0 THEN
+       #tempClampedPct := 0.0;
+   END_IF;
+
+   #tempRawSpeed := REAL_TO_INT((#tempClampedPct / 100.0) * 16384.0);
+   IF #iReverse THEN
+       #tempRawSpeed := -#tempRawSpeed;
+   END_IF;
+
+   // ── 3. 拼装标准控制字 STW1 ──────────────────────────────────────────────
+   IF NOT #iSafety_OK THEN
+       // 急停拍下：撤销 OFF1/OFF2/OFF3，仅保留 Bit10 PLC 控制权，立即自由滑行/安全制动
+       #tempStw1 := 16#0400;
+       #qPZD_NSOLL_A := 0;
+   ELSIF #iFaultAck AND #qDriveFault THEN
+       // 置位 Bit7 (16#04FE) 复位 SINAMICS 内部故障码
+       #tempStw1 := 16#04FE;
+       #qPZD_NSOLL_A := 0;
+   ELSIF #iRunCmd AND NOT #qDriveFault THEN
+       // 16#047F: OFF1=1, OFF2=1, OFF3=1, 使能运行, 斜坡使能, PLC主控
+       #tempStw1 := 16#047F;
+       #qPZD_NSOLL_A := #tempRawSpeed;
+   ELSE
+       // 16#047E: 待机/斜坡减速停机
+       #tempStw1 := 16#047E;
+       #qPZD_NSOLL_A := 0;
+   END_IF;
+
+   #qPZD_STW1 := #tempStw1;
+END_FUNCTION_BLOCK

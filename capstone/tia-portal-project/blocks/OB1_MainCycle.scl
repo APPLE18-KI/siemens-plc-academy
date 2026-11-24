@@ -1,0 +1,107 @@
+// ============================================================================
+// 文件名: OB1_MainCycle.scl
+// 组织块类型: Main Program Cycle (主循环扫描组织块) + 配套 OB30 循环中断示例
+// 架构规范:
+//   - OB1 保持极致清爽，仅负责：硬件 I/O 绑定与调用主控 FB 实例
+//   - 温控 PID 块放于 OB30 (100ms 恒定循环中断) 执行，与 OB1 严格解耦！
+// ============================================================================
+
+DATA_BLOCK "IDB_StationMain"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+"FB_CellSortingStation_Main"
+BEGIN
+END_DATA_BLOCK
+
+DATA_BLOCK "IDB_ThermalPress_PID"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+"FB_ThermalPress_PID"
+BEGIN
+END_DATA_BLOCK
+
+ORGANIZATION_BLOCK "OB1_MainCycle"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_TEMP
+      tempIdx : Int;
+   END_VAR
+
+BEGIN
+   // ── 1. HMI 一键出库清空仓库请求处理 ──────────────────────────────────────
+   IF "DB_StationGlobal".HMI.Cmd_ClearWarehouse AND
+      ("DB_StationGlobal".HMI.PackML_State = 0 OR "DB_StationGlobal".HMI.PackML_State = 20) THEN
+       FOR #tempIdx := 1 TO 12 DO
+           "DB_StationGlobal".WarehouseSlots[#tempIdx].Occupied := FALSE;
+           "DB_StationGlobal".WarehouseSlots[#tempIdx].ModuleBarcode := '';
+           "DB_StationGlobal".WarehouseSlots[#tempIdx].QualityGrade := 0;
+           "DB_StationGlobal".WarehouseSlots[#tempIdx].PressPeakTemp_C := 0.0;
+           "DB_StationGlobal".WarehouseSlots[#tempIdx].EntryTimestamp := '';
+       END_FOR;
+       "DB_StationGlobal".HMI.Alarms.ASRS_WarehouseFull := FALSE;
+       "DB_StationGlobal".HMI.Cmd_ClearWarehouse := FALSE;
+   END_IF;
+
+   // ── 2. 调用整线主控功能块（统一使用符号寻址连接硬件标签表） ──────────────
+   "IDB_StationMain"(
+       iSafety_EStop_OK   := "I_EStop_OK",
+       iSafety_Door_OK    := "I_SafetyDoor_OK",
+       iAirPressure_OK    := "I_AirPressure_OK",
+       iInfeed_Sensor     := "I_Infeed_Sensor",
+       iCylClamp_Ret      := "I_CylClamp_Ret",
+       iCylClamp_Adv      := "I_CylClamp_Adv",
+       iCylPress_Ret      := "I_CylPress_Ret",
+       iCylPress_Adv      := "I_CylPress_Adv",
+       iVision_Done       := "I_Vision_Done",
+       iVision_Grade      := "IW_Vision_Grade",
+       iVision_Barcode    := "DB_StationGlobal".HMI.ActiveBarcode,
+       iServo_Homed       := "I_V90_AllHomed",
+       iServo_InPos       := "I_V90_InPos",
+       iThermal_TempReady := "IDB_ThermalPress_PID".qTempReady,
+       iThermal_OverTemp  := "IDB_ThermalPress_PID".qOverTempFault,
+       iThermal_ActTemp   := "IDB_ThermalPress_PID".qActTemp_C,
+       iG120_ZSW1         := "IW_G120_ZSW1",
+       iG120_NIST_A       := "IW_G120_NIST_A",
+       qCylClamp_Adv      => "Q_CylClamp_Adv",
+       qCylClamp_Ret      => "Q_CylClamp_Ret",
+       qCylPress_Adv      => "Q_CylPress_Adv",
+       qCylPress_Ret      => "Q_CylPress_Ret",
+       qRejectPusher      => "Q_Reject_Pusher",
+       qVision_Trigger    => "Q_Vision_Trigger",
+       qG120_STW1         => "QW_G120_STW1",
+       qG120_NSOLL_A      => "QW_G120_NSOLL_A",
+       qTower_Green       => "Q_Tower_Green",
+       qTower_Amber       => "Q_Tower_Amber",
+       qTower_Red         => "Q_Tower_Red",
+       ioRecipe           := "DB_StationGlobal".ActiveRecipe,
+       ioSlots            := "DB_StationGlobal".WarehouseSlots,
+       ioHMI              := "DB_StationGlobal".HMI
+   );
+
+   // ── 3. 将 OB30 温控数据镜像至 HMI 监控区 ────────────────────────────────
+   "DB_StationGlobal".HMI.ActTemp_C := "IDB_ThermalPress_PID".qActTemp_C;
+   "DB_StationGlobal".HMI.PID_Output_Pct := "IDB_ThermalPress_PID".qPID_Out_Pct;
+   "DB_StationGlobal".HMI.Alarms.Thermal_SensorBroken := "IDB_ThermalPress_PID".qSensorFault;
+END_ORGANIZATION_BLOCK
+
+ORGANIZATION_BLOCK "OB30_CyclicPID_100ms"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+// 恒定 100ms 循环中断组织块：专为热压腔 PID 闭环温控提供精确 Δt 基准！
+BEGIN
+   "IDB_ThermalPress_PID"(
+       iEnable          := "IDB_StationMain".qHeater_Enable,
+       iSafety_OK       := "I_EStop_OK",
+       iRawPT100        := "AI_PressTemp_Raw",
+       iSetpoint_C      := "DB_StationGlobal".ActiveRecipe.TargetTemp_C,
+       iTolerance_C     := "DB_StationGlobal".ActiveRecipe.TempTolerance_C,
+       iOverTempLimit_C := "DB_StationGlobal".ActiveRecipe.OverTempLimit_C,
+       iAlarmReset      := "DB_StationGlobal".HMI.Cmd_AlarmAck,
+       iKp              := 6.5,
+       iKi              := 0.35,
+       iSampleTime_s    := 0.1,
+       qHeaterPWM_Out   => "Q_Heater_SSR_PWM"
+   );
+END_ORGANIZATION_BLOCK

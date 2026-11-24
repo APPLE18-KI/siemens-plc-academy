@@ -1,0 +1,170 @@
+/* ============================================================================
+   Siemens PLC Academy — Industrial Console Design Tokens
+   Aesthetic: TIA Portal / WinCC Unified Precision + Editorial Readability
+   Dominance Ratio: 65% Canvas / 25% Surfaces & Neutral Ink / <=10% Signal Accents
+   ============================================================================ */
+
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Brand & Industrial Signal Palette */
+  --siemens-teal: #009999;
+  --siemens-teal-hover: #00b3b3;
+  --siemens-teal-bright: #14d4d4;
+  --siemens-teal-soft: rgba(0, 153, 153, 0.14);
+  --siemens-teal-border: rgba(0, 153, 153, 0.38);
+  --siemens-teal-glow: rgba(0, 153, 153, 0.42);
+
+  --power-green: #10b981;
+  --power-green-soft: rgba(16, 185, 129, 0.13);
+  --power-green-border: rgba(16, 185, 129, 0.36);
+
+  --alarm-amber: #f59e0b;
+  --alarm-amber-soft: rgba(245, 158, 11, 0.13);
+  --alarm-amber-border: rgba(245, 158, 11, 0.36);
+
+  --fault-red: #ef4444;
+  --fault-red-soft: rgba(239, 68, 68, 0.13);
+  --fault-red-border: rgba(239, 68, 68, 0.36);
+
+  --info-cyan: #38bdf8;
+  --info-cyan-soft: rgba(56, 189, 248, 0.13);
+  --info-cyan-border: rgba(56, 189, 248, 0.34);
+
+  --db-violet: #a78bfa;
+  --db-violet-soft: rgba(167, 139, 250, 0.14);
+  --db-violet-border: rgba(167, 139, 250, 0.35);
+
+  /* Obsidian Console Surfaces */
+  --bg-canvas: #0a0f14;
+  --bg-canvas-alt: #0d131a;
+  --bg-surface: #111821;
+  --bg-surface-2: #16202c;
+  --bg-surface-3: #1d2a38;
+  --bg-code: #0b1118;
+  --bg-glass: rgba(11, 16, 22, 0.84);
+  --bg-grid-line: rgba(148, 179, 206, 0.055);
+  --bg-grid-dot: rgba(148, 179, 206, 0.14);
+
+  /* Typography Ink Hierarchy */
+  --ink-primary: #edf3f8;
+  --ink-secondary: #a2b3c6;
+  --ink-muted: #6c8096;
+  --ink-inverse: #081014;
+
+  /* Structural Hairlines & Elevation */
+  --border-hairline: rgba(148, 179, 206, 0.14);
+  --border-medium: rgba(148, 179, 206, 0.24);
+  --border-strong: rgba(148, 179, 206, 0.36);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.38);
+  --shadow-lg: 0 22px 60px rgba(0, 0, 0, 0.52);
+
+  /* Syntax Highlighting (SCL / LAD) */
+  --syn-keyword: #2dd4bf;
+  --syn-type: #38bdf8;
+  --syn-address: #fbbf24;
+  --syn-symbol: #34d399;
+  --syn-number: #c084fc;
+  --syn-comment: #64748b;
+  --syn-operator: #94a3b8;
+  --syn-rail: #00b8b8;
+  --syn-contact: #10b981;
+  --syn-coil: #f59e0b;
+
+  /* Shared Alias Tokens (friendly to embedded feature modules) */
+  --bg-primary: var(--bg-canvas);
+  --bg-secondary: var(--bg-surface);
+  --bg-card: var(--bg-surface);
+  --text-primary: var(--ink-primary);
+  --text-secondary: var(--ink-secondary);
+  --text-muted: var(--ink-muted);
+  --accent-primary: var(--siemens-teal);
+  --accent-green: var(--power-green);
+  --accent-amber: var(--alarm-amber);
+  --border-color: var(--border-hairline);
+
+  /* Typography Families */
+  --font-display: 'Inter', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Inter', 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Consolas', 'SFMono-Regular', 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif;
+
+  /* Layout Rhythm */
+  --nav-height: 64px;
+  --container-max: 1360px;
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-fast: 150ms var(--ease-out);
+  --transition-base: 240ms var(--ease-out);
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+
+  --siemens-teal: #008585;
+  --siemens-teal-hover: #006f6f;
+  --siemens-teal-bright: #009999;
+  --siemens-teal-soft: rgba(0, 133, 133, 0.09);
+  --siemens-teal-border: rgba(0, 133, 133, 0.32);
+  --siemens-teal-glow: rgba(0, 133, 133, 0.28);
+
+  --power-green: #059669;
+  --power-green-soft: rgba(5, 150, 105, 0.09);
+  --power-green-border: rgba(5, 150, 105, 0.32);
+
+  --alarm-amber: #d97706;
+  --alarm-amber-soft: rgba(217, 119, 6, 0.1);
+  --alarm-amber-border: rgba(217, 119, 6, 0.34);
+
+  --fault-red: #dc2626;
+  --fault-red-soft: rgba(220, 38, 38, 0.08);
+  --fault-red-border: rgba(220, 38, 38, 0.3);
+
+  --info-cyan: #0284c7;
+  --info-cyan-soft: rgba(2, 132, 199, 0.08);
+  --info-cyan-border: rgba(2, 132, 199, 0.28);
+
+  --db-violet: #7c3aed;
+  --db-violet-soft: rgba(124, 58, 237, 0.08);
+  --db-violet-border: rgba(124, 58, 237, 0.28);
+
+  /* Architectural Stone Immersive Reading Surfaces */
+  --bg-canvas: #f2f4f7;
+  --bg-canvas-alt: #eaeef3;
+  --bg-surface: #ffffff;
+  --bg-surface-2: #f6f8fa;
+  --bg-surface-3: #e9eef4;
+  --bg-code: #0f1722;
+  --bg-glass: rgba(255, 255, 255, 0.88);
+  --bg-grid-line: rgba(15, 23, 42, 0.045);
+  --bg-grid-dot: rgba(15, 23, 42, 0.11);
+
+  --ink-primary: #0f1722;
+  --ink-secondary: #435368;
+  --ink-muted: #6b7d93;
+  --ink-inverse: #ffffff;
+
+  --border-hairline: rgba(15, 23, 42, 0.1);
+  --border-medium: rgba(15, 23, 42, 0.18);
+  --border-strong: rgba(15, 23, 42, 0.28);
+  --shadow-sm: 0 1px 4px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 10px 28px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 20px 50px rgba(15, 23, 42, 0.12);
+
+  /* Keep Code Blocks High-Contrast Industrial Dark Terminal in both themes */
+  --syn-keyword: #2dd4bf;
+  --syn-type: #38bdf8;
+  --syn-address: #fbbf24;
+  --syn-symbol: #34d399;
+  --syn-number: #c084fc;
+  --syn-comment: #7b8ea3;
+  --syn-operator: #94a3b8;
+  --syn-rail: #00b8b8;
+  --syn-contact: #10b981;
+  --syn-coil: #f59e0b;
+}

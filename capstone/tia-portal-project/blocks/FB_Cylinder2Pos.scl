@@ -1,0 +1,131 @@
+// ============================================================================
+// 文件名: FB_Cylinder2Pos.scl
+// 功能: 工业标准化双位气缸控制功能块 (支持多重背景 Multi-Instance 调用)
+// 核心特性:
+//   1. 手/自动模式分离 + 外部安全防撞互锁 (iInterlockAdv / iInterlockRet)
+//   2. 伸出超时报警 / 退回超时报警 (内置 IEC TON 定时器)
+//   3. 双磁簧开关同时导通 150ms 互斥粘连检测 (Sensor Conflict Fault)
+//   4. 急停/失能时按需切断电磁阀并锁存报警直至人工复位
+// ============================================================================
+
+FUNCTION_BLOCK "FB_Cylinder2Pos"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT
+      iEnable : Bool := TRUE;                  // 安全回路总使能 (急停/气源正常=1)
+      iAutoMode : Bool := FALSE;               // 模式选择 (1=自动, 0=手动)
+      iAutoCmd_Adv : Bool := FALSE;            // 自动模式伸出指令
+      iAutoCmd_Ret : Bool := FALSE;            // 自动模式退回指令
+      iManCmd_Adv : Bool := FALSE;             // 手动模式点动伸出
+      iManCmd_Ret : Bool := FALSE;             // 手动模式点动退回
+      iInterlock_Adv : Bool := TRUE;           // 伸出外部防撞联锁许可 (1=允许)
+      iInterlock_Ret : Bool := TRUE;           // 退回外部防撞联锁许可 (1=允许)
+      iSensor_Adv : Bool := FALSE;             // 伸出到位磁簧开关 (%I)
+      iSensor_Ret : Bool := FALSE;             // 退回到位磁簧开关 (%I)
+      iAlarmReset : Bool := FALSE;             // 故障复位上升沿/电平
+      iTimeout_Adv : Time := T#3s;             // 伸出超时监测设定值
+      iTimeout_Ret : Time := T#3s;             // 退回超时监测设定值
+   END_VAR
+
+   VAR_OUTPUT
+      qValve_Adv : Bool;                       // 伸出电磁阀输出 (%Q)
+      qValve_Ret : Bool;                       // 退回电磁阀输出 (%Q)
+      qIsAtAdv : Bool;                         // 已可靠伸出到位 (互斥校验通过)
+      qIsAtRet : Bool;                         // 已可靠退回到位 (互斥校验通过)
+      qFault : Bool;                           // 气缸综合故障输出
+      qFaultCode : Int;                        // 0=正常, 101=伸出超时, 102=退回超时, 103=双传感器互斥粘连
+   END_VAR
+
+   VAR
+      statCmdAdv : Bool := FALSE;              // 内部锁存目标状态 (TRUE=伸出, FALSE=退回)
+      statFaultAdvTimeout : Bool := FALSE;     // 伸出超时锁存
+      statFaultRetTimeout : Bool := FALSE;     // 退回超时锁存
+      statFaultConflict : Bool := FALSE;       // 双到位互斥锁存
+      instTON_Adv { InstructionName := 'TON_TIME'; LibVersion := '1.0' } : TON_TIME;
+      instTON_Ret { InstructionName := 'TON_TIME'; LibVersion := '1.0' } : TON_TIME;
+      instTON_Conflict { InstructionName := 'TON_TIME'; LibVersion := '1.0' } : TON_TIME;
+   END_VAR
+
+   VAR_TEMP
+      tempReqAdv : Bool;
+      tempReqRet : Bool;
+   END_VAR
+
+BEGIN
+   // ── 1. 故障复位处理 ──────────────────────────────────────────────────────
+   IF #iAlarmReset THEN
+       #statFaultAdvTimeout := FALSE;
+       #statFaultRetTimeout := FALSE;
+       #statFaultConflict := FALSE;
+   END_IF;
+
+   // ── 2. 双磁簧传感器同时导通防呆检测 (滤波 150ms 抗抖动) ─────────────────
+   #instTON_Conflict(
+       IN := (#iSensor_Adv AND #iSensor_Ret),
+       PT := T#150ms
+   );
+   IF #instTON_Conflict.Q THEN
+       #statFaultConflict := TRUE;
+   END_IF;
+
+   // ── 3. 手/自动指令仲裁（伸出与退回互锁，退回安全优先） ───────────────────
+   IF #iAutoMode THEN
+       #tempReqAdv := #iAutoCmd_Adv AND NOT #iAutoCmd_Ret;
+       #tempReqRet := #iAutoCmd_Ret;
+   ELSE
+       #tempReqAdv := #iManCmd_Adv AND NOT #iManCmd_Ret;
+       #tempReqRet := #iManCmd_Ret;
+   END_IF;
+
+   IF #iEnable AND NOT #qFault THEN
+       IF #tempReqAdv AND #iInterlock_Adv THEN
+           #statCmdAdv := TRUE;
+       ELSIF #tempReqRet AND #iInterlock_Ret THEN
+           #statCmdAdv := FALSE;
+       END_IF;
+   END_IF;
+
+   // ── 4. 物理电磁阀驱动输出（失能或存在严重互斥故障时切阀） ────────────────
+   IF #iEnable AND NOT #statFaultConflict THEN
+       #qValve_Adv := #statCmdAdv AND #iInterlock_Adv;
+       #qValve_Ret := (NOT #statCmdAdv) AND #iInterlock_Ret;
+   ELSE
+       #qValve_Adv := FALSE;
+       #qValve_Ret := FALSE;
+   END_IF;
+
+   // ── 5. 伸出 / 退回动作超时监测 ──────────────────────────────────────────
+   #instTON_Adv(
+       IN := (#qValve_Adv AND NOT #iSensor_Adv),
+       PT := #iTimeout_Adv
+   );
+   IF #instTON_Adv.Q THEN
+       #statFaultAdvTimeout := TRUE;
+   END_IF;
+
+   #instTON_Ret(
+       IN := (#qValve_Ret AND NOT #iSensor_Ret),
+       PT := #iTimeout_Ret
+   );
+   IF #instTON_Ret.Q THEN
+       #statFaultRetTimeout := TRUE;
+   END_IF;
+
+   // ── 6. 汇总状态与诊断代码输出 ───────────────────────────────────────────
+   #qIsAtAdv := #iSensor_Adv AND NOT #iSensor_Ret AND NOT #statFaultConflict;
+   #qIsAtRet := #iSensor_Ret AND NOT #iSensor_Adv AND NOT #statFaultConflict;
+
+   IF #statFaultConflict THEN
+       #qFault := TRUE;
+       #qFaultCode := 103;
+   ELSIF #statFaultAdvTimeout THEN
+       #qFault := TRUE;
+       #qFaultCode := 101;
+   ELSIF #statFaultRetTimeout THEN
+       #qFault := TRUE;
+       #qFaultCode := 102;
+   ELSE
+       #qFault := FALSE;
+       #qFaultCode := 0;
+   END_IF;
+END_FUNCTION_BLOCK

@@ -1,0 +1,1701 @@
+/* ============================================================================
+   Siemens S7-1200 PLC Simulator & TIA Portal Online LAD Monitor Styles
+   Scoped strictly to .plc-sim-* so it integrates cleanly with any host theme
+   ============================================================================ */
+
+.plc-sim-workbench {
+  --sim-bg: #0b1220;
+  --sim-surface: #111b2e;
+  --sim-surface-2: #16233a;
+  --sim-canvas: #09101d;
+  --sim-border: rgba(148, 163, 184, 0.18);
+  --sim-border-strong: rgba(56, 189, 248, 0.34);
+  --sim-text: #e2e8f0;
+  --sim-text-muted: #94a3b8;
+  --sim-brand: #009999;
+  --sim-brand-bright: #14b8a6;
+  --sim-green: #10b981;
+  --sim-amber: #f59e0b;
+  --sim-red: #ef4444;
+  --sim-cyan: #38bdf8;
+
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--sim-text);
+  font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
+}
+
+.plc-sim-root {
+  --sim-bg: #0b1220;
+  --sim-surface: #111b2e;
+  --sim-surface-2: #16233a;
+  --sim-canvas: #09101d;
+  --sim-border: rgba(148, 163, 184, 0.18);
+  --sim-border-strong: rgba(56, 189, 248, 0.34);
+  --sim-text: #e2e8f0;
+  --sim-text-muted: #94a3b8;
+  --sim-brand: #009999;
+  --sim-brand-bright: #14b8a6;
+  --sim-green: #10b981;
+  --sim-amber: #f59e0b;
+  --sim-red: #ef4444;
+  --sim-cyan: #38bdf8;
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--sim-text);
+}
+
+.plc-sim-root.is-embedded {
+  background: var(--sim-bg);
+  border: 1px solid var(--sim-border);
+  border-radius: 14px;
+  padding: 12px;
+  gap: 10px;
+  box-shadow: 0 10px 28px rgba(2, 6, 23, 0.32);
+}
+
+/* Light theme host outer framing while preserving high-contrast TIA instrument panels */
+:root[data-theme='light'] .plc-sim-workbench-header,
+[data-theme='light'] .plc-sim-workbench-header {
+  background: linear-gradient(135deg, #0f172a 0%, #132539 100%);
+  color: #f1f5f9;
+}
+
+/* ─── Workbench Header & Preset Switcher ─── */
+.plc-sim-workbench-header {
+  background: linear-gradient(135deg, rgba(17, 27, 46, 0.96) 0%, rgba(11, 35, 48, 0.96) 100%);
+  border: 1px solid rgba(20, 184, 166, 0.28);
+  border-radius: 16px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 12px 32px rgba(2, 6, 23, 0.35);
+}
+
+.plc-sim-wb-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.plc-sim-wb-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2dd4bf;
+  margin-bottom: 4px;
+}
+
+.plc-sim-wb-title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #f8fafc;
+}
+
+.plc-sim-wb-desc {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.plc-sim-preset-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.plc-sim-preset-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 13px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.72);
+  color: #cbd5e1;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.plc-sim-preset-tab:hover {
+  border-color: rgba(45, 212, 191, 0.5);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.plc-sim-preset-tab.active {
+  background: linear-gradient(135deg, rgba(0, 153, 153, 0.34), rgba(16, 185, 129, 0.24));
+  border-color: #14b8a6;
+  color: #ecfdf5;
+  box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.3), 0 4px 14px rgba(0, 153, 153, 0.25);
+}
+
+.plc-sim-preset-tab.is-sandbox-tab {
+  border-color: rgba(245, 158, 11, 0.42);
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.plc-sim-preset-tab.is-sandbox-tab.active {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.32), rgba(234, 88, 12, 0.24));
+  border-color: #f59e0b;
+  color: #fffbeb;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.38);
+}
+
+.plc-sim-tab-idx {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+/* ─── CPU Status & Scan Cycle Bar ─── */
+.plc-sim-cpu-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #132036 0%, #0e182a 100%);
+  border: 1px solid var(--sim-border);
+}
+
+.plc-sim-cpu-bar.is-compact {
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.plc-sim-cpu-id {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.plc-sim-cpu-leds {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 5px;
+  background: #070d18;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.plc-sim-cpu-led {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.plc-sim-cpu-led.led-run {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.plc-sim-cpu-led.led-stop {
+  background: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+}
+
+.plc-sim-cpu-led.led-off {
+  background: #334155;
+}
+
+.plc-sim-cpu-model {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.plc-sim-cpu-sub {
+  font-size: 11px;
+  color: #94a3b8;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.plc-sim-run-pill {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.plc-sim-run-pill.is-run {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+}
+
+.plc-sim-run-pill.is-stop {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+}
+
+.plc-sim-pipeline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: #94a3b8;
+  background: rgba(7, 13, 25, 0.72);
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.plc-sim-stage {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(30, 41, 59, 0.8);
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.plc-sim-stage.active {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.24);
+}
+
+.plc-sim-arrow {
+  color: #475569;
+  font-weight: 700;
+}
+
+.plc-sim-cycle-stat {
+  margin-left: 6px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(148, 163, 184, 0.2);
+  font-family: ui-monospace, Consolas, monospace;
+  color: #cbd5e1;
+}
+
+.plc-sim-cpu-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.plc-sim-ctrl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: #17243b;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.plc-sim-ctrl-btn:hover {
+  filter: brightness(1.14);
+}
+
+.plc-sim-ctrl-btn.btn-run {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #10b981;
+  color: #6ee7b7;
+}
+
+.plc-sim-ctrl-btn.btn-stop {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.65);
+  color: #fcd34d;
+}
+
+.plc-sim-ctrl-btn.btn-step {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #7dd3fc;
+}
+
+.plc-sim-interval-group {
+  display: inline-flex;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: #0a1222;
+}
+
+.plc-sim-interval-group button {
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: ui-monospace, Consolas, monospace;
+  background: transparent;
+  color: #94a3b8;
+  border: none;
+  border-right: 1px solid rgba(148, 163, 184, 0.14);
+  cursor: pointer;
+}
+
+.plc-sim-interval-group button:last-child {
+  border-right: none;
+}
+
+.plc-sim-interval-group button.active {
+  background: rgba(0, 153, 153, 0.35);
+  color: #5eead4;
+}
+
+/* ─── Teaching Guide Banner ─── */
+.plc-sim-guide-card {
+  background: var(--sim-surface);
+  border: 1px solid var(--sim-border);
+  border-radius: 12px;
+  padding: 12px 15px;
+}
+
+.plc-sim-guide-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.plc-sim-guide-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.plc-sim-guide-title h3 {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.plc-sim-stage-badge {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(0, 153, 153, 0.22);
+  border: 1px solid rgba(20, 184, 166, 0.45);
+  color: #5eead4;
+}
+
+.plc-sim-guide-body {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plc-sim-guide-summary {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #cbd5e1;
+}
+
+.plc-sim-guide-cols {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+  gap: 10px;
+}
+
+.plc-sim-guide-box {
+  background: rgba(9, 16, 29, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+
+.plc-sim-guide-box.is-interview {
+  border-color: rgba(245, 158, 11, 0.28);
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.plc-sim-guide-box p {
+  margin: 0;
+}
+
+.plc-sim-guide-box-hd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #38bdf8;
+  margin-bottom: 6px;
+}
+
+.plc-sim-guide-box.is-interview .plc-sim-guide-box-hd {
+  color: #fbbf24;
+}
+
+.plc-sim-guide-steps {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ─── Main Split Layout (Ladder + Field Panel) ─── */
+.plc-sim-main-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.95fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.plc-sim-ladder-pane {
+  background: var(--sim-surface);
+  border: 1px solid var(--sim-border);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plc-sim-pane-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.plc-sim-pane-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.plc-sim-pane-hint {
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+/* ─── Embedded Layout ─── */
+.plc-sim-embedded-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.plc-sim-embedded-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.plc-sim-embedded-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #121d31;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.plc-sim-embedded-tabs button.active {
+  background: rgba(0, 153, 153, 0.28);
+  border-color: #14b8a6;
+  color: #ecfdf5;
+}
+
+.plc-sim-embedded-cycle {
+  font-size: 11px;
+  font-family: ui-monospace, Consolas, monospace;
+  color: #94a3b8;
+}
+
+.plc-sim-embedded-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.9fr);
+  gap: 10px;
+  align-items: start;
+}
+
+/* ─── SVG Ladder Networks ─── */
+.plc-sim-ladder-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plc-sim-doublecoil-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.55);
+  color: #fef3c7;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.plc-sim-dc-icon {
+  color: #fbbf24;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.plc-sim-networks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plc-sim-network {
+  background: var(--sim-canvas);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 11px;
+  overflow: hidden;
+  transition: border-color 0.18s ease;
+}
+
+.plc-sim-network.is-energized {
+  border-color: rgba(16, 185, 129, 0.36);
+}
+
+.plc-sim-network.has-warning {
+  border-color: rgba(245, 158, 11, 0.55);
+}
+
+.plc-sim-network-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  background: rgba(17, 27, 46, 0.88);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.plc-sim-network-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.plc-sim-nw-badge {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(0, 153, 153, 0.28);
+  border: 1px solid rgba(20, 184, 166, 0.4);
+  color: #5eead4;
+  font-size: 11px;
+  font-weight: 800;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.plc-sim-nw-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plc-sim-network-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.plc-sim-pill-flow {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.plc-sim-pill-flow.on {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+}
+
+.plc-sim-pill-flow.off {
+  background: rgba(51, 65, 85, 0.45);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.plc-sim-pill-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: rgba(245, 158, 11, 0.2);
+  color: #fde68a;
+  border: 1px solid rgba(245, 158, 11, 0.5);
+}
+
+.plc-sim-network-comment {
+  padding: 5px 12px;
+  font-size: 11.5px;
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.55);
+  border-bottom: 1px dashed rgba(148, 163, 184, 0.12);
+}
+
+.plc-sim-svg-scroll {
+  overflow-x: auto;
+  padding: 4px 4px 6px;
+  background-image: radial-gradient(rgba(148, 163, 184, 0.1) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.plc-sim-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+}
+
+.plc-sim-svg-clickable {
+  cursor: pointer;
+}
+
+.plc-sim-svg-hit {
+  fill: transparent;
+  stroke: transparent;
+  transition: fill 0.14s ease, stroke 0.14s ease;
+}
+
+.plc-sim-svg-clickable:hover .plc-sim-svg-hit {
+  fill: rgba(56, 189, 248, 0.1);
+  stroke: rgba(56, 189, 248, 0.48);
+  stroke-width: 1.2;
+}
+
+@keyframes plcSimFlow {
+  from {
+    stroke-dashoffset: 20;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.plc-sim-flow-dash {
+  animation: plcSimFlow 0.7s linear infinite;
+}
+
+/* ─── Field Debug Panel ─── */
+.plc-sim-field-pane {
+  background: var(--sim-surface);
+  border: 1px solid var(--sim-border);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.plc-sim-field-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.plc-sim-field-panel.is-compact {
+  gap: 10px;
+}
+
+.plc-sim-panel-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plc-sim-sec-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.plc-sim-sec-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.plc-sim-mode-switch {
+  display: inline-flex;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: #09101d;
+}
+
+.plc-sim-mode-switch button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: transparent;
+  color: #94a3b8;
+  border: none;
+  cursor: pointer;
+}
+
+.plc-sim-mode-switch button.active {
+  background: rgba(0, 153, 153, 0.34);
+  color: #5eead4;
+}
+
+.plc-sim-io-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.plc-sim-input-btn {
+  position: relative;
+  text-align: left;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: linear-gradient(180deg, #162238 0%, #10192b 100%);
+  color: #e2e8f0;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  transition: transform 0.08s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.plc-sim-input-btn:hover {
+  border-color: rgba(56, 189, 248, 0.55);
+}
+
+.plc-sim-input-btn:active,
+.plc-sim-input-btn.is-actuated {
+  transform: translateY(1px);
+}
+
+.plc-sim-input-btn.is-high.tone-success {
+  border-color: rgba(16, 185, 129, 0.72);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.2), rgba(16, 25, 43, 0.95));
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.18);
+}
+
+.plc-sim-input-btn.is-high.tone-info {
+  border-color: rgba(56, 189, 248, 0.72);
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.2), rgba(16, 25, 43, 0.95));
+}
+
+.plc-sim-input-btn.is-low.tone-danger {
+  border-color: rgba(239, 68, 68, 0.85);
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.26), rgba(30, 15, 22, 0.95));
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.25);
+}
+
+.plc-sim-input-btn.is-actuated.tone-warn {
+  border-color: rgba(245, 158, 11, 0.8);
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.2), rgba(26, 20, 12, 0.95));
+}
+
+.plc-sim-io-top,
+.plc-sim-io-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+}
+
+.plc-sim-io-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.plc-sim-io-sym {
+  font-size: 10.5px;
+  color: #94a3b8;
+  font-family: ui-monospace, Consolas, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plc-sim-addr-chip {
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.plc-sim-addr-chip.area-i {
+  background: rgba(56, 189, 248, 0.16);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.plc-sim-addr-chip.area-q {
+  background: rgba(16, 185, 129, 0.16);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.plc-sim-addr-chip.area-m {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.32);
+}
+
+.plc-sim-phy-tag {
+  font-size: 9.5px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.plc-sim-phy-tag.nc {
+  background: rgba(244, 63, 94, 0.16);
+  color: #fda4af;
+}
+
+.plc-sim-phy-tag.no {
+  background: rgba(148, 163, 184, 0.16);
+  color: #cbd5e1;
+}
+
+.plc-sim-bit-badge {
+  font-size: 10px;
+  font-weight: 800;
+  font-family: ui-monospace, Consolas, monospace;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.plc-sim-bit-badge.bit-1 {
+  background: rgba(16, 185, 129, 0.24);
+  color: #6ee7b7;
+}
+
+.plc-sim-bit-badge.bit-0 {
+  background: rgba(51, 65, 85, 0.5);
+  color: #94a3b8;
+}
+
+.plc-sim-pii-pending {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px dashed rgba(245, 158, 11, 0.6);
+  border-radius: 5px;
+  padding: 2px 6px;
+  text-align: center;
+}
+
+/* ─── Analog 4-20mA Slider ─── */
+.plc-sim-analog-card {
+  background: #0b1324;
+  border: 1px solid rgba(56, 189, 248, 0.26);
+  border-radius: 10px;
+  padding: 10px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plc-sim-analog-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12.5px;
+}
+
+.plc-sim-analog-readouts {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
+}
+
+.plc-sim-mono-val {
+  color: #94a3b8;
+}
+
+.plc-sim-ma-pill {
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: rgba(245, 158, 11, 0.18);
+  color: #fcd34d;
+  font-weight: 700;
+}
+
+.plc-sim-pct-pill {
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: rgba(56, 189, 248, 0.2);
+  color: #7dd3fc;
+  font-weight: 800;
+}
+
+.plc-sim-slider {
+  width: 100%;
+  accent-color: #14b8a6;
+  cursor: pointer;
+}
+
+.plc-sim-slider-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #64748b;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.plc-sim-analog-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.plc-sim-preset-chip {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: #142035;
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.plc-sim-preset-chip:hover {
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+.plc-sim-preset-chip.tone-danger {
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+}
+
+.plc-sim-mini-toggle {
+  padding: 4px 9px;
+  border-radius: 7px;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.1);
+  color: #7dd3fc;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.plc-sim-mini-toggle.active {
+  background: rgba(16, 185, 129, 0.24);
+  border-color: #10b981;
+  color: #6ee7b7;
+}
+
+/* ─── Output LED Array ─── */
+.plc-sim-stop-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.18);
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.plc-sim-out-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.plc-sim-out-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: #0c1526;
+  transition: all 0.15s ease;
+}
+
+.plc-sim-out-row.is-on {
+  border-color: rgba(16, 185, 129, 0.55);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.plc-sim-out-row.is-on.is-alarm {
+  border-color: rgba(239, 68, 68, 0.68);
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.plc-sim-led-orb {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #172338;
+  color: #64748b;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.plc-sim-led-orb.on {
+  background: rgba(16, 185, 129, 0.22);
+  color: #34d399;
+  border-color: #10b981;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
+}
+
+.plc-sim-led-orb.on.alarm {
+  background: rgba(239, 68, 68, 0.26);
+  color: #f87171;
+  border-color: #ef4444;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.45);
+}
+
+.plc-sim-role-glyph {
+  font-weight: 900;
+  font-size: 14px;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.plc-sim-out-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.plc-sim-out-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.plc-sim-out-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+  flex: 1;
+}
+
+.plc-sim-out-desc {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* Output icon micro-animations */
+@keyframes plcSpinCw {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes plcSpinCcw {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+@keyframes plcBlink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes plcCylMove {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+}
+
+.plc-sim-spin-cw {
+  animation: plcSpinCw 1.6s linear infinite;
+}
+.plc-sim-spin-ccw {
+  animation: plcSpinCcw 1.6s linear infinite;
+}
+.plc-sim-blink {
+  animation: plcBlink 0.75s ease-in-out infinite;
+}
+.plc-sim-pulse {
+  animation: plcBlink 1.1s ease-in-out infinite;
+}
+.plc-sim-cyl-active {
+  animation: plcCylMove 0.9s ease-in-out infinite;
+}
+
+/* ─── Internal Memory Watch Grid ─── */
+.plc-sim-watch-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 5px;
+}
+
+.plc-sim-watch-cell {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: #0a1222;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  font-size: 11.5px;
+}
+
+.plc-sim-watch-name {
+  flex: 1;
+  font-family: ui-monospace, Consolas, monospace;
+  color: #cbd5e1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plc-sim-watch-val {
+  font-family: ui-monospace, Consolas, monospace;
+  font-weight: 700;
+}
+
+.plc-sim-watch-val.is-true {
+  color: #34d399;
+}
+.plc-sim-watch-val.is-false {
+  color: #64748b;
+}
+.plc-sim-watch-val.is-num {
+  color: #38bdf8;
+}
+
+/* ─── Bottom Synchronized Dock: Trace + SCL ─── */
+.plc-sim-bottom-dock {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.plc-sim-trace,
+.plc-sim-scl {
+  background: var(--sim-surface);
+  border: 1px solid var(--sim-border);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.plc-sim-dock-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.plc-sim-dock-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.plc-sim-trace-meta {
+  font-size: 11px;
+  font-weight: 500;
+  color: #94a3b8;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.plc-sim-dock-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.plc-sim-mini-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 7px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: #152238;
+  color: #cbd5e1;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.plc-sim-mini-btn:hover {
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+.plc-sim-mini-btn.is-warn {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.2);
+  color: #fde68a;
+}
+
+.plc-sim-mini-btn.is-active {
+  border-color: #14b8a6;
+  background: rgba(0, 153, 153, 0.26);
+  color: #5eead4;
+}
+
+.plc-sim-mini-btn.is-danger {
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+}
+
+.plc-sim-trace-body {
+  overflow-x: auto;
+}
+
+.plc-sim-trace-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  min-width: 480px;
+}
+
+/* ─── SCL Code Panel ─── */
+.plc-sim-scl-pre {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #080f1c;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  overflow: auto;
+  max-height: 290px;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.plc-sim-scl-line {
+  display: flex;
+  gap: 10px;
+}
+
+.plc-sim-scl-ln {
+  color: #475569;
+  user-select: none;
+  flex-shrink: 0;
+  width: 22px;
+  text-align: right;
+}
+
+.plc-sim-scl-code {
+  white-space: pre;
+  color: #e2e8f0;
+}
+
+.plc-scl-kw {
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+.plc-scl-sym {
+  color: #cbd5e1;
+  padding: 0 2px;
+  border-radius: 3px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.plc-scl-sym.is-live-true {
+  background: rgba(16, 185, 129, 0.25);
+  color: #6ee7b7;
+  font-weight: 700;
+}
+
+.plc-scl-time {
+  color: #c084fc;
+  font-weight: 700;
+}
+
+.plc-scl-op {
+  color: #f59e0b;
+  font-weight: 700;
+}
+
+.plc-scl-num {
+  color: #fbbf24;
+}
+
+.plc-scl-comment {
+  color: #64748b;
+  font-style: italic;
+}
+
+/* ─── Custom Ladder Sandbox Builder ─── */
+.plc-sim-sandbox-banner {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(17, 27, 46, 0.94));
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plc-sim-sb-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.plc-sim-sb-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #fde68a;
+  font-size: 13.5px;
+}
+
+.plc-sim-sb-tpls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.plc-sim-tpl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(15, 23, 42, 0.8);
+  color: #fde68a;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.plc-sim-tpl-btn.active {
+  background: rgba(245, 158, 11, 0.28);
+  border-color: #f59e0b;
+  color: #ffffff;
+}
+
+.plc-sim-sb-hint {
+  font-size: 12.5px;
+  color: #e2e8f0;
+}
+
+.plc-sim-builder-card {
+  background: var(--sim-surface);
+  border: 1px solid var(--sim-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plc-sim-builder-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.plc-sim-add-nw-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #14b8a6;
+  background: rgba(0, 153, 153, 0.25);
+  color: #5eead4;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.plc-sim-add-nw-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.plc-sim-builder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plc-sim-nw-editor {
+  background: #0a1222;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.plc-sim-nwe-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.plc-sim-nwe-title-input {
+  flex: 1;
+  min-width: 180px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #121e33;
+  color: #f1f5f9;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.plc-sim-nwe-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plc-sim-nwe-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.plc-sim-nwe-group.is-parallel {
+  padding-left: 12px;
+  border-left: 2px solid #14b8a6;
+}
+
+.plc-sim-nwe-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  min-width: 82px;
+}
+
+.plc-sim-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.plc-sim-elem-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 7px;
+  background: #142239;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+}
+
+.plc-sim-elem-pill select,
+.plc-sim-nwe-inline select,
+.plc-sim-pt-input input {
+  background: #0b1425;
+  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 5px;
+  padding: 3px 6px;
+  font-size: 11.5px;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.plc-sim-pill-del {
+  background: transparent;
+  border: none;
+  color: #f87171;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 3px;
+  line-height: 1;
+}
+
+.plc-sim-add-chip {
+  padding: 4px 9px;
+  border-radius: 7px;
+  border: 1px dashed rgba(56, 189, 248, 0.45);
+  background: transparent;
+  color: #7dd3fc;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.plc-sim-nwe-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.16);
+}
+
+.plc-sim-nwe-inline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.plc-sim-pt-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: #cbd5e1;
+}
+
+.plc-sim-pt-input input {
+  width: 68px;
+}
+
+/* ─── Responsive Breakpoints ─── */
+@media (max-width: 1120px) {
+  .plc-sim-main-split,
+  .plc-sim-bottom-dock,
+  .plc-sim-embedded-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .plc-sim-guide-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .plc-sim-io-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ─── Mobile & HD Diagram Enhancements for Simulator ─── */
+.plc-sim-ladder-scroll,
+.plc-sim-trace-canvas-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  .plc-sim-workbench-header {
+    padding: 14px !important;
+  }
+
+  .plc-sim-wb-title {
+    font-size: 1.3rem !important;
+  }
+
+  .plc-sim-preset-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+
+  .plc-sim-preset-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .plc-sim-preset-tab {
+    flex-shrink: 0;
+  }
+
+  .plc-sim-network-svg {
+    min-width: 620px;
+  }
+
+  .plc-sim-trace-svg {
+    min-width: 560px;
+  }
+
+  .plc-sim-cpu-bar {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 10px !important;
+    padding: 10px 12px !important;
+  }
+}

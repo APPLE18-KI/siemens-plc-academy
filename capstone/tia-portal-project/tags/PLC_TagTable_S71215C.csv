@@ -1,0 +1,35 @@
+Name,Path,Data Type,Logical Address,Comment,Hmi Visible,Hmi Accessible,Hmi Writeable
+"I_EStop_OK",01_Safety,Bool,%I0.0,双通道安全继电器急停正常反馈(NC触点:1=正常/0=拍下),True,True,False
+"I_SafetyDoor_OK",01_Safety,Bool,%I0.1,机台防护安全门磁锁闭合反馈(NC触点:1=闭合),True,True,False
+"I_AirPressure_OK",01_Safety,Bool,%I0.2,压缩空气压力开关正常(>=0.45MPa为1),True,True,False
+"I_Infeed_Sensor",02_Sensors,Bool,%I0.3,进料皮带阻挡工位光纤传感器(来料=1),True,True,False
+"I_CylClamp_Ret",02_Sensors,Bool,%I0.4,阻挡夹紧气缸退回到位磁簧开关,True,True,False
+"I_CylClamp_Adv",02_Sensors,Bool,%I0.5,阻挡夹紧气缸伸出到位磁簧开关,True,True,False
+"I_CylPress_Ret",02_Sensors,Bool,%I0.6,热压气缸上限位退回磁簧开关,True,True,False
+"I_CylPress_Adv",02_Sensors,Bool,%I0.7,热压气缸下压到位磁簧开关,True,True,False
+"I_Start_PB",03_Panel,Bool,%I1.0,操作台绿色启动物理按钮(NO),True,True,False
+"I_Stop_PB",03_Panel,Bool,%I1.1,操作台红色停止物理按钮(NC:1=未按下),True,True,False
+"I_Reset_PB",03_Panel,Bool,%I1.2,操作台蓝色复位物理按钮(NO),True,True,False
+"I_Vision_Done",04_CommsIO,Bool,%I1.3,智能视觉相机拍照与内阻分级完成信号,True,True,False
+"I_V90_AllHomed",04_CommsIO,Bool,%I1.4,V90 X/Z轴伺服均已完成原点回归标志,True,True,False
+"I_V90_InPos",04_CommsIO,Bool,%I1.5,V90 X/Z轴立体库伺服定位到位信号,True,True,False
+"Q_CylClamp_Adv",05_Actuators,Bool,%Q0.0,阻挡夹紧气缸伸出电磁阀(24VDC),True,True,False
+"Q_CylClamp_Ret",05_Actuators,Bool,%Q0.1,阻挡夹紧气缸退回电磁阀(24VDC),True,True,False
+"Q_CylPress_Adv",05_Actuators,Bool,%Q0.2,热压下压气缸伸出电磁阀(24VDC),True,True,False
+"Q_CylPress_Ret",05_Actuators,Bool,%Q0.3,热压下压气缸抬升电磁阀(24VDC),True,True,False
+"Q_Reject_Pusher",05_Actuators,Bool,%Q0.4,NG不良品气动剔除推杆电磁阀,True,True,False
+"Q_Vision_Trigger",05_Actuators,Bool,%Q0.5,智能视觉相机硬触发拍照输出,True,True,False
+"Q_Heater_SSR_PWM",06_Thermal,Bool,%Q0.6,热压腔固态继电器SSR脉宽调制输出(OB30驱动),True,True,False
+"Q_Tower_Green",07_Signals,Bool,%Q0.7,三色警示灯-绿灯(Execute运行中),True,True,False
+"Q_Tower_Amber",07_Signals,Bool,%Q1.0,三色警示灯-黄灯(Idle待机/Held暂停),True,True,False
+"Q_Tower_Red",07_Signals,Bool,%Q1.1,三色警示灯-红灯(Aborted急停/设备报警),True,True,False
+"AI_PressTemp_Raw",06_Thermal,Int,%IW96,ET200SP/SM1231 PT100热压腔温度通道(0.1°C/字),True,True,False
+"IW_Vision_Grade",04_CommsIO,Int,%IW100,智能视觉相机PROFINET输入分级码(1=A/2=B/9=NG),True,True,False
+"IW_G120_ZSW1",08_Drives,Word,%IW256,SINAMICS G120 标准报文1状态字ZSW1,True,True,False
+"IW_G120_NIST_A",08_Drives,Int,%IW258,SINAMICS G120 标准报文1实际转速NIST_A,True,True,False
+"QW_G120_STW1",08_Drives,Word,%QW256,SINAMICS G120 标准报文1控制字STW1,True,True,False
+"QW_G120_NSOLL_A",08_Drives,Int,%QW258,SINAMICS G120 标准报文1设定转速NSOLL_A,True,True,False
+"IW_V90X_ZSW1",08_Drives,Word,%IW272,SINAMICS V90 PN X轴报文3/111状态字,True,True,False
+"QW_V90X_STW1",08_Drives,Word,%QW272,SINAMICS V90 PN X轴报文3/111控制字,True,True,False
+"IW_V90Z_ZSW1",08_Drives,Word,%IW296,SINAMICS V90 PN Z轴报文3/111状态字,True,True,False
+"QW_V90Z_STW1",08_Drives,Word,%QW296,SINAMICS V90 PN Z轴报文3/111控制字,True,True,False

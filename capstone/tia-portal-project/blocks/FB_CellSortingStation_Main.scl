@@ -1,0 +1,292 @@
+// ============================================================================
+// 文件名: FB_CellSortingStation_Main.scl
+// 功能: 锂电模组柔性视觉分拣、热压固化与 4×3 立体库主控状态机 (PackML + GRAFCET)
+// 架构要点:
+//   - 外层采用 OMAC PackML 状态机管理启停、暂停保持与任意态安全急停
+//   - Execute 内层采用 GRAFCET 5 步顺序流 (Step 10..50)
+//   - 内嵌多重背景 (Multi-Instance) 气缸与 G120 变频器功能块，杜绝散落背景 DB
+//   - 包含 4×3 立体库空仓位最优检索算法 (自下而上、由近及远分配坐标)
+// ============================================================================
+
+FUNCTION_BLOCK "FB_CellSortingStation_Main"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT
+      iSafety_EStop_OK : Bool;                 // 急停回路正常 (%I0.0, NC=1)
+      iSafety_Door_OK : Bool;                  // 防护安全门闭合 (%I0.1, NC=1)
+      iAirPressure_OK : Bool;                  // 气源压力正常 (%I0.2)
+      iInfeed_Sensor : Bool;                   // 来料到位光电 (%I0.3)
+      iCylClamp_Ret : Bool;                    // 夹紧气缸退回限位 (%I0.4)
+      iCylClamp_Adv : Bool;                    // 夹紧气缸伸出限位 (%I0.5)
+      iCylPress_Ret : Bool;                    // 热压气缸上限位 (%I0.6)
+      iCylPress_Adv : Bool;                    // 热压气缸下压限位 (%I0.7)
+      iVision_Done : Bool;                     // 智能相机拍照判定完成
+      iVision_Grade : Int;                     // 视觉分级结果 (1=A级, 2=B级, 9=NG)
+      iVision_Barcode : String[20];            // 扫码枪电芯条码
+      iServo_Homed : Bool;                     // V90 X/Z 伺服回零完成标志
+      iServo_InPos : Bool;                     // V90 伺服定位到位
+      iThermal_TempReady : Bool;               // 来自 OB30 温控块的恒温就绪信号
+      iThermal_OverTemp : Bool;                // 来自 OB30 温控块的超温故障
+      iThermal_ActTemp : Real;                 // 当前热压腔温度 (°C)
+      iG120_ZSW1 : Word;                       // G120 状态字 (%IW256)
+      iG120_NIST_A : Int;                      // G120 实际转速 (%IW258)
+   END_VAR
+
+   VAR_OUTPUT
+      qCylClamp_Adv : Bool;                    // 夹紧气缸伸出阀 (%Q0.0)
+      qCylClamp_Ret : Bool;                    // 夹紧气缸退回阀 (%Q0.1)
+      qCylPress_Adv : Bool;                    // 热压气缸下压阀 (%Q0.2)
+      qCylPress_Ret : Bool;                    // 热压气缸抬升阀 (%Q0.3)
+      qRejectPusher : Bool;                    // NG 废品剔除气缸 (%Q0.4)
+      qVision_Trigger : Bool;                  // 触发视觉拍照脉冲 (%Q0.5)
+      qHeater_Enable : Bool;                   // 传给 OB30 温控块的加热许可
+      qServo_MoveCmd : Bool;                   // 触发 V90 X/Z 伺服定位启动
+      qServo_TargetX_mm : Real;                // 目标立体库 X 坐标 (mm)
+      qServo_TargetZ_mm : Real;                // 目标立体库 Z 坐标 (mm)
+      qG120_STW1 : Word;                       // 发往 G120 控制字 (%QW256)
+      qG120_NSOLL_A : Int;                     // 发往 G120 转速设定 (%QW258)
+      qTower_Green : Bool;                     // 三色灯-绿(运行)
+      qTower_Amber : Bool;                     // 三色灯-黄(待机/暂停)
+      qTower_Red : Bool;                       // 三色灯-红(急停/故障)
+   END_VAR
+
+   VAR_IN_OUT
+      ioRecipe : "UDT_ModuleRecipe";
+      ioSlots : Array[1..12] of "UDT_WarehouseSlot";
+      ioHMI : "UDT_StationHMI";
+   END_VAR
+
+   VAR
+      statPackML : Int := 0;                   // 0=Stopped, 10=Resetting, 20=Idle, 30=Starting, 40=Execute, 50=Held, 90=Aborted
+      statStep : Int := 0;                     // GRAFCET 生产步序 (10/20/30/40/50)
+      statTargetSlotIdx : Int := 0;            // 本件电芯分配到的空仓位索引 (1..12)
+      instCylClamp : "FB_Cylinder2Pos";        // 多重背景实例1：阻挡夹紧气缸
+      instCylPress : "FB_Cylinder2Pos";        // 多重背景实例2：热压下压气缸
+      instG120 : "FB_SinamicsDrive_Tel1";      // 多重背景实例3：进料皮带变频器
+      instTON_PressHold { InstructionName := 'TON_TIME'; LibVersion := '1.0' } : TON_TIME;
+      instTON_VisionTimeout { InstructionName := 'TON_TIME'; LibVersion := '1.0' } : TON_TIME;
+   END_VAR
+
+   VAR_TEMP
+      tempSafetyChainOK : Bool;
+      tempAutoClampAdv : Bool;
+      tempAutoPressAdv : Bool;
+      tempConveyorRun : Bool;
+      tempIdx : Int;
+      tempFoundSlot : Int;
+   END_VAR
+
+BEGIN
+   // ── 1. 全局安全链与报警汇总更新 ──────────────────────────────────────────
+   #tempSafetyChainOK := #iSafety_EStop_OK AND #iSafety_Door_OK AND #iAirPressure_OK;
+
+   #ioHMI.Alarms.EStopPressed := NOT #iSafety_EStop_OK;
+   #ioHMI.Alarms.SafetyDoorOpen := NOT #iSafety_Door_OK;
+   #ioHMI.Alarms.AirPressureLow := NOT #iAirPressure_OK;
+   #ioHMI.Alarms.Thermal_OverTemp := #iThermal_OverTemp;
+   #ioHMI.Alarms.V90_AxisNotHomed := NOT #iServo_Homed;
+
+   // 任何状态下拍下急停或发生超温：无条件瞬跳 PackML Aborted (90)
+   IF (NOT #iSafety_EStop_OK) OR #iThermal_OverTemp THEN
+       #statPackML := 90;
+       #statStep := 0;
+   END_IF;
+
+   // 默认复位单周期临时指令（状态所有权输出原则）
+   #tempAutoClampAdv := FALSE;
+   #tempAutoPressAdv := FALSE;
+   #tempConveyorRun := FALSE;
+   #qVision_Trigger := FALSE;
+   #qRejectPusher := FALSE;
+   #qServo_MoveCmd := FALSE;
+   #qHeater_Enable := FALSE;
+
+   // ── 2. 外层 OMAC PackML 状态机调度 ──────────────────────────────────────
+   CASE #statPackML OF
+       0:  // ── Stopped (停机稳态) ──
+           #statStep := 0;
+           IF #ioHMI.Cmd_Reset AND #tempSafetyChainOK THEN
+               #statPackML := 10;
+           END_IF;
+
+       10: // ── Resetting (回零自检中) ──
+           // 气缸全部退回原位，等待伺服回零完毕
+           IF #instCylClamp.qIsAtRet AND #instCylPress.qIsAtRet AND #iServo_Homed THEN
+               #statStep := 10;
+               #statPackML := 20;
+           END_IF;
+
+       20: // ── Idle (就绪待命) ──
+           #qHeater_Enable := TRUE; // 待机即维持腔体预热，缩短首件等待
+           IF #ioHMI.Cmd_Start AND #ioHMI.Cmd_AutoMode AND #tempSafetyChainOK THEN
+               #statPackML := 30;
+           ELSIF #ioHMI.Cmd_Stop THEN
+               #statPackML := 0;
+           END_IF;
+
+       30: // ── Starting (启动预检) ──
+           #qHeater_Enable := TRUE;
+           IF #instG120.qReady AND NOT #instG120.qDriveFault THEN
+               #statPackML := 40;
+           END_IF;
+
+       40: // ── Execute (自动运行：执行内部 GRAFCET 步序流) ──
+           #qHeater_Enable := TRUE;
+
+           IF #ioHMI.Cmd_Hold OR NOT #iSafety_Door_OK THEN
+               #statPackML := 50; // 切入暂停态，保持 #statStep 不丢失！
+           ELSIF #ioHMI.Cmd_Stop THEN
+               #statPackML := 0;
+           ELSE
+               CASE #statStep OF
+                   10: // Step 10: 皮带进料并等待电芯到位
+                       #tempConveyorRun := TRUE;
+                       IF #iInfeed_Sensor THEN
+                           #tempConveyorRun := FALSE;
+                           #tempAutoClampAdv := TRUE;
+                           IF #instCylClamp.qIsAtAdv THEN
+                               #statStep := 20;
+                           END_IF;
+                       END_IF;
+
+                   20: // Step 20: 触发扫码与视觉分级定位
+                       #tempAutoClampAdv := TRUE;
+                       #qVision_Trigger := TRUE;
+                       #instTON_VisionTimeout(IN := NOT #iVision_Done, PT := T#3s);
+                       IF #instTON_VisionTimeout.Q THEN
+                           #ioHMI.Alarms.Vision_CommTimeout := TRUE;
+                           #statPackML := 50;
+                       ELSIF #iVision_Done THEN
+                           #ioHMI.ActiveBarcode := #iVision_Barcode;
+                           IF #iVision_Grade = 9 THEN
+                               // NG 废品剔除分支
+                               #qRejectPusher := TRUE;
+                               #ioHMI.RejectCount := #ioHMI.RejectCount + 1;
+                               #ioHMI.TotalProduced := #ioHMI.TotalProduced + 1;
+                               #statStep := 10;
+                           ELSE
+                               // 检索 4×3 立体库首个可用空仓位（自下而上）
+                               #tempFoundSlot := 0;
+                               FOR #tempIdx := 1 TO 12 DO
+                                   IF (NOT #ioSlots[#tempIdx].Occupied) AND (NOT #ioSlots[#tempIdx].Locked) THEN
+                                       #tempFoundSlot := #tempIdx;
+                                       EXIT;
+                                   END_IF;
+                               END_FOR;
+
+                               IF #tempFoundSlot = 0 THEN
+                                   #ioHMI.Alarms.ASRS_WarehouseFull := TRUE;
+                                   #statPackML := 50; // 满仓暂停等待出库
+                               ELSE
+                                   #statTargetSlotIdx := #tempFoundSlot;
+                                   #statStep := 30;
+                               END_IF;
+                           END_IF;
+                       END_IF;
+
+                   30: // Step 30: 移载入热压模腔并校验恒温就绪
+                       #qServo_TargetX_mm := 250.0; // 热压工位 X 坐标
+                       #qServo_TargetZ_mm := 120.0; // 热压工位 Z 坐标
+                       #qServo_MoveCmd := TRUE;
+                       IF #iServo_InPos AND #iThermal_TempReady THEN
+                           #statStep := 40;
+                       END_IF;
+
+                   40: // Step 40: 热压下压恒温保压 (PID 85.0°C ±0.5°C)
+                       #tempAutoPressAdv := TRUE;
+                       #instTON_PressHold(
+                           IN := (#instCylPress.qIsAtAdv AND #iThermal_TempReady),
+                           PT := #ioRecipe.PressHoldTime
+                       );
+                       IF #instTON_PressHold.Q THEN
+                           #statStep := 50;
+                       END_IF;
+
+                   50: // Step 50: V90 伺服搬运至立体库目标仓位并写入掉电保持 DB
+                       IF #instCylPress.qIsAtRet AND (#statTargetSlotIdx >= 1) AND (#statTargetSlotIdx <= 12) THEN
+                           #qServo_TargetX_mm := #ioSlots[#statTargetSlotIdx].PosX_mm;
+                           #qServo_TargetZ_mm := #ioSlots[#statTargetSlotIdx].PosZ_mm;
+                           #qServo_MoveCmd := TRUE;
+
+                           IF #iServo_InPos THEN
+                               #ioSlots[#statTargetSlotIdx].Occupied := TRUE;
+                               #ioSlots[#statTargetSlotIdx].ModuleBarcode := #ioHMI.ActiveBarcode;
+                               #ioSlots[#statTargetSlotIdx].QualityGrade := #iVision_Grade;
+                               #ioSlots[#statTargetSlotIdx].PressPeakTemp_C := #iThermal_ActTemp;
+                               #ioHMI.GoodCount := #ioHMI.GoodCount + 1;
+                               #ioHMI.TotalProduced := #ioHMI.TotalProduced + 1;
+                               #statStep := 10; // 循环返回等待下一模组
+                           END_IF;
+                       END_IF;
+               END_CASE;
+           END_IF;
+
+       50: // ── Held (暂停态：保持 #statStep 不丢失，恢复后原地续跑) ──
+           #qHeater_Enable := TRUE;
+           IF #ioHMI.Cmd_Unhold AND #tempSafetyChainOK AND NOT #ioHMI.Alarms.ASRS_WarehouseFull THEN
+               #statPackML := 40;
+           ELSIF #ioHMI.Cmd_Stop THEN
+               #statPackML := 0;
+           END_IF;
+
+       90: // ── Aborted (急停锁定态：必须排除故障后 Clear → Stopped) ──
+           #qHeater_Enable := FALSE;
+           IF #ioHMI.Cmd_AlarmAck AND #iSafety_EStop_OK AND NOT #iThermal_OverTemp THEN
+               #statPackML := 0;
+           END_IF;
+   END_CASE;
+
+   // ── 3. 调用多重背景标准设备 FB (气缸 ×2 + SINAMICS G120 ×1) ───────────────
+   #instCylClamp(
+       iEnable := #tempSafetyChainOK,
+       iAutoMode := #ioHMI.Cmd_AutoMode,
+       iAutoCmd_Adv := #tempAutoClampAdv,
+       iAutoCmd_Ret := NOT #tempAutoClampAdv,
+       iInterlock_Adv := TRUE,
+       iInterlock_Ret := TRUE,
+       iSensor_Adv := #iCylClamp_Adv,
+       iSensor_Ret := #iCylClamp_Ret,
+       iAlarmReset := #ioHMI.Cmd_AlarmAck,
+       qValve_Adv => #qCylClamp_Adv,
+       qValve_Ret => #qCylClamp_Ret
+   );
+
+   #instCylPress(
+       iEnable := #tempSafetyChainOK,
+       iAutoMode := #ioHMI.Cmd_AutoMode,
+       iAutoCmd_Adv := #tempAutoPressAdv,
+       iAutoCmd_Ret := NOT #tempAutoPressAdv,
+       iInterlock_Adv := #iServo_InPos, // 机械防撞联锁：伺服到位且机械手避让后才允许下压！
+       iInterlock_Ret := TRUE,
+       iSensor_Adv := #iCylPress_Adv,
+       iSensor_Ret := #iCylPress_Ret,
+       iAlarmReset := #ioHMI.Cmd_AlarmAck,
+       qValve_Adv => #qCylPress_Adv,
+       qValve_Ret => #qCylPress_Ret
+   );
+
+   #instG120(
+       iSafety_OK := #tempSafetyChainOK,
+       iRunCmd := #tempConveyorRun,
+       iReverse := FALSE,
+       iFaultAck := #ioHMI.Cmd_AlarmAck,
+       iSpeedSetpoint_Pct := #ioRecipe.ConveyorSpeed_Pct,
+       iPZD_ZSW1 := #iG120_ZSW1,
+       iPZD_NIST_A := #iG120_NIST_A,
+       qPZD_STW1 => #qG120_STW1,
+       qPZD_NSOLL_A => #qG120_NSOLL_A
+   );
+
+   // 回写设备级故障与状态至 HMI
+   #ioHMI.Alarms.CylClamp_Timeout := (#instCylClamp.qFaultCode = 101) OR (#instCylClamp.qFaultCode = 102);
+   #ioHMI.Alarms.CylClamp_SensorConflict := (#instCylClamp.qFaultCode = 103);
+   #ioHMI.Alarms.CylPress_Timeout := #instCylPress.qFault;
+   #ioHMI.Alarms.G120_DriveFault := #instG120.qDriveFault;
+   #ioHMI.PackML_State := #statPackML;
+   #ioHMI.Grafcet_Step := #statStep;
+
+   // 三色警示灯驱动
+   #qTower_Green := (#statPackML = 40);
+   #qTower_Amber := (#statPackML = 20) OR (#statPackML = 50);
+   #qTower_Red   := (#statPackML = 90) OR #instCylClamp.qFault OR #instCylPress.qFault OR #instG120.qDriveFault;
+END_FUNCTION_BLOCK
