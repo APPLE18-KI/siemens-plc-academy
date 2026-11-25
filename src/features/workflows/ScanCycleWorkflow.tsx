@@ -11,6 +11,7 @@ import {
   StepForward,
   Zap,
 } from 'lucide-react';
+import { LandscapeSvgStage } from '../../components/LandscapeSvgStage';
 import './workflows.css';
 
 type ScanSubStage =
@@ -490,84 +491,162 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
             </div>
 
             {/* Interactive SVG Loop Ring */}
-            <div className="wf-svg-wrap" style={{ marginBottom: 12 }}>
-              <svg viewBox="0 0 640 132" width="100%" style={{ display: 'block', minWidth: 480 }}>
-                <defs>
-                  <marker id="wfArr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-                    <path d="M 0 1 L 10 5 L 0 9 z" fill="#14b8a6" />
-                  </marker>
-                  <marker id="wfArrGray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-                    <path d="M 0 1 L 10 5 L 0 9 z" fill="#475569" />
-                  </marker>
-                </defs>
+            <div style={{ marginBottom: 12 }}>
+              <LandscapeSvgStage
+                title="S7-1200 PLC 五阶段循环扫描周期闭环数据流"
+                subtitle={`Cycle #${cycle} · ${mode === 'double-coil' ? '双线圈覆盖事故模式' : '标准单线圈模式'}`}
+                scopeClassName="wf-root"
+                fitMode="contain"
+                inlineMinWidth={540}
+                inlinePadding
+                hint="⇄ 点击阶段节点可跳转 · 推荐横屏全幅观察 PII/OB1/PIQ 闭环"
+                landscapeFooterLabel="DI 端子与映像区"
+                controls={
+                  <>
+                    <button type="button" className="lss-ctrl-btn is-primary" onClick={handleStep}>
+                      <StepForward size={12} />
+                      <span>单步推进</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`lss-ctrl-btn ${autoPlay ? 'is-warn' : ''}`}
+                      onClick={() => setAutoPlay((p) => !p)}
+                    >
+                      {autoPlay ? <Pause size={12} /> : <Play size={12} />}
+                      <span>{autoPlay ? '暂停播放' : '自动播放'}</span>
+                    </button>
+                    <button type="button" className="lss-ctrl-btn is-danger" onClick={triggerDoubleCoilDemo}>
+                      <Zap size={12} />
+                      <span>复现双线圈</span>
+                    </button>
+                    <button type="button" className="lss-ctrl-btn" onClick={resetLab}>
+                      <RotateCcw size={12} />
+                      <span>重置</span>
+                    </button>
+                  </>
+                }
+                landscapeFooter={
+                  <>
+                    <button
+                      type="button"
+                      className={`lss-ctrl-btn ${fieldIn.startPb ? 'is-success' : ''}`}
+                      onClick={() => toggleFieldInput('startPb', '%I0.0', 'Start_PB')}
+                    >
+                      %I0.0 启动: {fieldIn.startPb ? '1' : '0'}
+                    </button>
+                    <button
+                      type="button"
+                      className={`lss-ctrl-btn ${fieldIn.autoReq ? 'is-success' : ''}`}
+                      onClick={() => toggleFieldInput('autoReq', '%I0.1', 'Auto_Req')}
+                    >
+                      %I0.1 自动: {fieldIn.autoReq ? '1' : '0'}
+                    </button>
+                    <button
+                      type="button"
+                      className={`lss-ctrl-btn ${fieldIn.safetyOk ? 'is-success' : ''}`}
+                      onClick={() => toggleFieldInput('safetyOk', '%I0.2', 'Safety_OK')}
+                    >
+                      %I0.2 安全门: {fieldIn.safetyOk ? '1' : '0'}
+                    </button>
+                    <span className={`wf-badge ${overwrittenInScan ? 'red' : piqQ00 ? 'green' : 'teal'}`}>
+                      PIQ %Q0.0: {overwrittenInScan ? '被覆写 0!' : piqQ00 ? '1' : '0'}
+                    </span>
+                    <span className={`wf-badge ${physQ00 ? 'green' : 'amber'}`}>
+                      物理 DO %Q0.0: {physQ00 ? '吸合' : '断开'}
+                    </span>
+                  </>
+                }
+              >
+                <svg viewBox="0 0 640 132" width="100%" style={{ display: 'block', minWidth: 480 }}>
+                  <defs>
+                    <marker id="wfArr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                      <path d="M 0 1 L 10 5 L 0 9 z" fill="#14b8a6" />
+                    </marker>
+                    <marker id="wfArrGray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                      <path d="M 0 1 L 10 5 L 0 9 z" fill="#475569" />
+                    </marker>
+                  </defs>
 
-                {/* Connectors */}
-                {[
-                  { x1: 112, x2: 142, active: currentSubStage === 'pii-latch' },
-                  { x1: 238, x2: 268, active: currentSubStage === 'ob1-net1' || currentSubStage === 'ob1-net2' },
-                  { x1: 368, x2: 398, active: currentSubStage === 'sys-comms' },
-                  { x1: 494, x2: 524, active: currentSubStage === 'piq-write' },
-                ].map((c, idx) => (
-                  <line
-                    key={idx}
-                    x1={c.x1}
-                    y1={54}
-                    x2={c.x2}
-                    y2={54}
-                    stroke={c.active ? '#14b8a6' : '#475569'}
-                    strokeWidth={c.active ? 3 : 2}
-                    markerEnd={c.active ? 'url(#wfArr)' : 'url(#wfArrGray)'}
-                  />
-                ))}
-
-                {/* Return feedback loop arrow */}
-                <path
-                  d="M 578 86 L 578 116 L 62 116 L 62 88"
-                  fill="none"
-                  stroke={currentSubStage === 'field-change' ? '#14b8a6' : '#334155'}
-                  strokeWidth={currentSubStage === 'field-change' ? 2.5 : 1.5}
-                  strokeDasharray="6 4"
-                  markerEnd={currentSubStage === 'field-change' ? 'url(#wfArr)' : 'url(#wfArrGray)'}
-                />
-                <text x="320" y="110" textAnchor="middle" fill="#94a3b8" fontSize="11" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
-                  下一扫描周期开始 (Cyclic Scan Loop · 每 1~5ms 周而复始)
-                </text>
-
-                {/* 5 SVG Nodes */}
-                {[
-                  { x: 14, w: 98, label: '① 物理 DI', sub: '%I0.0~%I0.2', active: currentSubStage === 'field-change', color: '#38bdf8' },
-                  { x: 144, w: 94, label: '② PII 锁存', sub: '输入映像区', active: currentSubStage === 'pii-latch', color: '#14b8a6' },
-                  {
-                    x: 270,
-                    w: 98,
-                    label: currentSubStage === 'ob1-net2' ? '③ OB1 Net2' : '③ OB1 Net1',
-                    sub: mode === 'double-coil' ? '双线圈覆盖!' : '顺序求值',
-                    active: currentSubStage === 'ob1-net1' || currentSubStage === 'ob1-net2',
-                    color: overwrittenInScan ? '#ef4444' : '#10b981',
-                  },
-                  { x: 400, w: 94, label: '④ 系统通信', sub: 'HMI/DB 刷新', active: currentSubStage === 'sys-comms', color: '#f59e0b' },
-                  { x: 526, w: 100, label: '⑤ PIQ→DO', sub: physQ00 ? '%Q0.0=吸合' : '%Q0.0=断开', active: currentSubStage === 'piq-write', color: physQ00 ? '#10b981' : '#94a3b8' },
-                ].map((n, idx) => (
-                  <g key={idx}>
-                    <rect
-                      x={n.x}
-                      y={22}
-                      width={n.w}
-                      height={62}
-                      rx={10}
-                      fill={n.active ? 'rgba(0,153,153,0.22)' : '#111827'}
-                      stroke={n.active ? n.color : '#334155'}
-                      strokeWidth={n.active ? 2.5 : 1.2}
+                  {/* Connectors */}
+                  {[
+                    { x1: 112, x2: 142, active: currentSubStage === 'pii-latch' },
+                    { x1: 238, x2: 268, active: currentSubStage === 'ob1-net1' || currentSubStage === 'ob1-net2' },
+                    { x1: 368, x2: 398, active: currentSubStage === 'sys-comms' },
+                    { x1: 494, x2: 524, active: currentSubStage === 'piq-write' },
+                  ].map((c, idx) => (
+                    <line
+                      key={idx}
+                      x1={c.x1}
+                      y1={54}
+                      x2={c.x2}
+                      y2={54}
+                      stroke={c.active ? '#14b8a6' : '#475569'}
+                      strokeWidth={c.active ? 3 : 2}
+                      markerEnd={c.active ? 'url(#wfArr)' : 'url(#wfArrGray)'}
                     />
-                    <text x={n.x + n.w / 2} y={48} textAnchor="middle" fill="#f8fafc" fontSize="12" fontWeight="700">
-                      {n.label}
-                    </text>
-                    <text x={n.x + n.w / 2} y={68} textAnchor="middle" fill={n.active ? n.color : '#94a3b8'} fontSize="10.5" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
-                      {n.sub}
-                    </text>
-                  </g>
-                ))}
-              </svg>
+                  ))}
+
+                  {/* Return feedback loop arrow */}
+                  <path
+                    d="M 578 86 L 578 116 L 62 116 L 62 88"
+                    fill="none"
+                    stroke={currentSubStage === 'field-change' ? '#14b8a6' : '#334155'}
+                    strokeWidth={currentSubStage === 'field-change' ? 2.5 : 1.5}
+                    strokeDasharray="6 4"
+                    markerEnd={currentSubStage === 'field-change' ? 'url(#wfArr)' : 'url(#wfArrGray)'}
+                  />
+                  <text x="320" y="110" textAnchor="middle" fill="#94a3b8" fontSize="11" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                    下一扫描周期开始 (Cyclic Scan Loop · 每 1~5ms 周而复始)
+                  </text>
+
+                  {/* 5 SVG Nodes */}
+                  {[
+                    { x: 14, w: 98, stage: 'field-change' as ScanSubStage, label: '① 物理 DI', sub: '%I0.0~%I0.2', active: currentSubStage === 'field-change', color: '#38bdf8' },
+                    { x: 144, w: 94, stage: 'pii-latch' as ScanSubStage, label: '② PII 锁存', sub: '输入映像区', active: currentSubStage === 'pii-latch', color: '#14b8a6' },
+                    {
+                      x: 270,
+                      w: 98,
+                      stage: 'ob1-net1' as ScanSubStage,
+                      label: currentSubStage === 'ob1-net2' ? '③ OB1 Net2' : '③ OB1 Net1',
+                      sub: mode === 'double-coil' ? '双线圈覆盖!' : '顺序求值',
+                      active: currentSubStage === 'ob1-net1' || currentSubStage === 'ob1-net2',
+                      color: overwrittenInScan ? '#ef4444' : '#10b981',
+                    },
+                    { x: 400, w: 94, stage: 'sys-comms' as ScanSubStage, label: '④ 系统通信', sub: 'HMI/DB 刷新', active: currentSubStage === 'sys-comms', color: '#f59e0b' },
+                    { x: 526, w: 100, stage: 'piq-write' as ScanSubStage, label: '⑤ PIQ→DO', sub: physQ00 ? '%Q0.0=吸合' : '%Q0.0=断开', active: currentSubStage === 'piq-write', color: physQ00 ? '#10b981' : '#94a3b8' },
+                  ].map((n, idx) => (
+                    <g
+                      key={idx}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => {
+                        const targetIdx = STAGE_SEQUENCE.indexOf(n.stage);
+                        if (targetIdx >= 0) {
+                          setAutoPlay(false);
+                          setStageIdx(targetIdx);
+                          executeSubStage(targetIdx, cycle, mode);
+                        }
+                      }}
+                    >
+                      <rect
+                        x={n.x}
+                        y={22}
+                        width={n.w}
+                        height={62}
+                        rx={10}
+                        fill={n.active ? 'rgba(0,153,153,0.22)' : '#111827'}
+                        stroke={n.active ? n.color : '#334155'}
+                        strokeWidth={n.active ? 2.5 : 1.2}
+                      />
+                      <text x={n.x + n.w / 2} y={48} textAnchor="middle" fill="#f8fafc" fontSize="12" fontWeight="700">
+                        {n.label}
+                      </text>
+                      <text x={n.x + n.w / 2} y={68} textAnchor="middle" fill={n.active ? n.color : '#94a3b8'} fontSize="10.5" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                        {n.sub}
+                      </text>
+                    </g>
+                  ))}
+                </svg>
+              </LandscapeSvgStage>
             </div>
 
             {/* 3-Column Memory Comparison */}

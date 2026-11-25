@@ -10,19 +10,19 @@ interface CalloutBlockProps {
 
 const TONE_CONFIG = {
   tip: {
-    label: '工程技巧 · TIP',
+    label: '小技巧',
     Icon: Lightbulb,
   },
   warn: {
-    label: '调试注意 · WARN',
+    label: '注意',
     Icon: AlertTriangle,
   },
   info: {
-    label: '原理说明 · INFO',
+    label: '说明',
     Icon: Info,
   },
   danger: {
-    label: '安全红线 · DANGER',
+    label: '安全',
     Icon: ShieldAlert,
   },
 } as const;
@@ -36,7 +36,7 @@ export const CalloutBlock: React.FC<CalloutBlockProps> = ({ tone, title, md }) =
       <div className="callout-header">
         <Icon size={17} style={{ flexShrink: 0 }} />
         <span className="callout-tone-tag">{cfg.label}</span>
-        {title && <span className="callout-title">· {title}</span>}
+        {title && <span className="callout-title">{title}</span>}
       </div>
       <div className="callout-body">
         <MarkdownRenderer content={md} />

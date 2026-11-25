@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Camera, CheckCircle, PlayCircle, StopCircle } from 'lucide-react';
-import type { PlcRuntime } from '../../types/plc';
+import type { PlcRuntime, ScanMetrics, TagValue } from '../../types/plc';
 import {
   TwinShell,
   type FaultSwitchItem,
@@ -33,7 +33,10 @@ const STATION_CYL1_X = 638;
 const STATION_CYL2_X = 796;
 const STATION_END_X = 930;
 
-export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded = false }) => {
+export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({
+  runtime,
+  embedded = false,
+}) => {
   const [mode, setMode] = useState<TwinControlMode>('auto');
   const [paused, setPaused] = useState(false);
   const [lineRunning, setLineRunning] = useState(true);
@@ -69,13 +72,38 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
     i02Infeed: false,
     i03Metal: false,
     i04Vision: false,
+    i10CamIsDefect: false,
     i05Cyl1Ret: true,
     i06Cyl1Ext: false,
     i07EndCount: false,
     q00Belt: true,
     q01Cyl1: false,
     q02Cyl2: false,
+    q03Alarm: false,
+    effectiveBeltHz: 35,
+    vfdRawQw80: 19354,
   });
+
+  // External PLC runtime coupling refs (PLC -> Plant & Plant -> PLC)
+  const extOutRef = useRef({
+    vfdRun: true,
+    solCyl1: false,
+    solCyl2: false,
+    hlAlarm: false,
+    vfdFreqRef: 19354,
+  });
+  const lastSentInputsRef = useRef<Record<string, TagValue>>({});
+  const prevCycleRef = useRef(0);
+  const isExtAuto = Boolean(runtime) && mode === 'auto';
+
+  const syncPlantInput = (rt: PlcRuntime, name: string, nextVal: TagValue) => {
+    if (lastSentInputsRef.current[name] !== nextVal) {
+      lastSentInputsRef.current[name] = nextVal;
+      if (rt.getTag(name) !== nextVal) {
+        rt.setTag(name, nextVal);
+      }
+    }
+  };
 
   // Refs for smooth 25Hz deterministic physics loop without stale closures
   const stateRef = useRef({
@@ -116,6 +144,69 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
     stateRef.current.alarmCode = alarmCode;
   }, [alarmCode]);
 
+  // 1. Subscribe to external PlcRuntime outputs (PLC -> Plant)
+  useEffect(() => {
+    if (!runtime) {
+      lastSentInputsRef.current = {};
+      return;
+    }
+
+    lastSentInputsRef.current = {};
+    prevCycleRef.current = runtime.getMetrics?.().cycleCount ?? 0;
+
+    const readOutputs = (tags: Record<string, TagValue>, metrics?: ScanMetrics) => {
+      extOutRef.current = {
+        vfdRun: Boolean(tags['VFD_Run']),
+        solCyl1: Boolean(tags['Sol_Cyl1']),
+        solCyl2: Boolean(tags['Sol_Cyl2']),
+        hlAlarm: Boolean(tags['HL_Alarm']),
+        vfdFreqRef: Number(tags['VFD_FreqRef'] ?? 0),
+      };
+      if (metrics) {
+        if (metrics.cycleCount < prevCycleRef.current) {
+          lastSentInputsRef.current = {};
+        }
+        prevCycleRef.current = metrics.cycleCount;
+      }
+    };
+
+    readOutputs(runtime.tags, runtime.getMetrics?.());
+    return runtime.subscribe(readOutputs);
+  }, [runtime]);
+
+  // Reset cached sent inputs when entering external auto mode so all field sensors sync immediately
+  useEffect(() => {
+    if (!runtime || mode !== 'auto') {
+      lastSentInputsRef.current = {};
+      return;
+    }
+    lastSentInputsRef.current = {};
+    const s = stateRef.current;
+    const visionPart = s.parts.find(
+      (p) => !p.ejectedBy && Math.abs(p.x - STATION_VISION_X) < 24
+    );
+    syncPlantInput(runtime, 'EStop_OK', !faultEStop);
+    syncPlantInput(
+      runtime,
+      'PE_Infeed',
+      faultPhotoStuck || s.parts.some((p) => !p.ejectedBy && Math.abs(p.x - STATION_INFEED_X) < 26)
+    );
+    syncPlantInput(
+      runtime,
+      'Prox_Metal',
+      s.parts.some((p) => !p.ejectedBy && p.kind === 'metal' && Math.abs(p.x - STATION_METAL_X) < 26)
+    );
+    syncPlantInput(runtime, 'Cam_Trig', Boolean(visionPart));
+    syncPlantInput(runtime, 'Cam_IsDefect', Boolean(visionPart && visionPart.kind === 'defect'));
+    syncPlantInput(runtime, 'Cyl1_Ret', s.cyl1Stroke <= 0.05);
+    syncPlantInput(runtime, 'Cyl1_Ext', s.cyl1Stroke >= 0.95);
+    syncPlantInput(
+      runtime,
+      'PE_EndBox',
+      s.parts.some((p) => !p.ejectedBy && Math.abs(p.x - STATION_END_X) < 22)
+    );
+  }, [runtime, mode, faultEStop, faultPhotoStuck]);
+
   // Main 40ms Industrial Simulation + PLC Scan Loop
   useEffect(() => {
     if (paused) return;
@@ -125,12 +216,17 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
     const timer = window.setInterval(() => {
       const s = stateRef.current;
 
-      // 1. Check immediate E-Stop safety interlock
-      if (faultEStop) {
-        if (s.alarmCode !== 'ESTOP') {
-          s.alarmCode = 'ESTOP';
-          setAlarmCode('ESTOP');
+      // 1. Check immediate E-Stop safety interlock (built-in PLC only; external PLC handles EStop_OK itself)
+      if (!isExtAuto) {
+        if (faultEStop) {
+          if (s.alarmCode !== 'ESTOP') {
+            s.alarmCode = 'ESTOP';
+            setAlarmCode('ESTOP');
+          }
         }
+      } else if (s.alarmCode !== null) {
+        s.alarmCode = null;
+        setAlarmCode(null);
       }
 
       // 2. Read current field sensors from physical workpiece positions
@@ -143,10 +239,11 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
         (p) => !p.ejectedBy && Math.abs(p.x - STATION_VISION_X) < 24
       );
       const i04Vision = Boolean(visionPart);
+      const i10CamIsDefect = Boolean(visionPart && visionPart.kind === 'defect');
       const i07EndCount = s.parts.some((p) => !p.ejectedBy && Math.abs(p.x - STATION_END_X) < 22);
 
-      // Photoelectric stuck / jam watchdog (3.0s)
-      if (i02Infeed && mode === 'auto' && lineRunning && !s.alarmCode) {
+      // Photoelectric stuck / jam watchdog (3.0s, built-in PLC only)
+      if (!runtime && i02Infeed && mode === 'auto' && lineRunning && !s.alarmCode) {
         s.photoStuckMs += dtMs;
         if (s.photoStuckMs >= 3000) {
           s.alarmCode = 'INFEED_JAM';
@@ -173,15 +270,32 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
         if (s.visionFlashMs <= 0) setVisionFlash(null);
       }
 
-      // 3. Determine PLC Outputs (%Q0.0 Belt, %Q0.1 Cyl1, %Q0.2 Cyl2)
+      // 3. Determine PLC Outputs (%Q0.0 Belt, %Q0.1 Cyl1, %Q0.2 Cyl2, %Q0.3 Alarm, %QW80 Speed)
       let q00Belt = false;
       let q01Cyl1 = false;
       let q02Cyl2 = false;
+      let q03Alarm = false;
+      let effectiveBeltHz = beltHz;
+      let effectiveQw80 = 0;
 
       if (mode === 'manual') {
         q00Belt = !faultEStop && manualQ.belt;
         q01Cyl1 = !faultEStop && manualQ.cyl1;
         q02Cyl2 = !faultEStop && manualQ.cyl2;
+        q03Alarm = faultEStop;
+        effectiveBeltHz = beltHz;
+        effectiveQw80 = q00Belt ? Math.round((beltHz / 50) * 27648) : 0;
+      } else if (runtime) {
+        // External TIA Portal PLC runtime drives all actuators directly (PLC -> Plant)
+        const ext = extOutRef.current;
+        q00Belt = ext.vfdRun;
+        q01Cyl1 = ext.solCyl1;
+        q02Cyl2 = ext.solCyl2;
+        q03Alarm = ext.hlAlarm;
+        const rawFreq = Number.isFinite(ext.vfdFreqRef) ? ext.vfdFreqRef : 0;
+        effectiveBeltHz = rawFreq > 0 ? Math.min(60, (rawFreq / 27648) * 50) : beltHz;
+        effectiveQw80 =
+          rawFreq > 0 ? Math.round(rawFreq) : q00Belt ? Math.round((beltHz / 50) * 27648) : 0;
       } else {
         const canRun = lineRunning && !faultEStop && s.alarmCode === null;
         q00Belt = canRun;
@@ -212,6 +326,9 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
           q02Cyl2 = true;
           s.cyl2CmdTimerMs -= dtMs;
         }
+        q03Alarm = s.alarmCode !== null;
+        effectiveBeltHz = beltHz;
+        effectiveQw80 = q00Belt ? Math.round((beltHz / 50) * 27648) : 0;
       }
 
       // 4. Pneumatic Cylinder Kinematics & Watchdog Fault (%I0.5 / %I0.6)
@@ -232,8 +349,8 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
       const i05Cyl1Ret = s.cyl1Stroke <= 0.05;
       const i06Cyl1Ext = s.cyl1Stroke >= 0.95;
 
-      // Cylinder 1 Extend Timeout Watchdog (1.2s in Auto when jammed!)
-      if (q01Cyl1 && !i06Cyl1Ext && mode === 'auto' && !s.alarmCode) {
+      // Cylinder 1 Extend Timeout Watchdog (1.2s in Auto when jammed; built-in PLC only)
+      if (!runtime && q01Cyl1 && !i06Cyl1Ext && mode === 'auto' && !s.alarmCode) {
         // Keep solenoid commanded while jammed so watchdog clearly hits timeout
         if (faultCyl1Jam) {
           s.cyl1CmdTimerMs = Math.max(s.cyl1CmdTimerMs, 200);
@@ -248,7 +365,7 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
       }
 
       // 5. Move conveyor belt & workpieces
-      const pxPerSec = q00Belt ? (beltHz / 50) * 185 : 0;
+      const pxPerSec = q00Belt ? (effectiveBeltHz / 50) * 185 : 0;
       if (pxPerSec > 0) {
         setBeltOffset((o) => (o + pxPerSec * dtSec) % 36);
       }
@@ -327,6 +444,18 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
         }
       }
 
+      // 7. Write physical sensor states back to external PlcRuntime (Plant -> PLC)
+      if (runtime && mode === 'auto') {
+        syncPlantInput(runtime, 'EStop_OK', !faultEStop);
+        syncPlantInput(runtime, 'PE_Infeed', i02Infeed);
+        syncPlantInput(runtime, 'Prox_Metal', i03Metal);
+        syncPlantInput(runtime, 'Cam_Trig', i04Vision);
+        syncPlantInput(runtime, 'Cam_IsDefect', i10CamIsDefect);
+        syncPlantInput(runtime, 'Cyl1_Ret', i05Cyl1Ret);
+        syncPlantInput(runtime, 'Cyl1_Ext', i06Cyl1Ext);
+        syncPlantInput(runtime, 'PE_EndBox', i07EndCount);
+      }
+
       setParts([...s.parts]);
       setCyl1Stroke(s.cyl1Stroke);
       setCyl2Stroke(s.cyl2Stroke);
@@ -334,17 +463,34 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
         i02Infeed,
         i03Metal,
         i04Vision,
+        i10CamIsDefect,
         i05Cyl1Ret,
         i06Cyl1Ext,
         i07EndCount,
         q00Belt,
         q01Cyl1,
         q02Cyl2,
+        q03Alarm,
+        effectiveBeltHz,
+        vfdRawQw80: effectiveQw80,
       });
     }, dtMs);
 
     return () => window.clearInterval(timer);
-  }, [paused, mode, lineRunning, autoFeed, beltHz, feedIntervalSec, faultCyl1Jam, faultEStop, faultPhotoStuck, manualQ]);
+  }, [
+    paused,
+    runtime,
+    isExtAuto,
+    mode,
+    lineRunning,
+    autoFeed,
+    beltHz,
+    feedIntervalSec,
+    faultCyl1Jam,
+    faultEStop,
+    faultPhotoStuck,
+    manualQ,
+  ]);
 
   const handleResetFault = () => {
     if (faultEStop || faultCyl1Jam || faultPhotoStuck) {
@@ -371,6 +517,7 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
     setBeltHz(35);
     setFeedIntervalSec(2.8);
     setCounts({ total: 0, qualified: 0, metal: 0, defect: 0 });
+    lastSentInputsRef.current = {};
     stateRef.current = {
       nextId: 2,
       feedAccumMs: 0,
@@ -387,7 +534,31 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
     setParts([...stateRef.current.parts]);
   };
 
+  const alarmActive = Boolean(alarmCode) || ioState.q03Alarm;
+
   const banner = useMemo(() => {
+    if (isExtAuto) {
+      if (faultEStop) {
+        return {
+          tone: 'danger' as const,
+          text: '🔗 外部博途 PLC 受控模式 · 现场急停已拍下 (%I0.1 EStop_OK = FALSE)：已同步至外部 PLC 输入映像区，验证您的博途 SCL 程序是否正确停线并点亮报警灯！',
+          actionLabel: '旋起急停按钮',
+          onAction: () => setFaultEStop(false),
+        };
+      }
+      if (ioState.q03Alarm) {
+        return {
+          tone: 'danger' as const,
+          text: '🔗 外部博途 PLC 受控模式 · 声光报警红灯 (%Q0.3 HL_Alarm = TRUE) 已由博途 SCL 程序触发点亮！请检查卡缸/急停或复位 PLC 报警标志。',
+          actionLabel: faultCyl1Jam || faultPhotoStuck ? '排除现场机械故障' : undefined,
+          onAction: faultCyl1Jam || faultPhotoStuck ? handleResetFault : undefined,
+        };
+      }
+      return {
+        tone: 'ok' as const,
+        text: '🔗 已连接外部博途 PLC 程序受控模式：光电、金属接近、视觉次品判级与气缸磁簧实时回写 %I0.1~%I1.0，变频皮带与双分拣气缸完全由博途 SCL 输出 %Q0.0~%Q0.3 / %QW80 驱动！',
+      };
+    }
     if (alarmCode === 'ESTOP') {
       return {
         tone: 'danger' as const,
@@ -413,9 +584,14 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
       };
     }
     return undefined;
-  }, [alarmCode]);
+  }, [isExtAuto, faultEStop, faultCyl1Jam, faultPhotoStuck, ioState.q03Alarm, alarmCode]);
 
-  const vfdRawQw80 = ioState.q00Belt ? Math.round((beltHz / 50) * 27648) : 0;
+  const displayedBeltHz = isExtAuto ? ioState.effectiveBeltHz : beltHz;
+  const vfdRawQw80 = isExtAuto
+    ? ioState.vfdRawQw80
+    : ioState.q00Belt
+      ? Math.round((beltHz / 50) * 27648)
+      : 0;
   const yieldPct = counts.total > 0 ? Math.round((counts.qualified / counts.total) * 100) : 100;
 
   const ioSignals: IoSignalItem[] = [
@@ -437,6 +613,17 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
     },
     { address: '%I0.3', symbol: 'Prox_Metal', label: '电感金属接近开关', kind: 'I', value: ioState.i03Metal },
     { address: '%I0.4', symbol: 'Cam_Trig', label: '视觉相机检测工位', kind: 'I', value: ioState.i04Vision },
+    ...(runtime
+      ? [
+          {
+            address: '%I1.0',
+            symbol: 'Cam_IsDefect',
+            label: '视觉判级：次品 NG',
+            kind: 'I' as const,
+            value: ioState.i10CamIsDefect,
+          },
+        ]
+      : []),
     { address: '%I0.5', symbol: 'Cyl1_Ret', label: '1# 气缸缩回到位', kind: 'I', value: ioState.i05Cyl1Ret },
     {
       address: '%I0.6',
@@ -471,6 +658,18 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
       value: ioState.q02Cyl2,
       onToggle: () => setManualQ((m) => ({ ...m, cyl2: !m.cyl2 })),
     },
+    ...(runtime
+      ? [
+          {
+            address: '%Q0.3',
+            symbol: 'HL_Alarm',
+            label: '报警塔红灯告警',
+            kind: 'Q' as const,
+            value: ioState.q03Alarm,
+            fault: ioState.q03Alarm,
+          },
+        ]
+      : []),
     { address: '%QW80', symbol: 'VFD_FreqRef', label: '变频器频率给定', kind: 'QW', value: vfdRawQw80 },
   ];
 
@@ -518,7 +717,7 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
     },
   ];
 
-  const shellStatus: 'run' | 'stop' | 'fault' = alarmCode
+  const shellStatus: 'run' | 'stop' | 'fault' = alarmActive
     ? 'fault'
     : ioState.q00Belt
       ? 'run'
@@ -530,11 +729,17 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
       subtitle="一维实时物理位移仿真 · 对射光电 + 电感接近 + 视觉闪光拍照 + 双气缸磁性开关超时看门狗联锁"
       status={shellStatus}
       statusText={
-        alarmCode
-          ? `FAULT · ${alarmCode}`
-          : ioState.q00Belt
-            ? `AUTO RUN · ${beltHz} Hz`
-            : 'STANDBY'
+        isExtAuto
+          ? alarmActive
+            ? '🔗 外部博途 PLC 受控 · ALARM'
+            : ioState.q00Belt
+              ? `🔗 外部博途 PLC 受控 · ${displayedBeltHz.toFixed(1)} Hz`
+              : '🔗 外部博途 PLC 受控 · STOP'
+          : alarmCode
+            ? `FAULT · ${alarmCode}`
+            : ioState.q00Belt
+              ? `AUTO RUN · ${beltHz} Hz`
+              : 'STANDBY'
       }
       mode={mode}
       onModeChange={setMode}
@@ -670,9 +875,9 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
             width="28"
             height="22"
             rx="4"
-            fill={alarmCode ? '#ef4444' : '#450a0a'}
+            fill={alarmActive ? '#ef4444' : '#450a0a'}
             stroke="#f87171"
-            className={alarmCode ? 'dt-blink' : ''}
+            className={alarmActive ? 'dt-blink' : ''}
           />
           {/* Amber Tier */}
           <rect
@@ -681,7 +886,7 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
             width="28"
             height="22"
             rx="4"
-            fill={!alarmCode && !ioState.q00Belt ? '#f59e0b' : '#451a03'}
+            fill={!alarmActive && !ioState.q00Belt ? '#f59e0b' : '#451a03'}
             stroke="#fbbf24"
           />
           {/* Green Tier */}
@@ -691,7 +896,7 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
             width="28"
             height="22"
             rx="4"
-            fill={!alarmCode && ioState.q00Belt ? '#10b981' : '#064e3b'}
+            fill={!alarmActive && ioState.q00Belt ? '#10b981' : '#064e3b'}
             stroke="#34d399"
           />
           {/* Tower pole */}
@@ -793,13 +998,13 @@ export const SortingConveyorTwin: React.FC<SortingConveyorProps> = ({ embedded =
               SINAMICS G120 变频驱动 (%Q0.0)
             </text>
             <text x="14" y="45" fill={ioState.q00Belt ? '#34d399' : '#64748b'} fontSize="17" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif" fontWeight="800">
-              {ioState.q00Belt ? `${beltHz.toFixed(1)} Hz` : '0.0 Hz'}
+              {ioState.q00Belt ? `${displayedBeltHz.toFixed(1)} Hz` : '0.0 Hz'}
             </text>
             <text x="112" y="44" fill="#a78bfa" fontSize="11" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
               %QW80={vfdRawQw80}
             </text>
             <text x="14" y="62" fill="#94a3b8" fontSize="11">
-              线速度：{ioState.q00Belt ? ((beltHz / 50) * 0.65).toFixed(2) : '0.00'} m/s
+              线速度：{ioState.q00Belt ? ((displayedBeltHz / 50) * 0.65).toFixed(2) : '0.00'} m/s
             </text>
           </g>
         </g>

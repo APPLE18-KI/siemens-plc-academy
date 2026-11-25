@@ -5,74 +5,66 @@ import {
   BookOpen,
   Boxes,
   CheckCircle2,
+  Clock,
   Cpu,
   FolderKanban,
   GitBranch,
   Play,
-  Sparkles,
   Star,
+  TerminalSquare,
 } from 'lucide-react';
-import {
-  chapters,
-  examples,
-  lessons,
-  modelRegistry,
-  simPresets,
-  workflowRegistry,
-} from '../../registry';
+import { chapters, examples, lessons, modelRegistry, simPresets, workflowRegistry } from '../../registry';
+import { formatDuration, totalLessonMinutes } from '../../content/curriculum';
 import { useProgress } from '../store/progressStore';
+import { Term } from '../../components/Term';
+import { FaqSection } from '../../components/FaqSection';
 
 interface PipelineNode {
   id: string;
   step: string;
   name: string;
-  protocol: string;
+  summary: string;
   desc: string;
   route: string;
   cta: string;
-  ioHighlight: string;
 }
 
 const PIPELINE_NODES: PipelineNode[] = [
   {
     id: 'plc',
-    step: '01 · CTRL',
-    name: 'S7-1200 内核',
-    protocol: 'OB1 扫描 · PII / PIQ · IEC 定时器',
-    desc: '从零理解 CPU 1214C/1215C 硬件接线、NPN/PNP 传感器选型，到 LAD 梯形图与 SCL 结构化编程实战。',
+    step: '第 1 步',
+    name: '认识 PLC',
+    summary: '按钮、指示灯怎么接到 PLC 上',
+    desc: '从零认识 S7-1200 的外观和接线端子，弄懂按钮、传感器、指示灯分别接在哪里，以及常开/常闭是什么意思。',
     route: '/learn',
-    cta: '进入 15 讲课程',
-    ioHighlight: '%I0.0 / %Q0.0 / TON_DB',
+    cta: '查看课程目录',
   },
   {
     id: 'pn',
-    step: '02 · COMM',
-    name: 'PROFINET 联调',
-    protocol: '100Mbps 实时以太网 · 梯形图能流仿真',
-    desc: '在浏览器实时运行 PLC 扫描周期，在线监控触点荧光绿导通、强制 I/O 信号并查看数字时序波形。',
+    step: '第 2 步',
+    name: '写程序、看效果',
+    summary: '在网页上运行梯形图',
+    desc: '在浏览器里直接运行梯形图：按下按钮，能看到哪条线通电、哪个输出亮起，还能单步慢放，一步步看清 PLC 是怎么执行的。',
     route: '/sim',
     cta: '打开仿真实验室',
-    ioHighlight: 'PII → OB1 → PIQ (10ms)',
   },
   {
     id: 'twin',
-    step: '03 · TWIN',
-    name: '2.5D 数字孪生',
-    protocol: '物理动力学联动 · 现场故障注入',
-    desc: '4 套高精度 SVG 工业被控对象与 6 个工程实例：视觉分拣线、双泵恒压供水、热工储罐与十字路口。',
+    step: '第 3 步',
+    name: '控制一台设备',
+    summary: '传送带、水箱、红绿灯模型',
+    desc: '用程序去控制会动的设备模型：分拣传送带、恒压供水水箱、十字路口红绿灯，还可以人为制造故障，练习排查。',
     route: '/models',
-    cta: '探索数字孪生',
-    ioHighlight: '%IW64 → NORM_X → SCALE_X',
+    cta: '查看设备模型',
   },
   {
     id: 'capstone',
-    step: '04 · JOB',
-    name: '简历毕业项目',
-    protocol: 'PackML + PID 温控 + WinCC SCADA',
-    desc: '交付锂电模组柔性分拣热压工作站，附可导入 TIA Portal 的 .scl 源码、STAR 简历生成器与 15 问面试话术。',
+    step: '第 4 步',
+    name: '完成一个项目',
+    summary: '综合练习 + 可导入博途的源码',
+    desc: '把前面学的串起来，完成一个分拣 + 温控的小型工作站综合练习，附带可以导入 TIA Portal 的 .scl 源文件和项目说明。',
     route: '/capstone',
-    cta: '冲刺毕业项目',
-    ioHighlight: 'S7-1215C + PROFINET',
+    cta: '了解毕业项目',
   },
 ];
 
@@ -80,35 +72,35 @@ const FALLBACK_STAGES = [
   {
     id: 'ch1',
     order: 1,
-    badge: 'STAGE 01',
+    badge: '阶段 01',
     title: '电气认知与 S7-1200 硬件接线',
     subtitle: '零基础入门 PLC 结构、漏型/源型接线与 TIA Portal 工程建立',
   },
   {
     id: 'ch2',
     order: 2,
-    badge: 'STAGE 02',
+    badge: '阶段 02',
     title: '扫描周期与经典位逻辑控制',
     subtitle: '起保停自锁、正反转双互锁、上升沿检测与置位复位规范',
   },
   {
     id: 'ch3',
     order: 3,
-    badge: 'STAGE 03',
+    badge: '阶段 03',
     title: 'IEC 定时器、计数器与顺序控制',
     subtitle: 'TON/TOF/TP、星三角降压启动、CTU 批次包装与状态机思想',
   },
   {
     id: 'ch4',
     order: 4,
-    badge: 'STAGE 04',
+    badge: '阶段 04',
     title: '模拟量标定、SCL 编程与 PID 闭环',
     subtitle: 'NORM_X/SCALE_X 工程量转换、FB/UDT 模块化与恒压温控',
   },
   {
     id: 'ch5',
     order: 5,
-    badge: 'STAGE 05',
+    badge: '阶段 05',
     title: 'PROFINET 通讯与工程交付实战',
     subtitle: '工业以太网组态、故障诊断、FAT/SAT 调试与简历项目冲刺',
   },
@@ -127,146 +119,158 @@ export const HomePage: React.FC = () => {
   const simCount = simPresets ? Object.keys(simPresets).length : 6;
   const modelCount = modelRegistry ? Object.keys(modelRegistry).length : 4;
   const workflowCount = workflowRegistry ? Object.keys(workflowRegistry).length : 3;
+  const totalHours = Math.round(totalLessonMinutes(safeLessons) / 60);
 
-  const stats = getStats(safeLessons.length || 15);
+  const stats = getStats(safeLessons.length);
   const activePipe = PIPELINE_NODES[activePipeIdx];
+  const firstLesson = safeLessons[0];
 
-  const primaryLessonTarget = useMemo(() => {
-    if (safeLessons.length === 0) return { to: '/learn', label: '从零基础第一课开始' };
-    if (state.lastVisitedLessonId) {
-      const found = safeLessons.find((l) => l.id === state.lastVisitedLessonId);
-      if (found) {
-        return {
-          to: `/learn/${found.id}`,
-          label: `继续第 ${found.order} 讲：${found.title.slice(0, 14)}${found.title.length > 14 ? '…' : ''}`,
-        };
-      }
-    }
-    return { to: `/learn/${safeLessons[0].id}`, label: '从零基础第一课开始' };
-  }, [safeLessons, state.lastVisitedLessonId]);
+  const continueTarget = useMemo(() => {
+    if (!state.lastVisitedLessonId) return null;
+    const found = safeLessons.find((l) => l.id === state.lastVisitedLessonId);
+    if (!found || found.id === firstLesson?.id) return null;
+    return found;
+  }, [safeLessons, state.lastVisitedLessonId, firstLesson]);
 
   const pillars = [
     {
-      index: '01 / LEARN',
-      title: '互动式渐进教学',
-      desc: '5 大阶段 15 节实战精品课，每讲嵌入实时仿真、数字孪生、LAD/SCL 双码对照、动手工单与随堂闯关测验。',
+      title: '分步课程',
+      tag: '课程',
+      desc: `${safeLessons.length} 讲，从“PLC 是什么”讲到完整项目。每讲都有动手练习、小测验和答案解析。`,
       to: '/learn',
-      cta: `浏览 ${safeLessons.length || 15} 节课程`,
-      metric: `已完成 ${stats.completedLessons}/${safeLessons.length || 15}`,
+      cta: '查看课程目录',
+      metric: `已完成 ${stats.completedLessons}/${safeLessons.length}`,
       Icon: BookOpen,
     },
     {
-      index: '02 / EXAMPLES',
-      title: '工业实例工作台',
-      desc: '6 套真实工业现场案例，覆盖起保停、星三角、分拣产线、双泵恒压供水、红绿灯与热压温控，含踩坑警示与面试考点。',
-      to: '/examples',
-      cta: `进入 ${safeExamples.length || 6} 个实例`,
-      metric: `已研读 ${stats.examplesStudied} 个`,
-      Icon: FolderKanban,
+      title: '仿真实验室',
+      tag: '仿真',
+      desc: `${simCount} 个现成的梯形图练习，外加一个可以自己搭程序的沙盒。按按钮、看通电、单步慢放。`,
+      to: '/sim',
+      cta: '打开仿真器',
+      metric: '无需硬件',
+      Icon: Cpu,
     },
     {
-      index: '03 / TWIN',
-      title: '2.5D 数字孪生建模',
-      desc: '4 套物理规律驱动的高精度工业被控对象：S7-1200 硬件接线台、三工位分拣线、双泵储罐 PID、智能十字路口。',
+      title: '设备模型',
+      tag: '模型',
+      desc: `${modelCount} 套会动的设备：传送带分拣、恒压供水、十字路口红绿灯等，可以模拟故障来练习排查。`,
       to: '/models',
-      cta: `查看 ${modelCount} 套模型`,
-      metric: '支持故障注入与联调',
+      cta: '查看模型',
+      metric: '可注入故障',
       Icon: Boxes,
     },
     {
-      index: '04 / WORKFLOW',
-      title: '核心工作流解剖',
-      desc: '可视化剖析 PLC 微观扫描周期与双线圈事故、GRAFCET/PackML 状态机步进，以及非标自动化工程全生命周期交付。',
-      to: '/workflows',
-      cta: `剖析 ${workflowCount} 大工作流`,
-      metric: '从原理到工程交付',
-      Icon: GitBranch,
+      title: '工程实例',
+      tag: '实例',
+      desc: `${safeExamples.length || 6} 个常见控制案例，每个都有 I/O 表、梯形图与 SCL 代码，以及调试时容易踩的坑。`,
+      to: '/examples',
+      cta: '浏览实例',
+      metric: `已看 ${stats.examplesStudied} 个`,
+      Icon: FolderKanban,
     },
   ];
 
   return (
     <div className="home-page">
-      {/* ==================== HERO SECTION ==================== */}
+      {/* ==================== 首屏 ==================== */}
       <section className="hero-section">
         <div className="spa-container hero-grid">
           <div>
             <div className="telemetry-eyebrow">
               <span className="telemetry-dot" />
-              SIEMENS S7-1200 / 1500 · TIA PORTAL · 零基础到工业现场
+              西门子 S7-1200 · 零基础入门
             </div>
 
             <h1 className="hero-title">
-              在真实工业项目中，
+              从按下第一个按钮开始，
               <br />
-              <span className="hero-title-accent">边做边学</span> 西门子 PLC
+              <span className="hero-title-accent">学会西门子 PLC</span>
             </h1>
 
             <p className="hero-desc">
-              告别纯背指令的枯燥教材。这里将 <strong>博途 LAD/SCL 编程</strong>、
-              <strong>实时扫描周期仿真</strong>、<strong>2.5D 产线数字孪生</strong> 与{' '}
-              <strong>简历级锂电自动化毕业项目</strong> 融为一体，带你打通从电气接线到项目交付的完整闭环。
+              不需要买硬件，打开浏览器就能练。跟着 {safeLessons.length} 讲课程一步步学，学完后你能：
             </p>
+            <ul className="hero-outcomes">
+              <li>
+                <CheckCircle2 size={16} />
+                看懂按钮、传感器、指示灯是怎么接到<Term name="PLC">PLC</Term>上的
+              </li>
+              <li>
+                <CheckCircle2 size={16} />
+                在<Term name="TIA Portal">博途</Term>里写出电机启停、延时、计数等常见程序
+              </li>
+              <li>
+                <CheckCircle2 size={16} />
+                先在电脑上仿真调通，再放心地上真实设备
+              </li>
+            </ul>
 
             <div className="hero-cta-row">
-              <Link to={primaryLessonTarget.to} className="btn btn-primary btn-lg">
+              <Link
+                to={firstLesson ? `/learn/${firstLesson.id}` : '/learn'}
+                className="btn btn-primary btn-lg hero-cta-main"
+              >
                 <Play size={16} fill="currentColor" />
-                {primaryLessonTarget.label}
-              </Link>
-              <Link to="/sim" className="btn btn-lg">
-                <Cpu size={17} />
-                直达 PLC 仿真台
+                新手从这里开始
               </Link>
               <Link
-                to="/capstone"
+                to="/ide"
                 className="btn btn-lg"
                 style={{
-                  borderColor: 'var(--alarm-amber-border)',
-                  color: 'var(--alarm-amber)',
+                  borderColor: 'var(--siemens-teal-border)',
+                  background: 'var(--siemens-teal-soft)',
                 }}
               >
-                <Star size={16} />
-                毕业大项目
+                <TerminalSquare size={16} />
+                博途在线编程台
               </Link>
+              {continueTarget && (
+                <Link to={`/learn/${continueTarget.id}`} className="btn btn-lg">
+                  继续第 {continueTarget.order} 讲
+                  <ArrowRight size={15} />
+                </Link>
+              )}
+            </div>
+            <div className="hero-secondary-links">
+              <Link to="/ide">亲手写 SCL 控产线</Link>
+              <span aria-hidden="true">·</span>
+              <Link to="/sim">先玩梯形图仿真器</Link>
+              <span aria-hidden="true">·</span>
+              <Link to="/learn">查看全部课程</Link>
+              <span aria-hidden="true">·</span>
+              <Link to="/glossary">术语表</Link>
             </div>
 
             <div className="hero-metrics-bar">
               <div className="hero-metric">
-                <span className="hero-metric-val">{safeLessons.length || 15}</span>
-                <span className="hero-metric-lbl">渐进式互动课程</span>
+                <span className="hero-metric-val">{safeLessons.length}</span>
+                <span className="hero-metric-lbl">讲课程</span>
+              </div>
+              <div className="hero-metric">
+                <span className="hero-metric-val">约 {totalHours}</span>
+                <span className="hero-metric-lbl">小时学完</span>
               </div>
               <div className="hero-metric">
                 <span className="hero-metric-val">{simCount}</span>
-                <span className="hero-metric-lbl">实时梯形图仿真预设</span>
-              </div>
-              <div className="hero-metric">
-                <span className="hero-metric-val">{modelCount}</span>
-                <span className="hero-metric-lbl">2.5D 物理数字孪生</span>
+                <span className="hero-metric-lbl">个仿真练习</span>
               </div>
               <div className="hero-metric">
                 <span className="hero-metric-val" style={{ color: 'var(--power-green)' }}>
-                  {stats.overallMasteryPct}%
+                  {stats.lessonPct}%
                 </span>
-                <span className="hero-metric-lbl">你的综合掌握度</span>
+                <span className="hero-metric-lbl">你的课程进度</span>
               </div>
             </div>
           </div>
 
-          {/* Focal Centerpiece: Interactive S7-1200 Closed-Loop Architecture Console */}
+          {/* 学习路线示意 */}
           <div className="hero-rack-card">
             <div className="hero-rack-bar">
-              <span>SIMATIC S7-1215C DC/DC/DC · CLOSED-LOOP PIPELINE</span>
+              <span>学习路线 · 4 步</span>
               <span className="hero-rack-status">
-                <span
-                  style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: '50%',
-                    background: '#10b981',
-                    boxShadow: '0 0 8px #10b981',
-                    animation: 'led-pulse 2s infinite',
-                  }}
-                />
-                RUN · OB1
+                <span className="hero-rack-led" />
+                运行中
               </span>
             </div>
 
@@ -276,7 +280,7 @@ export const HomePage: React.FC = () => {
                 width="100%"
                 style={{ height: 'auto', display: 'block' }}
                 role="img"
-                aria-label="S7-1200 到 PROFINET 到数字孪生再到简历毕业项目的进阶闭环架构图"
+                aria-label="学习路线示意：认识 PLC、写程序看效果、控制设备模型、完成项目"
               >
                 <defs>
                   <linearGradient id="plcFace" x1="0" y1="0" x2="0" y2="1">
@@ -386,7 +390,7 @@ export const HomePage: React.FC = () => {
                     strokeWidth={activePipeIdx === 1 ? '2' : '1.2'}
                   />
                   <text x="12" y="22" fill="#2dd4bf" fontSize="11" fontWeight="700" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
-                    PROFINET · LAD
+                    梯形图仿真
                   </text>
                   {/* Mini Energized Ladder Rung */}
                   <line x1="14" y1="42" x2="14" y2="90" stroke="#00b8b8" strokeWidth="2.5" />
@@ -405,7 +409,7 @@ export const HomePage: React.FC = () => {
                     | |
                   </text>
                   <text x="12" y="106" fill="#8ca3ba" fontSize="10.4" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
-                    能流实时监控
+                    看见“通电”
                   </text>
                 </g>
 
@@ -424,7 +428,7 @@ export const HomePage: React.FC = () => {
                     strokeWidth={activePipeIdx === 2 ? '2' : '1.2'}
                   />
                   <text x="12" y="22" fill="#38bdf8" fontSize="11" fontWeight="700" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
-                    2.5D DIGITAL TWIN
+                    设备模型
                   </text>
                   {/* Conveyor + Workpiece Icon */}
                   <rect x="14" y="70" width="84" height="14" rx="7" fill="#1e2d3d" stroke="#38bdf8" strokeWidth="1.2" />
@@ -434,7 +438,7 @@ export const HomePage: React.FC = () => {
                   <rect x="44" y="47" width="24" height="20" rx="3" fill="#009999" stroke="#2dd4bf" />
                   <line x1="56" y1="32" x2="56" y2="46" stroke="#10b981" strokeWidth="1.6" strokeDasharray="3 2" />
                   <text x="12" y="106" fill="#8ca3ba" fontSize="10.4" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
-                    4套产线物理建模
+                    4 套设备模型
                   </text>
                 </g>
 
@@ -453,7 +457,7 @@ export const HomePage: React.FC = () => {
                     strokeWidth={activePipeIdx === 3 ? '2' : '1.2'}
                   />
                   <text x="11" y="22" fill="#f59e0b" fontSize="11" fontWeight="700" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
-                    CAPSTONE ★
+                    毕业项目 ★
                   </text>
                   {/* Mini SCADA Trend */}
                   <polyline
@@ -469,7 +473,7 @@ export const HomePage: React.FC = () => {
                     锂电视觉热压站
                   </text>
                   <text x="11" y="108" fill="#a89b7e" fontSize="10.4" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
-                    可写简历+源码
+                    含博途源码
                   </text>
                 </g>
 
@@ -483,12 +487,12 @@ export const HomePage: React.FC = () => {
                   opacity="0.7"
                 />
                 <text x="184" y="213" fill="#6f879e" fontSize="11" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
-                  闭环实训路径：硬件认知 → 仿真调试 → 孪生建模 → 简历项目交付
+                  学习路线：认识硬件 → 仿真调试 → 控制设备 → 完成项目
                 </text>
               </svg>
             </div>
 
-            <div className="hero-pipeline-tabs" role="tablist" aria-label="进阶闭环节点">
+            <div className="hero-pipeline-tabs" role="tablist" aria-label="学习路线步骤">
               {PIPELINE_NODES.map((node, idx) => (
                 <button
                   key={node.id}
@@ -504,21 +508,12 @@ export const HomePage: React.FC = () => {
               ))}
             </div>
 
-            <div className="hero-pipe-readout">
+            <div className="hero-pipe-readout" role="tabpanel">
               <div>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 11,
-                    color: '#2dd4bf',
-                    marginBottom: 4,
-                  }}
-                >
-                  {activePipe.protocol} · [{activePipe.ioHighlight}]
-                </div>
+                <div className="hero-pipe-summary">{activePipe.summary}</div>
                 <div>{activePipe.desc}</div>
               </div>
-              <Link to={activePipe.route} className="btn btn-primary btn-sm" style={{ flexShrink: 0 }}>
+              <Link to={activePipe.route} className="btn btn-sm hero-pipe-cta">
                 {activePipe.cta}
                 <ArrowRight size={13} />
               </Link>
@@ -527,24 +522,18 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* ==================== FOUR CORE PILLARS ==================== */}
+      {/* ==================== 网站里有什么 ==================== */}
       <section className="home-section">
         <div className="spa-container">
           <div className="section-header">
             <div>
               <div className="telemetry-eyebrow">
                 <span className="telemetry-dot teal" />
-                CORE ARCHITECTURE · 四大实训支柱
+                网站里有什么
               </div>
-              <h2 className="section-title">交互式教学 × 工业实例 × 数字孪生 × 工作流解剖</h2>
-              <p className="section-sub">
-                所有模块共享同一套西门子 S7-1200 符号寻址体系与实时仿真引擎，知识点随学随练。
-              </p>
+              <h2 className="section-title">课程、仿真、设备模型和实例，都在一个地方</h2>
+              <p className="section-sub">它们用的是同一套变量和仿真引擎，课程里学到的，马上能在仿真器和模型里试。</p>
             </div>
-            <Link to="/sim" className="btn">
-              <Cpu size={15} />
-              进入独立 PLC 仿真实验室
-            </Link>
           </div>
 
           <div className="pillars-grid">
@@ -556,22 +545,13 @@ export const HomePage: React.FC = () => {
                     <span className="pillar-icon">
                       <Icon size={20} />
                     </span>
-                    <span className="pillar-index">{p.index}</span>
+                    <span className="pillar-index">{p.tag}</span>
                   </div>
                   <h3 className="pillar-title">{p.title}</h3>
                   <p className="pillar-desc">{p.desc}</p>
                   <div className="pillar-foot">
                     <span>{p.cta}</span>
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 11.5,
-                        color: 'var(--ink-muted)',
-                      }}
-                    >
+                    <span className="pillar-metric">
                       {p.metric}
                       <ArrowRight size={14} color="var(--siemens-teal-bright)" />
                     </span>
@@ -580,24 +560,24 @@ export const HomePage: React.FC = () => {
               );
             })}
           </div>
+          <p className="section-footnote">
+            还有 {workflowCount} 个原理动画（扫描周期、状态机、项目流程），在课程里会直接用到，也可以在
+            <Link to="/workflows"> 工作流 </Link>页单独查看。
+          </p>
         </div>
       </section>
 
-      {/* ==================== 5-STAGE LEARNING ROADMAP ==================== */}
+      {/* ==================== 学习路线 ==================== */}
       <section className="home-section">
         <div className="spa-container">
           <div className="section-header">
             <div>
               <div className="telemetry-eyebrow">
                 <span className="telemetry-dot" />
-                5-STAGE CURRICULUM · 阶梯式成长路线图
+                学习路线
               </div>
-              <h2 className="section-title">从零基础电工思维，进阶到博途项目架构师</h2>
+              <h2 className="section-title">5 个阶段，从零基础到能独立完成一个小项目</h2>
             </div>
-            <Link to="/learn" className="btn">
-              查看全部 15 讲课表
-              <ArrowRight size={14} />
-            </Link>
           </div>
 
           <div className="roadmap-grid">
@@ -607,6 +587,7 @@ export const HomePage: React.FC = () => {
                 state.completedLessonIds.includes(l.id)
               ).length;
               const chTotal = chapterLessons.length;
+              const chMinutes = totalLessonMinutes(chapterLessons);
               const pct = chTotal > 0 ? Math.round((doneInCh / chTotal) * 100) : 0;
               const firstTarget = chapterLessons[0]
                 ? `/learn/${chapterLessons[0].id}`
@@ -615,19 +596,23 @@ export const HomePage: React.FC = () => {
               return (
                 <Link key={ch.id} to={firstTarget} className="roadmap-card">
                   <div className="roadmap-stage-row">
-                    <span className="roadmap-num">{ch.badge || `STAGE 0${ch.order}`}</span>
+                    <span className="roadmap-num">阶段 {ch.order} · {ch.badge}</span>
                     {chTotal > 0 && doneInCh === chTotal && (
                       <CheckCircle2 size={16} color="var(--power-green)" />
                     )}
                   </div>
-                  <h3 className="roadmap-title">{ch.title}</h3>
+                  <h3 className="roadmap-title">{ch.title.replace(/^第 \d+ 章：/, '')}</h3>
                   <p className="roadmap-sub">{ch.subtitle}</p>
                   <div className="roadmap-progress-track">
                     <div className="roadmap-progress-fill" style={{ width: `${pct}%` }} />
                   </div>
                   <div className="roadmap-meta">
-                    <span>{chTotal > 0 ? `${doneInCh} / ${chTotal} 讲已掌握` : '3 节核心课'}</span>
-                    <span>{pct}%</span>
+                    <span>
+                      {chTotal} 讲 · <Clock size={11} /> 约 {formatDuration(chMinutes)}
+                    </span>
+                    <span>
+                      {doneInCh}/{chTotal}
+                    </span>
                   </div>
                 </Link>
               );
@@ -636,54 +621,58 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* ==================== RESUME CAPSTONE SPOTLIGHT ==================== */}
+      {/* ==================== 毕业项目 ==================== */}
       <section className="home-section">
         <div className="spa-container">
           <div className="capstone-spotlight">
             <div>
               <div className="telemetry-eyebrow" style={{ color: '#fbbf24' }}>
-                <Sparkles size={14} />
-                RESUME CAPSTONE · 简历加分毕业大项目
+                <Star size={14} />
+                毕业项目 · 建议学完第 4 阶段再挑战
               </div>
-              <h2>
-                基于 S7-1215C + PROFINET 的锂电模组柔性视觉分拣、热压温控与立体入库工作站
-              </h2>
+              <h2>综合练习：锂电模组分拣、热压温控与入库工作站</h2>
               <p>
-                这不是玩具 Demo，而是对标新能源产线标准的完整工程交付包：涵盖 URS 需求、I/O 分配、PackML
-                多模式状态机、PID 热压闭环温控、WinCC Unified 风格联调监控台，并自带 STAR
-                法则简历生成器与 15 道面试官高频追问满分话术。
+                把前面学的内容串成一个完整项目：需求说明、I/O 分配表、多模式状态机、PID 温度控制和监控画面。附带可以导入
+                TIA Portal 的 .scl 源文件，以及项目经历的写法参考和常见面试问题解析，适合放进作品集。
               </p>
               <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                <Link to="/capstone" className="btn btn-primary btn-lg">
+                <Link to="/capstone" className="btn btn-lg">
                   <Star size={16} />
-                  进入毕业项目实训室
+                  了解毕业项目
                   <ArrowRight size={15} />
                 </Link>
                 <span className="badge badge-amber badge-mono" style={{ padding: '7px 12px' }}>
-                  毕业里程碑进度：{stats.capstoneDone} / {stats.capstoneTotal} ({stats.capstonePct}%)
+                  里程碑：{stats.capstoneDone} / {stats.capstoneTotal}
                 </span>
               </div>
             </div>
 
             <div className="capstone-deliverables">
               <div className="capstone-deliv-item">
-                <strong>可导入 TIA Portal `.scl` 工程</strong>
-                <span>包含 UDT 结构体、FB 状态机、视觉分拣与 PID 温控完整源码</span>
+                <strong>可导入博途的 .scl 源文件</strong>
+                <span>包含自定义数据类型、设备功能块、状态机与温控程序</span>
               </div>
               <div className="capstone-deliv-item">
-                <strong>WinCC Unified 联调监控台</strong>
-                <span>在线模拟启停、急停复位、温度曲线监控与报警历史追溯</span>
+                <strong>模拟监控画面</strong>
+                <span>在网页上试启停、急停复位，查看温度曲线和报警记录</span>
               </div>
               <div className="capstone-deliv-item">
-                <strong>STAR 法则简历一键定制</strong>
-                <span>按应届/转行/在职自动生成量化成果与专业技术关键词</span>
+                <strong>项目经历写法参考</strong>
+                <span>按应届、转行、在职等不同背景给出描述示例</span>
               </div>
               <div className="capstone-deliv-item">
-                <strong>15 道面试高频追问拆解</strong>
-                <span>直击 PROFINET 丢包、PID 震荡、双线圈与安全急停电路考点</span>
+                <strong>15 道常见面试问题解析</strong>
+                <span>通讯故障、PID 振荡、双线圈、急停回路等</span>
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ==================== 常见问题 ==================== */}
+      <section className="home-section">
+        <div className="spa-container">
+          <FaqSection id="home-faq" compact />
         </div>
       </section>
     </div>

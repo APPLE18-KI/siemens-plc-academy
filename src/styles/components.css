@@ -5,6 +5,8 @@
 /* --- Top Floating Industrial Console Navbar --- */
 .app-shell {
   min-height: 100vh;
+  padding-left: var(--sal);
+  padding-right: var(--sar);
   display: flex;
   flex-direction: column;
 }
@@ -13,7 +15,8 @@
   position: sticky;
   top: 0;
   z-index: 60;
-  height: var(--nav-height);
+  height: var(--nav-offset);
+  padding-top: var(--sat);
   background: var(--bg-glass);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -304,7 +307,7 @@
 /* Mobile Nav Drawer */
 .mobile-drawer-backdrop {
   position: fixed;
-  inset: var(--nav-height) 0 0 0;
+  inset: var(--nav-offset) 0 0 0;
   background: rgba(0, 0, 0, 0.52);
   z-index: 55;
   display: flex;
@@ -1353,11 +1356,11 @@
 
 @media (max-width: 768px) {
   .app-shell {
-    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(64px + var(--sab));
   }
 
   .app-header {
-    height: 56px;
+    height: calc(56px + var(--sat));
   }
 
   .app-header-inner {
@@ -1394,7 +1397,7 @@
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
     border-top: 1px solid var(--border-medium);
-    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    padding: 6px 4px calc(6px + var(--sab));
     box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.32);
   }
 
@@ -1450,5 +1453,188 @@
 
   .dual-code-grid {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* ---- 行内术语 ---- */
+.term-wrap {
+  position: relative;
+  display: inline;
+}
+
+.term-trigger {
+  display: inline;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-bottom: 1.5px dashed var(--siemens-teal-bright);
+  cursor: help;
+  line-height: inherit;
+}
+
+.term-trigger:hover,
+.term-trigger.open {
+  color: var(--siemens-teal-bright);
+}
+
+.term-pop {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  transform: translateX(-50%);
+  z-index: 40;
+  width: min(300px, 82vw);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+  font-size: 13.5px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--ink-secondary);
+  text-align: left;
+  white-space: normal;
+}
+
+.term-pop-title {
+  font-weight: 800;
+  color: var(--ink-primary);
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.term-pop-en {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+.term-pop-link {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--siemens-teal-bright);
+  padding: 4px 0;
+}
+
+/* ---- 页脚 ---- */
+.app-footer-inner {
+  align-items: flex-start;
+}
+
+.footer-notes {
+  flex: 1 1 520px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.footer-notes p {
+  margin: 0;
+  line-height: 1.6;
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.footer-notes p svg {
+  flex-shrink: 0;
+  margin-top: 4px;
+  color: var(--alarm-amber);
+}
+
+.footer-brand {
+  color: var(--ink-secondary);
+  font-weight: 600;
+  align-items: center !important;
+}
+
+.footer-links a {
+  padding: 10px 0;
+  display: inline-block;
+}
+
+.mobile-drawer-title {
+  font-size: 12px;
+  color: var(--ink-muted);
+  padding: 4px 10px 8px;
+  font-weight: 600;
+}
+
+.progress-popover-note {
+  margin: -6px 0 12px;
+  font-size: 11.5px;
+  color: var(--ink-muted);
+}
+
+/* 手机：底部导航负责全部入口，隐藏顶栏的汉堡按钮，避免两套菜单 */
+@media (max-width: 768px) {
+  .mobile-menu-btn {
+    display: none !important;
+  }
+  .mobile-drawer-backdrop {
+    inset: var(--nav-offset) 0 calc(64px + var(--sab)) 0;
+  }
+  button.mobile-bottom-tab {
+    background: transparent;
+    border: 0;
+    font: inherit;
+    font-size: 10.5px;
+    font-weight: 600;
+  }
+  .mobile-bottom-nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .mobile-bottom-tab {
+    min-height: 48px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- 轻提示 Toast（App 返回键“再按一次退出”等） ---------- */
+.plc-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + var(--sab));
+  z-index: 200;
+  max-width: calc(100vw - 48px);
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(15, 23, 32, 0.94);
+  color: #f1f5f9;
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(20, 212, 212, 0.35);
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.plc-toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+@media (max-width: 768px) {
+  .plc-toast {
+    bottom: calc(80px + var(--sab));
   }
 }

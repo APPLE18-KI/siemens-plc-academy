@@ -3,8 +3,8 @@ import type { ChapterMeta, Lesson } from '../../types/content';
 export const ch5Meta: ChapterMeta = {
   id: 'ch5',
   order: 5,
-  title: '第 5 章：模拟量闭环、PROFINET 通信与非标项目交付',
-  subtitle: '攻克 4-20mA 模拟量换算与断线检测、OB30 PID_Compact 闭环整定、PROFINET 变频/伺服报文与 URS→SAT 全流程交付',
+  title: '第 5 章：模拟量、通信与项目交付',
+  subtitle: '读取温度、压力这类连续变化的信号，用 PID 让温度稳在设定值，通过 PROFINET 网线控制变频器，最后了解一个项目从需求到验收的全过程',
   badge: '实战',
 };
 
@@ -13,10 +13,10 @@ export const ch5Lessons: Lesson[] = [
     id: 'l13-analog-norm-scale',
     chapterId: 'ch5',
     order: 13,
-    title: '模拟量 4-20mA / 0-10V 信号本质、断线检测与 NORM_X + SCALE_X 换算',
+    title: '模拟量入门：4-20mA 信号换算成温度/压力（NORM_X、SCALE_X）',
     subtitle: '揭秘 0~27648 魔法数字背后的工程意义，掌握断线报警、一阶 RC 滤波与 4-20mA 面试必考三大优势',
     level: '实战',
-    minutes: 30,
+    minutes: 40,
     tags: ['模拟量', '4-20mA', '27648', 'NORM_X', 'SCALE_X', '断线检测'],
     objectives: [
       '彻底掌握西门子 S7-1200/1500 模拟量通道原始数值标准（额定范围 0~27648、上溢 >32511、下溢/断线 <-4864）',
@@ -184,7 +184,7 @@ END_FUNCTION
       },
       {
         kind: 'practice-task',
-        title: '第 13 讲实训打卡：27648 换算心算验收与断线保护实测',
+        title: '本讲实训打卡：27648 换算心算验收与断线保护实测',
         scenario: '在上方模拟量仿真实验中，验证压力传感器从正常波动到电缆被叉车拉断的全工况表现。',
         steps: [
           '手动拖动滑块依次停在 0、6912（25%）、13824（50%）、27648（100%），心算核对 0~1.6 MPa 换算结果是否精准对应 0.0 / 0.4 / 0.8 / 1.6 MPa。',
@@ -240,10 +240,10 @@ END_FUNCTION
     id: 'l14-pid-compact-process',
     chapterId: 'ch5',
     order: 14,
-    title: '闭环过程控制：博途 PID_Compact 参数整定与手自动无扰切换',
+    title: 'PID 闭环控制：让温度稳在设定值（PID_Compact）',
     subtitle: '告别令人头疼的微积分公式！用直觉驾驭 P/I/D 三大参数、恒压供水双泵切泵与 OB30 调用铁律',
     level: '实战',
-    minutes: 35,
+    minutes: 40,
     tags: ['PID_Compact', 'OB30循环中断', '参数整定', '无扰切换', '恒压供水'],
     objectives: [
       '用纯工程直觉理解比例（P）、积分（I）、微分（D）各自解决什么物理问题，以及调大调小的曲线表现',
@@ -425,7 +425,7 @@ END_IF;
       },
       {
         kind: 'practice-task',
-        title: '第 14 讲实训打卡：恒压供水 PID 手动整定与抗扰动极限测试',
+        title: '本讲实训打卡：恒压供水 PID 手动整定与抗扰动极限测试',
         scenario: '在上方双泵恒压供水数字孪生中担任过程控制工程师，亲手把振荡的管网调校得丝般顺滑。',
         steps: [
           '先故意把积分作用关弱、仅保留较小比例增益 Kp，观察实测压力 PV 为何始终低于设定值 SP（亲眼看见“纯比例控制必有静差”）。',
@@ -486,10 +486,10 @@ END_IF;
     id: 'l15-profinet-project-delivery',
     chapterId: 'ch5',
     order: 15,
-    title: 'PROFINET IO 通信、变频/伺服报文与非标项目 URS→SAT 全流程交付',
+    title: 'PROFINET 通信与项目从需求到验收的全流程',
     subtitle: '打通从写代码到独立交付整套非标产线的最后一公里！吃透 G120/V90 控制字 047E→047F，直通简历毕业项目',
     level: '实战',
-    minutes: 40,
+    minutes: 50,
     tags: ['PROFINET', 'G120/V90', '047E→047F', '111号报文', 'URS→SAT', '毕业项目衔接'],
     objectives: [
       '彻底掌握西门子 PROFINET IO 组态核心：设备名称（Device Name）与 IP 地址分配原则、GSDML 第三方设备导入与断站诊断',
@@ -705,7 +705,7 @@ END_FUNCTION_BLOCK`,
       },
       {
         kind: 'practice-task',
-        title: '第 15 讲结业冲刺打卡：完成交付清单核验，进军简历级毕业大项目！',
+        title: '本讲结业冲刺打卡：完成交付清单核验，进军简历级毕业大项目！',
         scenario: '恭喜你已完成全部 5 章 15 讲系统课程！现在你已具备开启综合毕业项目《基于 S7-1215C + PROFINET 的新能源锂电模组柔性视觉分拣、热压恒温固化与立体入库工作站》的全部技能拼图。',
         steps: [
           '在上方“URS → SAT 项目全生命周期工作流”中逐一点击 01~08 八个里程碑，重点核对 FAT 厂内验收故障注入清单。',

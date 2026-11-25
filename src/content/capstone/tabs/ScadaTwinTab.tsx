@@ -15,6 +15,7 @@ import {
   Trash2,
   Unlock,
 } from 'lucide-react';
+import { LandscapeSvgStage } from '../../../components/LandscapeSvgStage';
 
 interface RecipePreset {
   id: number;
@@ -577,7 +578,87 @@ export const ScadaTwinTab: React.FC<ScadaTwinTabProps> = ({ onMilestoneAchieved 
               <span className="cap-badge teal">{stepLabels[step] ?? '待机'}</span>
             </div>
 
-            <div className="cap-svg-stage">
+            <LandscapeSvgStage
+              title="锂电模组工作站实时产线数字孪生画面"
+              subtitle={`${packml} · ${stepLabels[step] ?? '待机'} · 热压 ${actTemp.toFixed(1)}°C · 仓位 ${occupiedCount}/12`}
+              scopeClassName="cap-root"
+              fitMode="contain"
+              inlineMinWidth={540}
+              inlinePadding
+              hint="⇄ G120 / 视觉 / OB30 热压 / V90 堆垛机实时联动 · 推荐横屏全屏"
+              landscapeFooterLabel="产线遥测与故障注入"
+              controls={
+                <>
+                  <button
+                    type="button"
+                    className="lss-ctrl-btn is-success"
+                    disabled={packml === 'Execute' || packml === 'Aborted'}
+                    onClick={handleStart}
+                  >
+                    <Play size={12} />
+                    <span>启动</span>
+                  </button>
+                  {packml === 'Held' ? (
+                    <button type="button" className="lss-ctrl-btn is-success" onClick={handleUnhold}>
+                      <span>继续</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="lss-ctrl-btn is-warn"
+                      disabled={packml !== 'Execute'}
+                      onClick={handleHold}
+                    >
+                      <PauseCircle size={12} />
+                      <span>暂停</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="lss-ctrl-btn"
+                    disabled={packml === 'Stopped' || packml === 'Aborted'}
+                    onClick={handleStop}
+                  >
+                    <Square size={11} />
+                    <span>停机</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="lss-ctrl-btn is-danger-solid"
+                    onClick={() => {
+                      pushAlarm('ALM-001', 'CRITICAL', '操作员拍下急停按钮 (E-Stop)！硬件切断 STO 与 SSR 加热！');
+                      setPackml('Aborted');
+                      setStep(0);
+                    }}
+                  >
+                    <AlertOctagon size={12} />
+                    <span>急停</span>
+                  </button>
+                  <button type="button" className="lss-ctrl-btn is-primary" onClick={handleReset}>
+                    <RotateCcw size={12} />
+                    <span>复位</span>
+                  </button>
+                </>
+              }
+              landscapeFooter={
+                <>
+                  <span className="cap-badge teal">OEE {oeePct}%</span>
+                  <span className="cap-badge green">良率 {yieldPct}%</span>
+                  <span className="cap-badge blue">立体库 {occupiedCount}/12</span>
+                  <span className="cap-badge amber">
+                    热压 {actTemp.toFixed(1)}°C / SV {recipe.targetTemp.toFixed(1)}°C
+                  </span>
+                  <button type="button" className="lss-ctrl-btn is-danger" onClick={injectOverTemp}>
+                    <Flame size={12} />
+                    <span>注入超温</span>
+                  </button>
+                  <button type="button" className="lss-ctrl-btn" onClick={clearWarehouse}>
+                    <Trash2 size={12} />
+                    <span>清空立体库</span>
+                  </button>
+                </>
+              }
+            >
               <svg viewBox="0 0 640 212" width="100%" style={{ display: 'block', minWidth: 460 }}>
                 {/* Floor & Conveyor Rail */}
                 <rect x="14" y="140" width="612" height="16" rx="5" fill="#1e293b" stroke="#334155" />
@@ -740,7 +821,7 @@ export const ScadaTwinTab: React.FC<ScadaTwinTabProps> = ({ onMilestoneAchieved 
                 <rect x="22" y="194" width="596" height="6" rx="3" fill="#1e293b" />
                 <rect x="22" y="194" width={(596 * stepProgress) / 100} height="6" rx="3" fill="#14b8a6" />
               </svg>
-            </div>
+            </LandscapeSvgStage>
           </div>
 
           {/* Live SVG PID Temperature Trend Chart */}
@@ -757,7 +838,35 @@ export const ScadaTwinTab: React.FC<ScadaTwinTabProps> = ({ onMilestoneAchieved 
               </div>
             </div>
 
-            <div className="cap-svg-stage">
+            <LandscapeSvgStage
+              title="OB30 热压腔 PID 实时温度趋势曲线"
+              subtitle={`SV ${recipe.targetTemp.toFixed(1)}°C · 实测 ${actTemp.toFixed(2)}°C · SSR PWM ${pidOutPct}%`}
+              scopeClassName="cap-root"
+              fitMode="contain"
+              inlinePadding
+              hint="100ms 循环中断 PID 实时曲线 · 支持横屏放大观察超调"
+              controls={
+                <>
+                  <button
+                    type="button"
+                    className="lss-ctrl-btn is-success"
+                    disabled={packml === 'Execute' || packml === 'Aborted'}
+                    onClick={handleStart}
+                  >
+                    <Play size={12} />
+                    <span>启动</span>
+                  </button>
+                  <button type="button" className="lss-ctrl-btn is-danger" onClick={injectOverTemp}>
+                    <Flame size={12} />
+                    <span>注入超温</span>
+                  </button>
+                  <button type="button" className="lss-ctrl-btn is-primary" onClick={handleReset}>
+                    <RotateCcw size={12} />
+                    <span>复位降温</span>
+                  </button>
+                </>
+              }
+            >
               <svg viewBox="0 0 430 134" width="100%" style={{ display: 'block' }}>
                 {/* Tolerance band ±0.5°C */}
                 <rect
@@ -815,7 +924,7 @@ export const ScadaTwinTab: React.FC<ScadaTwinTabProps> = ({ onMilestoneAchieved 
                   实时
                 </text>
               </svg>
-            </div>
+            </LandscapeSvgStage>
           </div>
         </div>
 

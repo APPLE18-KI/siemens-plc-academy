@@ -11,6 +11,7 @@ import {
   Square,
   Zap,
 } from 'lucide-react';
+import { LandscapeSvgStage } from '../../components/LandscapeSvgStage';
 import './workflows.css';
 
 type PackMLState =
@@ -432,7 +433,112 @@ export const GrafcetPackmlWorkflow: React.FC<{ embedded?: boolean }> = ({ embedd
                   任意态拍急停 → 瞬跳 Aborting
                 </span>
               </div>
-              <div className="wf-svg-wrap">
+              <LandscapeSvgStage
+                title="OMAC PackML (ISA-TR88) + GRAFCET 双层状态机拓扑"
+                subtitle={`PackML: ${packml} · GRAFCET: ${grafcetStep === 0 ? 'OFF' : `S${grafcetStep}`} · 产出 ${completedCount}/${batchTarget}`}
+                scopeClassName="wf-root"
+                fitMode="contain"
+                inlineMinWidth={580}
+                inlinePadding
+                hint="⇄ 支持横屏全幅观看状态跃迁 · 顶栏可一键启动/暂停/拍急停"
+                landscapeFooterLabel="GRAFCET 工步流"
+                controls={
+                  <>
+                    <button
+                      type="button"
+                      className="lss-ctrl-btn is-primary"
+                      disabled={!(packml === 'Stopped' || packml === 'Complete')}
+                      onClick={cmdReset}
+                    >
+                      <RotateCcw size={12} />
+                      <span>Reset 复位</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="lss-ctrl-btn is-success"
+                      disabled={packml !== 'Idle'}
+                      onClick={cmdStart}
+                    >
+                      <Play size={12} />
+                      <span>Start 启动</span>
+                    </button>
+                    {packml === 'Held' ? (
+                      <button type="button" className="lss-ctrl-btn is-success" onClick={cmdUnhold}>
+                        <RefreshCw size={12} />
+                        <span>Unhold 恢复</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="lss-ctrl-btn is-warn"
+                        disabled={packml !== 'Execute'}
+                        onClick={cmdHold}
+                      >
+                        <PauseCircle size={12} />
+                        <span>Hold 暂停</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="lss-ctrl-btn"
+                      disabled={packml === 'Stopped' || packml === 'Stopping' || isAbortedZone}
+                      onClick={cmdStop}
+                    >
+                      <Square size={11} />
+                      <span>Stop</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="lss-ctrl-btn is-danger-solid"
+                      disabled={packml === 'Aborted' || packml === 'Aborting'}
+                      onClick={cmdAbort}
+                    >
+                      <AlertOctagon size={12} />
+                      <span>急停 Abort</span>
+                    </button>
+                    {packml === 'Aborted' && (
+                      <button type="button" className="lss-ctrl-btn is-warn" onClick={cmdClear}>
+                        <ShieldCheck size={12} />
+                        <span>Clear 清除</span>
+                      </button>
+                    )}
+                  </>
+                }
+                landscapeFooter={
+                  <>
+                    <button
+                      type="button"
+                      className="lss-ctrl-btn is-success"
+                      disabled={packml !== 'Execute'}
+                      onClick={advanceGrafcetStep}
+                    >
+                      <CheckCircle2 size={12} />
+                      <span>推进 GRAFCET 下一步</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`lss-ctrl-btn ${autoSensors ? 'is-warn' : ''}`}
+                      disabled={packml !== 'Execute'}
+                      onClick={() => setAutoSensors((v) => !v)}
+                    >
+                      <span>{autoSensors ? '停止自动传感' : '自动传感联跑'}</span>
+                    </button>
+                    {GRAFCET_STEPS.map((g) => {
+                      const active = packml === 'Execute' && grafcetStep === g.step;
+                      const held = isHeldZone && grafcetStep === g.step;
+                      return (
+                        <span
+                          key={g.step}
+                          className={`wf-badge ${active ? 'green' : held ? 'amber' : 'teal'}`}
+                          style={{ opacity: active || held ? 1 : 0.55 }}
+                        >
+                          S{g.step} {g.name}
+                        </span>
+                      );
+                    })}
+                  </>
+                }
+              >
                 <svg viewBox="0 0 680 228" width="100%" style={{ display: 'block', minWidth: 520 }}>
                   <defs>
                     <marker id="pmArr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
@@ -485,7 +591,7 @@ export const GrafcetPackmlWorkflow: React.FC<{ embedded?: boolean }> = ({ embedd
                   {renderPackmlBox('Aborted', 264, 174, 100, 38, '急停锁定')}
                   {renderPackmlBox('Clearing', 414, 174, 100, 38, '故障清除')}
                 </svg>
-              </div>
+              </LandscapeSvgStage>
             </div>
 
             {/* Bottom Half: GRAFCET Sequential Flow Inside Execute */}

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Flame, Gauge, Waves } from 'lucide-react';
-import type { PlcRuntime } from '../../types/plc';
+import type { PlcRuntime, ScanMetrics, TagValue } from '../../types/plc';
 import {
   TwinShell,
   type FaultSwitchItem,
@@ -22,7 +22,10 @@ interface TrendPoint {
 
 const MAX_TREND = 72;
 
-export const TankPressurePidTwin: React.FC<TankPressurePidProps> = ({ embedded = false }) => {
+export const TankPressurePidTwin: React.FC<TankPressurePidProps> = ({
+  runtime,
+  embedded = false,
+}) => {
   const [mode, setMode] = useState<TwinControlMode>('auto');
   const [paused, setPaused] = useState(false);
 
@@ -53,6 +56,28 @@ export const TankPressurePidTwin: React.FC<TankPressurePidProps> = ({ embedded =
     Array.from({ length: 30 }, () => ({ sp: 65, pv: 52, out: 45 }))
   );
 
+  // External PLC runtime coupling refs (PLC -> Plant & Plant -> PLC)
+  const extOutRef = useRef({
+    pump1Run: true,
+    pump2Aux: false,
+    heaterSsr: false,
+    aoPump1Spd: 15000,
+  });
+  const [extPump1Run, setExtPump1Run] = useState(true);
+  const [extAoRaw, setExtAoRaw] = useState(15000);
+  const lastSentInputsRef = useRef<Record<string, TagValue>>({});
+  const prevCycleRef = useRef(0);
+  const isExtAuto = Boolean(runtime) && mode === 'auto';
+
+  const syncPlantInput = (rt: PlcRuntime, name: string, nextVal: TagValue) => {
+    if (lastSentInputsRef.current[name] !== nextVal) {
+      lastSentInputsRef.current[name] = nextVal;
+      if (rt.getTag(name) !== nextVal) {
+        rt.setTag(name, nextVal);
+      }
+    }
+  };
+
   // ODE & PID internal accumulator ref
   const physRef = useRef({
     level: 52,
@@ -64,6 +89,60 @@ export const TankPressurePidTwin: React.FC<TankPressurePidProps> = ({ embedded =
     p2Active: false,
     tickCounter: 0,
   });
+
+  // 1. Subscribe to external PlcRuntime outputs (PLC -> Plant)
+  useEffect(() => {
+    if (!runtime) {
+      lastSentInputsRef.current = {};
+      return;
+    }
+
+    lastSentInputsRef.current = {};
+    prevCycleRef.current = runtime.getMetrics?.().cycleCount ?? 0;
+
+    const readOutputs = (tags: Record<string, TagValue>, metrics?: ScanMetrics) => {
+      const nextPump1Run = Boolean(tags['Pump1_Run']);
+      const nextPump2Aux = Boolean(tags['Pump2_Aux']);
+      const nextHeaterSsr = Boolean(tags['Heater_SSR']);
+      const rawAo = Number(tags['AO_Pump1_Spd'] ?? 0);
+      const nextAo = Number.isFinite(rawAo) ? rawAo : 0;
+
+      extOutRef.current = {
+        pump1Run: nextPump1Run,
+        pump2Aux: nextPump2Aux,
+        heaterSsr: nextHeaterSsr,
+        aoPump1Spd: nextAo,
+      };
+
+      if (metrics) {
+        if (metrics.cycleCount < prevCycleRef.current) {
+          lastSentInputsRef.current = {};
+        }
+        prevCycleRef.current = metrics.cycleCount;
+      }
+    };
+
+    readOutputs(runtime.tags, runtime.getMetrics?.());
+    return runtime.subscribe(readOutputs);
+  }, [runtime]);
+
+  // Immediately sync initial / fault sensor inputs when entering external auto mode
+  useEffect(() => {
+    if (!runtime || mode !== 'auto') {
+      lastSentInputsRef.current = {};
+      return;
+    }
+    lastSentInputsRef.current = {};
+    const s = physRef.current;
+    syncPlantInput(
+      runtime,
+      'AI_Level_Raw',
+      faultWireBreak ? -32768 : Math.round((s.level / 100) * 27648)
+    );
+    syncPlantInput(runtime, 'AI_Temp_Raw', Math.round((s.temp / 100) * 27648));
+    syncPlantInput(runtime, 'Pump1_OK', !faultPump1Trip);
+    syncPlantInput(runtime, 'HH_Switch', s.level >= 90 || faultHighHigh);
+  }, [runtime, mode, faultWireBreak, faultHighHigh, faultPump1Trip]);
 
   // Real-time ODE integration (50ms step)
   useEffect(() => {
@@ -78,12 +157,20 @@ export const TankPressurePidTwin: React.FC<TankPressurePidProps> = ({ embedded =
       const hhTripped = faultHighHigh || s.level >= 90;
       const safetyTrip = faultWireBreak || hhTripped;
 
-      // 2. PID Control Law (Auto) vs Manual Force
+      // 2. External PLC Control (PLC -> Plant) vs Built-in PID Control Law (Auto) vs Manual Force
       let p1OutPct = 0;
       let p2On = false;
       let heatOn = false;
 
-      if (safetyTrip) {
+      if (isExtAuto) {
+        const ext = extOutRef.current;
+        const clampedAoPct = Math.max(0, Math.min(100, (ext.aoPump1Spd / 27648) * 100));
+        p1OutPct = ext.pump1Run && !faultPump1Trip ? clampedAoPct : 0;
+        p2On = ext.pump2Aux;
+        heatOn = ext.heaterSsr;
+        setExtPump1Run(ext.pump1Run);
+        setExtAoRaw(Math.round(ext.aoPump1Spd));
+      } else if (safetyTrip) {
         p1OutPct = 0;
         p2On = false;
         heatOn = false;
@@ -159,6 +246,16 @@ export const TankPressurePidTwin: React.FC<TankPressurePidProps> = ({ embedded =
       const coldMakeupLoss = (qIn / 45) * (s.temp - 20.0) * 0.08;
       s.temp = Math.max(18, Math.min(85, s.temp + (heatGain - ambientLoss - coldMakeupLoss) * dt));
 
+      // 4.5 Write physical analog & switch sensors back to external PlcRuntime (Plant -> PLC)
+      if (runtime && mode === 'auto') {
+        const aiLevelRaw = faultWireBreak ? -32768 : Math.round((s.level / 100) * 27648);
+        const aiTempRaw = Math.round((s.temp / 100) * 27648);
+        syncPlantInput(runtime, 'AI_Level_Raw', aiLevelRaw);
+        syncPlantInput(runtime, 'AI_Temp_Raw', aiTempRaw);
+        syncPlantInput(runtime, 'Pump1_OK', !faultPump1Trip);
+        syncPlantInput(runtime, 'HH_Switch', s.level >= 90 || faultHighHigh);
+      }
+
       // 5. Commit UI visual state
       setLevelPct(Number(s.level.toFixed(1)));
       setTempC(Number(s.temp.toFixed(1)));
@@ -188,6 +285,8 @@ export const TankPressurePidTwin: React.FC<TankPressurePidProps> = ({ embedded =
     return () => window.clearInterval(timer);
   }, [
     paused,
+    runtime,
+    isExtAuto,
     mode,
     setpointPct,
     loadValvePct,
@@ -209,6 +308,7 @@ export const TankPressurePidTwin: React.FC<TankPressurePidProps> = ({ embedded =
     setLoadValvePct(42);
     setPidKp(2.6);
     setHeaterEnabled(true);
+    lastSentInputsRef.current = {};
     physRef.current = {
       level: 52,
       temp: 48.5,
@@ -226,19 +326,57 @@ export const TankPressurePidTwin: React.FC<TankPressurePidProps> = ({ embedded =
     setTrend(Array.from({ length: 30 }, () => ({ sp: 65, pv: 52, out: 45 })));
   };
 
-  // Siemens S7-1200 analog scaling (4-20mA -> 0..27648, wire-break < -1728)
-  const iw64Level = faultWireBreak ? -3456 : Math.round((levelPct / 100) * 27648);
+  // Siemens S7-1200 analog scaling (4-20mA -> 0..27648, wire-break < -1728 / -32768)
+  const iw64Level = faultWireBreak
+    ? isExtAuto
+      ? -32768
+      : -3456
+    : Math.round((levelPct / 100) * 27648);
   const transmitterMa = faultWireBreak ? 0.0 : 4.0 + (levelPct / 100) * 16.0;
   const pressureMpa = Number(
     Math.max(0.02, (levelPct / 100) * 0.42 + (pidOutputPct / 100) * 0.16 + (pump2Running ? 0.12 : 0)).toFixed(2)
   );
   const targetPressureMpa = Number(((setpointPct / 100) * 0.42 + 0.17).toFixed(2));
   const iw66Pressure = Math.round((pressureMpa / 1.0) * 27648);
-  const qw80Vfd = Math.round((pidOutputPct / 100) * 27648);
+  const iw66TempRaw = Math.round((tempC / 100) * 27648);
+  const qw80Vfd = isExtAuto ? extAoRaw : Math.round((pidOutputPct / 100) * 27648);
   const vfdHz = (pidOutputPct / 100) * 50;
   const hhAlarm = faultHighHigh || levelPct >= 90;
 
   const banner = useMemo(() => {
+    if (isExtAuto) {
+      if (faultWireBreak) {
+        return {
+          tone: 'danger' as const,
+          text: '🔗 外部博途 PLC 受控模式 · 4-20mA 液位断线 (%IW64 AI_Level_Raw = -32768)：已送入外部 PLC，验证您的博途 SCL 程序是否立即停泵保护！',
+          actionLabel: '修复 4-20mA 信号线',
+          onAction: () => setFaultWireBreak(false),
+        };
+      }
+      if (hhAlarm) {
+        return {
+          tone: 'danger' as const,
+          text: `🔗 外部博途 PLC 受控模式 · 高高液位开关触发 (%I0.1 HH_Switch = TRUE，当前 ${levelPct.toFixed(1)}%)：已同步至外部 PLC，检验博途程序是否切断进水泵！`,
+          actionLabel: '解除溢流故障并排液',
+          onAction: () => {
+            setFaultHighHigh(false);
+            physRef.current.level = 72;
+          },
+        };
+      }
+      if (faultPump1Trip) {
+        return {
+          tone: 'warn' as const,
+          text: '🔗 外部博途 PLC 受控模式 · 1# 主泵过载跳闸 (%I0.0 Pump1_OK = FALSE)：已反馈至外部 PLC，观察博途程序是否投入 2# 副泵 (%Q0.1 Pump2_Aux)。',
+          actionLabel: '复位 1# 主泵故障',
+          onAction: () => setFaultPump1Trip(false),
+        };
+      }
+      return {
+        tone: 'ok' as const,
+        text: '🔗 已连接外部博途 PLC 程序受控模式：液位 (%IW64)、水温 (%IW66)、泵热继 (%I0.0) 与高液位 (%I0.1) 实时回写 PLC，1# 变频泵转速 (%QW80)、2# 副泵与电加热管完全由博途 SCL 实时闭环控制！',
+      };
+    }
     if (faultWireBreak) {
       return {
         tone: 'danger' as const,
@@ -267,65 +405,131 @@ export const TankPressurePidTwin: React.FC<TankPressurePidProps> = ({ embedded =
       };
     }
     return undefined;
-  }, [faultWireBreak, hhAlarm, levelPct, faultPump1Trip]);
+  }, [isExtAuto, faultWireBreak, hhAlarm, levelPct, faultPump1Trip]);
 
-  const ioSignals: IoSignalItem[] = [
-    {
-      address: '%IW64',
-      symbol: 'AI_TankLevel',
-      label: `液位变送 (${transmitterMa.toFixed(1)}mA)`,
-      kind: 'IW',
-      value: iw64Level,
-      fault: faultWireBreak,
-    },
-    {
-      address: '%IW66',
-      symbol: 'AI_Pressure',
-      label: `管网压力 (${pressureMpa.toFixed(2)}MPa)`,
-      kind: 'IW',
-      value: iw66Pressure,
-    },
-    {
-      address: '%I0.2',
-      symbol: 'LS_HighHigh',
-      label: '高高液位浮球 (NC)',
-      kind: 'I',
-      value: !hhAlarm,
-      fault: hhAlarm,
-    },
-    {
-      address: '%Q0.0',
-      symbol: 'Pump1_VFD_Run',
-      label: '1# 主变频泵启停',
-      kind: 'Q',
-      value: pidOutputPct > 1,
-      fault: faultPump1Trip,
-      onToggle: () => setManualOut((m) => ({ ...m, p1Pct: m.p1Pct > 0 ? 0 : 65 })),
-    },
-    {
-      address: '%Q0.1',
-      symbol: 'Pump2_Aux_Run',
-      label: '2# 副增压泵投入',
-      kind: 'Q',
-      value: pump2Running,
-      onToggle: () => setManualOut((m) => ({ ...m, p2On: !m.p2On })),
-    },
-    {
-      address: '%Q0.2',
-      symbol: 'Heater_SSR',
-      label: '热工电加热棒 SSR',
-      kind: 'Q',
-      value: heaterActive,
-      onToggle: () => setManualOut((m) => ({ ...m, heaterOn: !m.heaterOn })),
-    },
-    {
-      address: '%QW80',
-      symbol: 'AQ_VFD_Out',
-      label: `变频输出 (${vfdHz.toFixed(1)}Hz)`,
-      kind: 'QW',
-      value: qw80Vfd,
-    },
-  ];
+  const ioSignals: IoSignalItem[] = runtime
+    ? [
+        {
+          address: '%I0.0',
+          symbol: 'Pump1_OK',
+          label: '1# 主泵热继正常 (NC)',
+          kind: 'I',
+          value: !faultPump1Trip,
+          fault: faultPump1Trip,
+        },
+        {
+          address: '%I0.1',
+          symbol: 'HH_Switch',
+          label: '高高液位溢流开关',
+          kind: 'I',
+          value: hhAlarm,
+          fault: hhAlarm,
+        },
+        {
+          address: '%IW64',
+          symbol: 'AI_Level_Raw',
+          label: `液位变送 (${transmitterMa.toFixed(1)}mA)`,
+          kind: 'IW',
+          value: iw64Level,
+          fault: faultWireBreak,
+        },
+        {
+          address: '%IW66',
+          symbol: 'AI_Temp_Raw',
+          label: `水温 PT100 (${tempC.toFixed(1)}°C)`,
+          kind: 'IW',
+          value: iw66TempRaw,
+        },
+        {
+          address: '%Q0.0',
+          symbol: 'Pump1_Run',
+          label: '1# 主变频泵启停',
+          kind: 'Q',
+          value: mode === 'manual' ? pidOutputPct > 1 : extPump1Run,
+          fault: faultPump1Trip,
+          onToggle: () => setManualOut((m) => ({ ...m, p1Pct: m.p1Pct > 0 ? 0 : 65 })),
+        },
+        {
+          address: '%Q0.1',
+          symbol: 'Pump2_Aux',
+          label: '2# 副增压泵投入',
+          kind: 'Q',
+          value: pump2Running,
+          onToggle: () => setManualOut((m) => ({ ...m, p2On: !m.p2On })),
+        },
+        {
+          address: '%Q0.2',
+          symbol: 'Heater_SSR',
+          label: '热工电加热棒 SSR',
+          kind: 'Q',
+          value: heaterActive,
+          onToggle: () => setManualOut((m) => ({ ...m, heaterOn: !m.heaterOn })),
+        },
+        {
+          address: '%QW80',
+          symbol: 'AO_Pump1_Spd',
+          label: `变频输出 (${vfdHz.toFixed(1)}Hz)`,
+          kind: 'QW',
+          value: qw80Vfd,
+        },
+      ]
+    : [
+        {
+          address: '%IW64',
+          symbol: 'AI_TankLevel',
+          label: `液位变送 (${transmitterMa.toFixed(1)}mA)`,
+          kind: 'IW',
+          value: iw64Level,
+          fault: faultWireBreak,
+        },
+        {
+          address: '%IW66',
+          symbol: 'AI_Pressure',
+          label: `管网压力 (${pressureMpa.toFixed(2)}MPa)`,
+          kind: 'IW',
+          value: iw66Pressure,
+        },
+        {
+          address: '%I0.2',
+          symbol: 'LS_HighHigh',
+          label: '高高液位浮球 (NC)',
+          kind: 'I',
+          value: !hhAlarm,
+          fault: hhAlarm,
+        },
+        {
+          address: '%Q0.0',
+          symbol: 'Pump1_VFD_Run',
+          label: '1# 主变频泵启停',
+          kind: 'Q',
+          value: pidOutputPct > 1,
+          fault: faultPump1Trip,
+          onToggle: () => setManualOut((m) => ({ ...m, p1Pct: m.p1Pct > 0 ? 0 : 65 })),
+        },
+        {
+          address: '%Q0.1',
+          symbol: 'Pump2_Aux_Run',
+          label: '2# 副增压泵投入',
+          kind: 'Q',
+          value: pump2Running,
+          onToggle: () => setManualOut((m) => ({ ...m, p2On: !m.p2On })),
+        },
+        {
+          address: '%Q0.2',
+          symbol: 'Heater_SSR',
+          label: '热工电加热棒 SSR',
+          kind: 'Q',
+          value: heaterActive,
+          onToggle: () => setManualOut((m) => ({ ...m, heaterOn: !m.heaterOn })),
+        },
+        {
+          address: '%QW80',
+          symbol: 'AQ_VFD_Out',
+          label: `变频输出 (${vfdHz.toFixed(1)}Hz)`,
+          kind: 'QW',
+          value: qw80Vfd,
+        },
+      ];
 
   const sliders: ParamSliderItem[] = [
     {
@@ -433,11 +637,17 @@ export const TankPressurePidTwin: React.FC<TankPressurePidProps> = ({ embedded =
       subtitle="一阶惯性微分方程实时积分 · 4-20mA 模拟量标定 + 断线保护 + 双泵加减泵 + 三曲线 PID 示波器"
       status={shellStatus}
       statusText={
-        faultWireBreak
-          ? 'FAULT · 4-20mA 断线'
-          : hhAlarm
-            ? 'FAULT · HH 高高液位'
-            : `PID CLOSED-LOOP · PV ${levelPct.toFixed(1)}%`
+        isExtAuto
+          ? faultWireBreak
+            ? '🔗 外部博途 PLC 受控 · 4-20mA 断线'
+            : hhAlarm
+              ? '🔗 外部博途 PLC 受控 · HH 溢流'
+              : `🔗 外部博途 PLC 受控 · PV ${levelPct.toFixed(1)}%`
+          : faultWireBreak
+            ? 'FAULT · 4-20mA 断线'
+            : hhAlarm
+              ? 'FAULT · HH 高高液位'
+              : `PID CLOSED-LOOP · PV ${levelPct.toFixed(1)}%`
       }
       mode={mode}
       onModeChange={setMode}

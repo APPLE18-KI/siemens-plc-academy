@@ -6,6 +6,18 @@ import './styles/components.css';
 import './styles/pages.css';
 import { App } from './app/App';
 
+// 网页环境（http/https）注册离线缓存；Android App（Capacitor）与 file:// 下不注册
+if (
+  'serviceWorker' in navigator &&
+  /^https?:$/.test(window.location.protocol) &&
+  !(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.() &&
+  import.meta.env.PROD
+) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => undefined);
+  });
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

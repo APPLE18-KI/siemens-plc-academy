@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Award, CheckCircle2, ClipboardCheck, RotateCcw, XCircle } from 'lucide-react';
 import type { QuizQuestion } from '../../types/content';
 import { useProgress } from '../../app/store/progressStore';
+import { haptic } from '../../app/native/platform';
 
 interface QuizBlockProps {
   lessonId: string;
@@ -15,6 +16,7 @@ export const QuizBlock: React.FC<QuizBlockProps> = ({ lessonId, title, items }) 
   const { state, recordQuizScore } = useProgress();
   const [selected, setSelected] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState(false);
+  const rootRef = React.useRef<HTMLElement | null>(null);
 
   // Reset local attempt state when switching lessons
   useEffect(() => {
@@ -35,34 +37,40 @@ export const QuizBlock: React.FC<QuizBlockProps> = ({ lessonId, title, items }) 
 
   const handleSelect = (qIdx: number, optIdx: number) => {
     if (submitted) return;
+    haptic('tap');
     setSelected((prev) => ({ ...prev, [qIdx]: optIdx }));
   };
 
   const handleSubmit = () => {
     setSubmitted(true);
+    haptic(correctCount === items.length ? 'success' : 'error');
     recordQuizScore(lessonId, correctCount, items.length);
   };
 
   const handleRetry = () => {
     setSelected({});
     setSubmitted(false);
+    // 回到第一题，方便重新作答
+    const el = rootRef.current;
+    if (el && el.getBoundingClientRect().top < 0) el.scrollIntoView({ block: 'start' });
+    el?.querySelector<HTMLButtonElement>('.quiz-opt')?.focus({ preventScroll: true });
   };
 
   return (
-    <section className="quiz-card">
+    <section className="quiz-card" ref={rootRef}>
       <div className="quiz-head">
         <div>
           <div className="embedded-stage-kicker" style={{ marginBottom: 4 }}>
             <ClipboardCheck size={13} />
-            随堂闯关测验 · CHECKPOINT QUIZ
+            小测验
           </div>
           <div style={{ fontSize: 16, fontWeight: 700 }}>
-            {title || '本讲核心知识点随堂校验'}
+            {title || '检查一下本讲的重点'}
           </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="badge badge-mono">{items.length} 道精选工程题</span>
+          <span className="badge">{items.length} 道题</span>
           {savedBest && (
             <span className={`badge ${savedBest.bestPct === 100 ? 'badge-green' : 'badge-teal'}`}>
               历史最高 {savedBest.bestPct}%
@@ -101,6 +109,7 @@ export const QuizBlock: React.FC<QuizBlockProps> = ({ lessonId, title, items }) 
                       key={optIdx}
                       type="button"
                       disabled={submitted}
+                      aria-pressed={isSelected}
                       className={`quiz-opt${stateClass}`}
                       onClick={() => handleSelect(qIdx, optIdx)}
                     >
@@ -125,12 +134,12 @@ export const QuizBlock: React.FC<QuizBlockProps> = ({ lessonId, title, items }) 
                     {isRight ? (
                       <>
                         <CheckCircle2 size={15} />
-                        回答正确 · 原理解析
+                        答对了！为什么是 {OPTION_LETTERS[item.answer] ?? item.answer + 1}：
                       </>
                     ) : (
                       <>
                         <XCircle size={15} />
-                        正确答案：{OPTION_LETTERS[item.answer] ?? item.answer + 1} · 原理解析
+                        你选了 {OPTION_LETTERS[picked] ?? picked + 1}，正确答案是 {OPTION_LETTERS[item.answer] ?? item.answer + 1}。原因：
                       </>
                     )}
                   </div>
@@ -143,22 +152,22 @@ export const QuizBlock: React.FC<QuizBlockProps> = ({ lessonId, title, items }) 
       </div>
 
       <div className="quiz-footer">
-        <div className="quiz-result-banner">
+        <div className="quiz-result-banner" role="status" aria-live="polite">
           {!submitted ? (
             <span style={{ color: 'var(--ink-secondary)', fontWeight: 500 }}>
-              已作答 {answeredCount} / {items.length} 题 · 全部答对自动点亮本课进度
+              已作答 {answeredCount} / {items.length} 题 · 全部答对会自动标记本讲完成
             </span>
           ) : allCorrect ? (
             <>
               <Award size={20} color="var(--power-green)" />
               <span style={{ color: 'var(--power-green)' }}>
-                全对通关 ({correctCount}/{items.length})！本课学习进度已自动点亮 ✓
+                全部答对（{correctCount}/{items.length}）！本讲已标记为完成 ✓
               </span>
             </>
           ) : (
             <span style={{ color: 'var(--alarm-amber)' }}>
               本次得分：{correctCount} / {items.length}（
-              {Math.round((correctCount / items.length) * 100)}%），请结合解析复习后重试
+              {Math.round((correctCount / items.length) * 100)}%）。看看每题下面的解析，再试一次吧
             </span>
           )}
         </div>
@@ -176,7 +185,7 @@ export const QuizBlock: React.FC<QuizBlockProps> = ({ lessonId, title, items }) 
               disabled={!allAnswered}
               onClick={handleSubmit}
             >
-              提交并判分 ({answeredCount}/{items.length})
+              {allAnswered ? '提交答案' : `还有 ${items.length - answeredCount} 题未作答`}
             </button>
           )}
         </div>

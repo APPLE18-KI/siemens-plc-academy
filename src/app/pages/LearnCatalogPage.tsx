@@ -15,6 +15,8 @@ import {
 import { chapters, lessons } from '../../registry';
 import type { Lesson, LessonLevel } from '../../types/content';
 import { useProgress } from '../store/progressStore';
+import { formatDuration, LEVEL_STARS } from '../../content/curriculum';
+import { DifficultyStars } from '../../components/DifficultyStars';
 
 const LEVELS: Array<'全部' | LessonLevel> = ['全部', '入门', '基础', '进阶', '实战'];
 
@@ -41,7 +43,7 @@ function summarizeInteractiveBlocks(lesson: Lesson) {
   for (const b of lesson.blocks) {
     if (b.kind === 'sim') sim++;
     else if (b.kind === 'model') model++;
-    else if (b.kind === 'workflow') workflow++;
+    else if (b.kind === 'workflow' || b.kind === 'demo') workflow++;
     else if (b.kind === 'quiz') quiz++;
   }
   return { sim, model, workflow, quiz };
@@ -106,7 +108,7 @@ export const LearnCatalogPage: React.FC = () => {
                 order: 1,
                 title: '全部课程',
                 subtitle: '西门子 S7-1200 核心实训课程',
-                badge: 'COURSE',
+                badge: '课程',
               },
               items: filteredLessons,
             },
@@ -131,7 +133,7 @@ export const LearnCatalogPage: React.FC = () => {
           order: 99,
           title: '拓展实战专题',
           subtitle: '其他专项课程内容',
-          badge: 'EXTRA',
+          badge: '拓展',
         },
         items: orphans,
       });
@@ -161,12 +163,12 @@ export const LearnCatalogPage: React.FC = () => {
           <div>
             <div className="telemetry-eyebrow">
               <span className="telemetry-dot" />
-              STRUCTURED CURRICULUM · 5 阶段 15 讲实战体系
+              课程目录 · {safeChapters.length} 个阶段
             </div>
-            <h1>西门子 S7-1200 渐进式互动课程</h1>
+            <h1>西门子 S7-1200 入门课程</h1>
             <p>
-              面向零基础工程师设计的 5 阶段体系，共 {safeLessons.length} 节互动实战课（约{' '}
-              {Math.max(1, Math.round(totalMinutes / 60))} 小时精讲），每讲内嵌在线仿真、数字孪生或随堂测验。
+              共 {safeLessons.length} 讲，预计总学习时长约 <strong>{formatDuration(totalMinutes)}</strong>
+              （含动手练习和小测验）。建议按顺序学习，每次 1 讲即可；第 0 讲会告诉你需要准备什么。
             </p>
           </div>
 
@@ -186,7 +188,7 @@ export const LearnCatalogPage: React.FC = () => {
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700 }}>
                   {stats.completedLessons} / {safeLessons.length}
                 </div>
-                <div style={{ fontSize: 11.5, color: 'var(--ink-muted)' }}>已掌握课时</div>
+                <div style={{ fontSize: 11.5, color: 'var(--ink-muted)' }}>已完成课程</div>
               </div>
               <div
                 style={{
@@ -213,7 +215,7 @@ export const LearnCatalogPage: React.FC = () => {
             {nextLesson && (
               <Link to={`/learn/${nextLesson.id}`} className="btn btn-primary">
                 <Play size={15} fill="currentColor" />
-                {state.lastVisitedLessonId ? `继续第 ${nextLesson.order} 讲` : '开始第 1 讲'}
+                {state.lastVisitedLessonId ? `继续第 ${nextLesson.order} 讲` : `从第 ${nextLesson.order} 讲开始`}
               </Link>
             )}
           </div>
@@ -227,7 +229,8 @@ export const LearnCatalogPage: React.FC = () => {
               <input
                 type="search"
                 className="search-input"
-                placeholder="搜索课程标题、指令或知识点（如 TON、自锁、PROFINET、PID）…"
+                placeholder="搜索课程，如 定时器、自锁、HMI、PID…"
+                aria-label="搜索课程"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
@@ -250,7 +253,7 @@ export const LearnCatalogPage: React.FC = () => {
               {[
                 { key: 'all', label: '全部状态' },
                 { key: 'todo', label: '未完成' },
-                { key: 'done', label: '已掌握' },
+                { key: 'done', label: '已完成' },
               ].map((st) => (
                 <button
                   key={st.key}
@@ -280,7 +283,7 @@ export const LearnCatalogPage: React.FC = () => {
                   className={`filter-pill${chapterFilter === ch.id ? ' active' : ''}`}
                   onClick={() => setChapterFilter(ch.id)}
                 >
-                  {ch.badge} · {ch.title}
+                  {ch.title.replace(/^第 (\d+) 章：.*$/, '第 $1 章')} · {ch.badge}
                 </button>
               ))}
             </div>
@@ -319,14 +322,14 @@ export const LearnCatalogPage: React.FC = () => {
               <section key={chapter.id} className="chapter-block">
                 <div className="chapter-block-head">
                   <div className="chapter-head-left">
-                    <span className="badge badge-teal badge-mono">{chapter.badge}</span>
+                    <span className="badge badge-teal">{chapter.badge}</span>
                     <div>
                       <h2 className="chapter-block-title">{chapter.title}</h2>
                       <p className="chapter-block-sub">{chapter.subtitle}</p>
                     </div>
                   </div>
                   <span className="badge badge-mono">
-                    阶段进度 {chapterDone} / {chapterAll.length || items.length}
+                    {chapterDone}/{chapterAll.length || items.length} 已完成 · 约 {formatDuration(chapterAll.reduce((acc, l) => acc + l.minutes, 0))}
                   </span>
                 </div>
 
@@ -341,36 +344,26 @@ export const LearnCatalogPage: React.FC = () => {
                         key={lesson.id}
                         to={`/learn/${lesson.id}`}
                         className={`lesson-card${done ? ' is-done' : ''}`}
+                        aria-label={`第 ${lesson.order} 讲：${lesson.title}，难度${lesson.level}，约 ${lesson.minutes} 分钟${done ? '，已完成' : ''}`}
                       >
                         <div className="lesson-card-top">
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span className="badge badge-mono">
-                              L{String(lesson.order).padStart(2, '0')}
-                            </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <span className="badge badge-mono">第 {lesson.order} 讲</span>
                             <span className={`badge ${levelBadgeClass(lesson.level)}`}>
+                              <DifficultyStars level={LEVEL_STARS[lesson.level]} />
                               {lesson.level}
                             </span>
                           </div>
                           {done ? (
                             <span className="badge badge-green">
                               <CheckCircle2 size={12} />
-                              已掌握
+                              已完成
                             </span>
-                          ) : (
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                fontSize: 12,
-                                color: 'var(--ink-muted)',
-                                fontFamily: 'var(--font-mono)',
-                              }}
-                            >
-                              <Clock size={12} />
-                              {lesson.minutes} min
-                            </span>
-                          )}
+                          ) : null}
+                        </div>
+                        <div className="lesson-card-meta">
+                          <Clock size={12} />
+                          约 {formatDuration(lesson.minutes)}
                         </div>
 
                         <h3 className="lesson-card-title">{lesson.title}</h3>
@@ -397,20 +390,20 @@ export const LearnCatalogPage: React.FC = () => {
                             )}
                             {counts.model > 0 && (
                               <span
-                                title="内嵌数字孪生模型"
+                                title="内嵌设备模型"
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}
                               >
                                 <Boxes size={13} color="var(--info-cyan)" />
-                                孪生
+                                模型
                               </span>
                             )}
                             {counts.workflow > 0 && (
                               <span
-                                title="内嵌交互工作流"
+                                title="内嵌原理动画或互动演示"
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}
                               >
                                 <GitBranch size={13} color="var(--alarm-amber)" />
-                                工作流
+                                演示
                               </span>
                             )}
                             {quizBest && (

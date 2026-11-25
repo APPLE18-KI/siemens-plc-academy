@@ -3,8 +3,8 @@ import type { ChapterMeta, Lesson } from '../../types/content';
 export const ch4Meta: ChapterMeta = {
   id: 'ch4',
   order: 4,
-  title: '第 4 章：模块化架构与 SCL——初级与中高级工程师的分水岭',
-  subtitle: '告别千行 OB1 面条代码！精通 FB/FC/多重背景、UDT + 优化 DB 配方管理与工业级 SCL 状态机',
+  title: '第 4 章：把程序写得有条理',
+  subtitle: '程序变长以后怎么拆分：用 FC/FB 把同类设备写成可复用的块，用数据块和自定义类型管理参数，再用 SCL 文本语言写“状态机”',
   badge: '进阶',
 };
 
@@ -13,10 +13,10 @@ export const ch4Lessons: Lesson[] = [
     id: 'l10-fc-fb-instance-db',
     chapterId: 'ch4',
     order: 10,
-    title: '告别千行 OB1 面条代码：FC vs FB、背景 DB 与多重背景气缸标准块',
+    title: '把程序拆成块：FC 与 FB、背景数据块',
     subtitle: '24 个气缸只写 1 套代码！吃透西门子块架构精髓，亲手打造简历级可复用 FB_Cylinder2Pos 驱动块',
     level: '进阶',
-    minutes: 35,
+    minutes: 50,
     tags: ['FB函数块', 'FC函数', '背景数据块', '多重背景', 'FB_Cylinder2Pos'],
     objectives: [
       '彻底辨清西门子 OB / FC / FB / DB 四大程序块的职责分工与内存生命周期差异',
@@ -226,7 +226,7 @@ END_FUNCTION_BLOCK`,
       },
       {
         kind: 'practice-task',
-        title: '第 10 讲实训打卡：把面条程序重构为 FB 多重背景架构',
+        title: '本讲实训打卡：把面条程序重构为 FB 多重背景架构',
         scenario: '对照上方三工位分拣线与 FB_Cylinder2Pos 源码，完成一次完整的模块化架构评审。',
         steps: [
           '逐行核对 FB_Cylinder2Pos 代码中的 3 种故障码（1=伸出超时、2=缩回超时、3=双传感器互斥），验证为什么即使气压不足气缸推不到位，系统也能在 3 秒后精准停阀并告诉操作工具体坏了哪根气缸。',
@@ -287,10 +287,10 @@ END_FUNCTION_BLOCK`,
     id: 'l11-udt-global-db',
     chapterId: 'ch4',
     order: 11,
-    title: 'UDT（PLC 数据类型）+ 优化访问全局 DB：管理多工位与锂电配方',
+    title: '用 UDT 和全局 DB 管理设备数据与配方',
     subtitle: '一条产线一键切换 10 种锂电模组配方！吃透西门子优化块访问机制与 UDT 结构体数据契约',
     level: '进阶',
-    minutes: 30,
+    minutes: 40,
     tags: ['UDT', '优化访问DB', '配方管理', 'IN_OUT传参', '数组越界保护'],
     objectives: [
       '学会使用西门子 UDT（PLC 数据类型，以 type 前缀命名）定义高度结构化的工艺配方与工位状态蓝图',
@@ -468,7 +468,7 @@ END_FUNCTION`,
       },
       {
         kind: 'practice-task',
-        title: '第 11 讲实训打卡：设计毕业项目专属锂电配方与工位 UDT',
+        title: '本讲实训打卡：设计毕业项目专属锂电配方与工位 UDT',
         scenario: '我们的毕业大项目是“锂电模组柔性视觉分拣、热压温控与立体入库工作站”。现在请你以架构师身份审视其核心数据结构。',
         steps: [
           '通读上方 typeModuleRecipe 源码，确认每一个物理工艺量（温度 Real、时长 Time、速度 Real、托盘件数 Int）的数据类型是否选得最精准。',
@@ -529,10 +529,10 @@ END_FUNCTION`,
     id: 'l12-scl-state-machine',
     chapterId: 'ch4',
     order: 12,
-    title: 'SCL 结构化控制语言精讲与工业级 CASE 状态机（GRAFCET & PackML）',
+    title: 'SCL 文本编程与 CASE 状态机',
     subtitle: '中高级西门子工程师核心生产力语言！写出带工步超时看门狗与标准 PackML 模式管理的状态机引擎',
     level: '进阶',
-    minutes: 35,
+    minutes: 50,
     tags: ['SCL', 'CASE状态机', 'PackML', 'GRAFCET', '工步看门狗'],
     objectives: [
       '精通西门子 SCL 核心语法（:= 赋值 vs = 比较、IF/ELSIF、FOR 循环、CASE 状态机、ENO 错误检查）',
@@ -748,7 +748,7 @@ END_IF;
       },
       {
         kind: 'practice-task',
-        title: '第 12 讲实训打卡：PackML/GRAFCET 状态机与看门狗故障推演',
+        title: '本讲实训打卡：PackML/GRAFCET 状态机与看门狗故障推演',
         scenario: '在上方交互式 GRAFCET/PackML 状态机工作流中，模拟正常生产、中途暂停续跑与传感器卡阻超时 3 种真实车间场景。',
         steps: [
           '点击 Reset 完成回零进入 IDLE，再点击 Start 进入 EXECUTE，逐步触发各工位传感器，对照右侧同步高亮的 SCL CASE 代码验证每一步转移。',

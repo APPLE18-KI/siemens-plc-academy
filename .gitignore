@@ -4,3 +4,7 @@ dist
 .vendor-skills
 *.local
 
+android/keystore.properties
+*.jks
+*.keystore
+*.p12

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, CheckCircle2, Wrench } from 'lucide-react';
 import { useProgress } from '../../app/store/progressStore';
+import { haptic } from '../../app/native/platform';
 
 interface PracticeTaskBlockProps {
   taskKey: string;
@@ -25,6 +26,12 @@ export const PracticeTaskBlock: React.FC<PracticeTaskBlockProps> = ({
   const doneCount = checkedSteps.length + checkedPoints.length;
   const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
   const isCompleted = totalCount > 0 && doneCount >= totalCount;
+  /** 勾选反馈：普通勾选轻振一下，勾完最后一项给“完成”振动 */
+  const toggleWithFeedback = (kind: 'step' | 'point', idx: number, wasChecked: boolean) => {
+    const willComplete = !wasChecked && doneCount + 1 >= totalCount;
+    haptic(willComplete ? 'success' : 'tap');
+    togglePracticeItem(taskKey, kind, idx, steps.length, checkPoints.length);
+  };
 
   return (
     <section className={`practice-card${isCompleted ? ' completed' : ''}`}>
@@ -32,7 +39,7 @@ export const PracticeTaskBlock: React.FC<PracticeTaskBlockProps> = ({
         <div>
           <div className="embedded-stage-kicker" style={{ marginBottom: 4 }}>
             <Wrench size={13} />
-            动手实训工单 · LAB TASK
+            动手练习
           </div>
           <div style={{ fontSize: 16, fontWeight: 700 }}>{title}</div>
         </div>
@@ -53,13 +60,13 @@ export const PracticeTaskBlock: React.FC<PracticeTaskBlockProps> = ({
 
       <div className="practice-body">
         <div className="practice-scenario">
-          <strong style={{ color: 'var(--ink-primary)' }}>工业现场工况：</strong>
+          <strong style={{ color: 'var(--ink-primary)' }}>任务说明：</strong>
           {scenario}
         </div>
 
         <div>
           <div className="practice-section-label">
-            实施操作步骤 ({checkedSteps.length} / {steps.length})
+            操作步骤 ({checkedSteps.length} / {steps.length})
           </div>
           <div className="practice-list">
             {steps.map((step, idx) => {
@@ -70,7 +77,7 @@ export const PracticeTaskBlock: React.FC<PracticeTaskBlockProps> = ({
                   type="button"
                   className={`practice-check-item${checked ? ' checked' : ''}`}
                   onClick={() =>
-                    togglePracticeItem(taskKey, 'step', idx, steps.length, checkPoints.length)
+                    toggleWithFeedback('step', idx, checked)
                   }
                 >
                   <span className="practice-checkbox">
@@ -85,7 +92,7 @@ export const PracticeTaskBlock: React.FC<PracticeTaskBlockProps> = ({
                         marginRight: 8,
                       }}
                     >
-                      STEP {String(idx + 1).padStart(2, '0')}
+                      第 {idx + 1} 步
                     </span>
                     {step}
                   </span>
@@ -98,7 +105,7 @@ export const PracticeTaskBlock: React.FC<PracticeTaskBlockProps> = ({
         {checkPoints.length > 0 && (
           <div>
             <div className="practice-section-label">
-              工程验收检查点 ({checkedPoints.length} / {checkPoints.length})
+              做完后确认 ({checkedPoints.length} / {checkPoints.length})
             </div>
             <div className="practice-list">
               {checkPoints.map((cp, idx) => {
@@ -109,7 +116,7 @@ export const PracticeTaskBlock: React.FC<PracticeTaskBlockProps> = ({
                     type="button"
                     className={`practice-check-item${checked ? ' checked' : ''}`}
                     onClick={() =>
-                      togglePracticeItem(taskKey, 'point', idx, steps.length, checkPoints.length)
+                      toggleWithFeedback('point', idx, checked)
                     }
                   >
                     <span className="practice-checkbox">

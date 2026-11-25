@@ -61,11 +61,11 @@ export const CpuStatusBar: React.FC<CpuStatusBarProps> = ({
       {/* Scan Pipeline Telemetry */}
       {!compact && (
         <div className="plc-sim-pipeline" title="西门子 S7-1200 标准循环扫描三阶段">
-          <span className={`plc-sim-stage ${running ? 'active' : ''}`}>1. PII 采样</span>
+          <span className={`plc-sim-stage ${running ? 'active' : ''}`} title="PII：过程映像输入，扫描开始时一次性读取全部输入点">1 读输入 PII</span>
           <span className="plc-sim-arrow">→</span>
-          <span className={`plc-sim-stage ${running ? 'active' : ''}`}>2. OB1 逐网段求值</span>
+          <span className={`plc-sim-stage ${running ? 'active' : ''}`} title="OB1：主程序，从第 1 个网段到最后一个网段依次执行">2 执行 OB1</span>
           <span className="plc-sim-arrow">→</span>
-          <span className={`plc-sim-stage ${running ? 'active' : ''}`}>3. PIQ 刷新</span>
+          <span className={`plc-sim-stage ${running ? 'active' : ''}`} title="PIQ：过程映像输出，程序算完后一次性写到输出点">3 写输出 PIQ</span>
           <span className="plc-sim-cycle-stat">
             周期 <b>#{cycleCount}</b> · {lastScanMs.toFixed(2)}ms
           </span>
@@ -81,7 +81,7 @@ export const CpuStatusBar: React.FC<CpuStatusBarProps> = ({
           title={running ? '切换 CPU 为 STOP（物理输出安全切断）' : '启动 CPU 进入 RUN 循环扫描'}
         >
           {running ? <Square size={13} /> : <Play size={13} />}
-          <span>{running ? 'STOP' : 'RUN'}</span>
+          <span>{running ? '停止 CPU' : '运行 CPU'}</span>
         </button>
 
         <button
@@ -94,7 +94,8 @@ export const CpuStatusBar: React.FC<CpuStatusBarProps> = ({
           <span>{compact ? '单步' : '单步扫描'}</span>
         </button>
 
-        <div className="plc-sim-interval-group" role="group" aria-label="扫描周期调节">
+        <div className="plc-sim-interval-group" role="group" aria-label="扫描速度：数值越大越慢，方便看清每一步">
+          <span className="plc-sim-interval-label">速度</span>
           {INTERVAL_OPTIONS.filter((o) => (!compact ? true : o.ms !== 20)).map((opt) => (
             <button
               key={opt.ms}
@@ -115,7 +116,7 @@ export const CpuStatusBar: React.FC<CpuStatusBarProps> = ({
           title="复位所有 I/O、定时器、计数器与示波器缓冲"
         >
           <RotateCcw size={13} />
-          {!compact && <span>Reset</span>}
+          <span>{compact ? '复位' : '全部复位'}</span>
         </button>
       </div>
     </div>

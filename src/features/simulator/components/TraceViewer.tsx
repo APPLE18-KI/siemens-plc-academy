@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Activity, Pause, Play, Trash2 } from 'lucide-react';
 import type { TraceChannelDef, TraceSample } from '../../../core/plc';
+import { LandscapeSvgStage } from '../../../components/LandscapeSvgStage';
 
 interface TraceViewerProps {
   channels: TraceChannelDef[];
@@ -9,6 +10,9 @@ interface TraceViewerProps {
   onTogglePause: () => void;
   onClear: () => void;
   compact?: boolean;
+  landscapeTitle?: string;
+  landscapeControls?: React.ReactNode;
+  landscapeFooter?: React.ReactNode;
 }
 
 const LANE_H = 38;
@@ -26,6 +30,9 @@ export const TraceViewer: React.FC<TraceViewerProps> = ({
   onTogglePause,
   onClear,
   compact = false,
+  landscapeTitle,
+  landscapeControls,
+  landscapeFooter,
 }) => {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
@@ -111,9 +118,19 @@ export const TraceViewer: React.FC<TraceViewerProps> = ({
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     if (samples.length < 2) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const scaleX = svgWidth / rect.width;
-    const svgX = (e.clientX - rect.left) * scaleX;
+    const svg = e.currentTarget;
+    let svgX: number;
+    const ctm = svg.getScreenCTM?.();
+    if (ctm) {
+      const pt = svg.createSVGPoint();
+      pt.x = e.clientX;
+      pt.y = e.clientY;
+      svgX = pt.matrixTransform(ctm.inverse()).x;
+    } else {
+      const rect = svg.getBoundingClientRect();
+      const scaleX = svgWidth / rect.width;
+      svgX = (e.clientX - rect.left) * scaleX;
+    }
     if (svgX < LABEL_W || svgX > LABEL_W + PLOT_W) {
       setHoverIdx(null);
       return;
@@ -159,12 +176,39 @@ export const TraceViewer: React.FC<TraceViewerProps> = ({
       </div>
 
       <div className="plc-sim-trace-body">
-        <svg
-          className="plc-sim-trace-svg"
-          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={() => setHoverIdx(null)}
+        <LandscapeSvgStage
+          title={landscapeTitle ?? '实时时序示波器 (Trace 逻辑分析仪)'}
+          subtitle={`${inspectedSample ? `周期 #${inspectedSample.cycle}` : '等待采样'} · ${samples.length}/120 点`}
+          compactHud
+          hint="⇄ 可滑动查看波形 · 横屏放大查看各通道边沿时序"
+          scopeClassName="plc-sim-root"
+          fitMode="contain"
+          landscapeFooter={landscapeFooter}
+          landscapeFooterLabel="现场输入按钮"
+          controls={
+            <>
+              {landscapeControls}
+              <button
+                type="button"
+                className={`lss-ctrl-btn ${paused ? 'is-warn' : ''}`}
+                onClick={onTogglePause}
+              >
+                {paused ? <Play size={12} /> : <Pause size={12} />}
+                <span>{paused ? '继续采样' : '暂停抓拍'}</span>
+              </button>
+              <button type="button" className="lss-ctrl-btn" onClick={onClear}>
+                <Trash2 size={12} />
+                <span>清空</span>
+              </button>
+            </>
+          }
         >
+          <svg
+            className="plc-sim-trace-svg"
+            viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={() => setHoverIdx(null)}
+          >
           {/* Plot background */}
           <rect
             x={LABEL_W}
@@ -273,7 +317,8 @@ export const TraceViewer: React.FC<TraceViewerProps> = ({
               strokeDasharray="3 2"
             />
           )}
-        </svg>
+          </svg>
+        </LandscapeSvgStage>
       </div>
     </div>
   );

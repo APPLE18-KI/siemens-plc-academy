@@ -17,6 +17,9 @@ import { chapters, lessons } from '../../registry';
 import { useProgress } from '../store/progressStore';
 import { LessonBlockRenderer } from '../../components/lesson/LessonBlockRenderer';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
+import { DifficultyStars } from '../../components/DifficultyStars';
+import { formatDuration, LEVEL_STARS } from '../../content/curriculum';
+import { haptic } from '../native/platform';
 
 export const LessonReaderPage: React.FC = () => {
   const { lessonId } = useParams<{ lessonId: string }>();
@@ -87,7 +90,7 @@ export const LessonReaderPage: React.FC = () => {
       ? safeChapters
           .map((ch) => ({
             id: ch.id,
-            label: `${ch.badge} · ${ch.title}`,
+            label: ch.title,
             items: safeLessons.filter((l) => l.chapterId === ch.id),
           }))
           .filter((g) => g.items.length > 0)
@@ -99,10 +102,11 @@ export const LessonReaderPage: React.FC = () => {
       <button
         type="button"
         className="btn btn-sm reader-mobile-toc-btn"
+        aria-expanded={mobileTocOpen}
         onClick={() => setMobileTocOpen((v) => !v)}
       >
         <ListTree size={15} />
-        {mobileTocOpen ? '收起课程大纲' : '展开全部 15 讲大纲'}
+        {mobileTocOpen ? '收起课程大纲' : `课程大纲（第 ${lesson.order} 讲 / 共 ${safeLessons.length} 讲）`}
       </button>
 
       {/* Left Sticky Outline Sidebar */}
@@ -187,12 +191,12 @@ export const LessonReaderPage: React.FC = () => {
       {/* Main Immersive Lesson Column */}
       <article className="reader-main">
         <nav className="reader-breadcrumb" aria-label="面包屑">
-          <Link to="/learn">渐进课程</Link>
+          <Link to="/learn">课程</Link>
           <ChevronRight size={14} />
           {currentChapter && (
             <>
               <Link to={`/learn?chapter=${encodeURIComponent(currentChapter.id)}`}>
-                {currentChapter.badge} · {currentChapter.title}
+                {currentChapter.title.replace(/：.*$/, '')}
               </Link>
               <ChevronRight size={14} />
             </>
@@ -204,18 +208,19 @@ export const LessonReaderPage: React.FC = () => {
 
         <header className="reader-header-card">
           <div className="reader-header-meta">
-            <span className="badge badge-teal badge-mono">
-              LESSON {String(lesson.order).padStart(2, '0')}
+            <span className="badge badge-teal">第 {lesson.order} 讲</span>
+            <span className="badge" title="难度">
+              <DifficultyStars level={LEVEL_STARS[lesson.level]} />
+              难度：{lesson.level}
             </span>
-            <span className="badge">{lesson.level}</span>
-            <span className="badge badge-mono">
+            <span className="badge">
               <Clock size={12} />
-              约 {lesson.minutes} 分钟
+              预计 {formatDuration(lesson.minutes)}
             </span>
             {completed && (
               <span className="badge badge-green">
                 <CheckCircle2 size={12} />
-                本课已掌握
+                已完成
               </span>
             )}
           </div>
@@ -237,7 +242,7 @@ export const LessonReaderPage: React.FC = () => {
             <div className="objectives-panel">
               <div className="objectives-panel-title">
                 <Target size={15} color="var(--siemens-teal-bright)" />
-                本讲核心工程目标
+                学完这一讲，你能
               </div>
               <ul className="objectives-list">
                 {lesson.objectives.map((obj, idx) => (
@@ -267,9 +272,16 @@ export const LessonReaderPage: React.FC = () => {
           <section className="interview-tip-card">
             <div className="interview-tip-head">
               <BriefcaseBusiness size={17} />
-              面试高频考点 · INTERVIEW TIP
+              面试常问（进阶参考）
             </div>
             <MarkdownRenderer content={lesson.interviewTip} />
+          </section>
+        )}
+
+        {lesson.recap && (
+          <section className="lesson-recap" aria-label="本讲小结">
+            <span className="lesson-recap-tag">一句话小结</span>
+            <p>{lesson.recap}</p>
           </section>
         )}
 
@@ -277,23 +289,33 @@ export const LessonReaderPage: React.FC = () => {
         <section className={`lesson-complete-bar${completed ? ' done' : ''}`}>
           <div>
             <div style={{ fontSize: 15.5, fontWeight: 700, marginBottom: 3 }}>
-              {completed ? '太棒了！本讲已收录进你的工程师成长档案' : '完成本讲学习与实验了吗？'}
+              {completed ? '这一讲已完成！' : '学完这一讲了吗？'}
             </div>
             <div style={{ fontSize: 13.5, color: 'var(--ink-secondary)' }}>
               {completed
-                ? '你可以继续推进下一讲，或随时返回实训台复习仿真电路。'
-                : '手动打卡标记掌握，或全对通过上方随堂测验即可自动点亮本课进度。'}
+                ? '可以继续下一讲，也可以随时回来复习。'
+                : '点右边按钮标记完成；小测验全部答对也会自动标记。'}
             </div>
           </div>
 
           <button
             type="button"
             className={`btn ${completed ? 'btn-success' : 'btn-primary'}`}
-            onClick={() => toggleLessonComplete(lesson.id)}
+            aria-pressed={completed}
+            onClick={() => {
+              haptic(completed ? 'tap' : 'success');
+              toggleLessonComplete(lesson.id);
+            }}
           >
             <CheckCircle2 size={16} />
-            {completed ? '本课已掌握 ✓（点击取消）' : '标记本课已掌握'}
+            {completed ? '已完成（点击取消）' : '标记为已完成'}
           </button>
+          {completed && nextLesson && (
+            <Link to={`/learn/${nextLesson.id}`} className="btn btn-primary lesson-complete-next">
+              继续下一讲
+              <ArrowRight size={16} />
+            </Link>
+          )}
         </section>
 
         {/* Prev / Next Smooth Lesson Navigation */}
@@ -302,7 +324,7 @@ export const LessonReaderPage: React.FC = () => {
             <Link to={`/learn/${prevLesson.id}`} className="lesson-nav-card">
               <span className="lesson-nav-dir">
                 <ArrowLeft size={13} />
-                上一讲 · L{String(prevLesson.order).padStart(2, '0')}
+                上一讲 · 第 {prevLesson.order} 讲
               </span>
               <span className="lesson-nav-name">{prevLesson.title}</span>
             </Link>
@@ -319,7 +341,7 @@ export const LessonReaderPage: React.FC = () => {
           {nextLesson ? (
             <Link to={`/learn/${nextLesson.id}`} className="lesson-nav-card next">
               <span className="lesson-nav-dir">
-                下一讲 · L{String(nextLesson.order).padStart(2, '0')}
+                下一讲 · 第 {nextLesson.order} 讲
                 <ArrowRight size={13} />
               </span>
               <span className="lesson-nav-name">{nextLesson.title}</span>
@@ -332,10 +354,10 @@ export const LessonReaderPage: React.FC = () => {
             >
               <span className="lesson-nav-dir" style={{ color: 'var(--alarm-amber)' }}>
                 <Star size={13} />
-                终极实战冲刺
+                全部课程学完了
                 <ArrowRight size={13} />
               </span>
-              <span className="lesson-nav-name">前往简历毕业大项目 ★</span>
+              <span className="lesson-nav-name">挑战毕业项目 ★</span>
             </Link>
           )}
         </nav>

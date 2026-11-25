@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useBackDismiss } from '../native/overlay';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Award,
@@ -10,11 +11,15 @@ import {
   FolderKanban,
   GitBranch,
   Home,
+  LayoutGrid,
+  Library,
   Menu,
   Moon,
   RotateCcw,
+  ShieldAlert,
   Star,
   Sun,
+  TerminalSquare,
   X,
 } from 'lucide-react';
 import { lessons } from '../../registry';
@@ -69,7 +74,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const popoverRef = useRef<HTMLDivElement | null>(null);
 
   const safeLessons = Array.isArray(lessons) ? lessons : [];
-  const totalLessons = safeLessons.length || 15;
+  const totalLessons = safeLessons.length || 1;
   const stats = getStats(totalLessons);
 
   // Scroll to top & close drawers on route navigation
@@ -79,6 +84,36 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     setPopoverOpen(false);
     setConfirmReset(false);
   }, [location.pathname]);
+
+  // 手机抽屉打开时锁定背景滚动
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileOpen]);
+
+  const dismissShellOverlays = () => {
+    setMobileOpen(false);
+    setPopoverOpen(false);
+    setConfirmReset(false);
+  };
+
+  // 告诉原生返回键：当前有打开的抽屉/弹层，先关闭它
+  useEffect(() => {
+    const open = mobileOpen || popoverOpen;
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismissShellOverlays();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [mobileOpen, popoverOpen]);
+  useBackDismiss(mobileOpen || popoverOpen, () => dismissShellOverlays());
 
   // Close progress popover on outside click
   useEffect(() => {
@@ -94,18 +129,15 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   }, [popoverOpen]);
 
   const navItems = [
-    { to: '/', label: '总览', icon: Home, end: true },
-    {
-      to: '/learn',
-      label: '渐进课程',
-      icon: BookOpen,
-      badge: `${safeLessons.length || 15}讲`,
-    },
-    { to: '/sim', label: '仿真实验室', icon: Cpu },
-    { to: '/models', label: '数字孪生', icon: Boxes },
-    { to: '/examples', label: '工业实例', icon: FolderKanban },
-    { to: '/workflows', label: '工作流', icon: GitBranch },
-    { to: '/capstone', label: '毕业项目 ★', icon: Star, isCapstone: true },
+    { to: '/', label: '首页', icon: Home, end: true },
+    { to: '/learn', label: '课程', icon: BookOpen },
+    { to: '/ide', label: '博途编程', icon: TerminalSquare, badge: '新' },
+    { to: '/sim', label: '梯形图仿真', icon: Cpu },
+    { to: '/models', label: '设备模型', icon: Boxes },
+    { to: '/examples', label: '实例', icon: FolderKanban },
+    { to: '/workflows', label: '原理动画', icon: GitBranch },
+    { to: '/glossary', label: '术语表', icon: Library },
+    { to: '/capstone', label: '毕业项目', icon: Star, isCapstone: true },
   ];
 
   const handleContinueLearning = () => {
@@ -133,7 +165,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             </span>
             <span className="brand-text">
               <span className="brand-title">西门子 PLC 实训工坊</span>
-              <span className="brand-sub">S7-1200 · TIA ACADEMY</span>
+              <span className="brand-sub">S7-1200 零基础入门</span>
             </span>
           </Link>
 
@@ -151,7 +183,6 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 >
                   <Icon size={15} />
                   <span>{item.label}</span>
-                  {item.badge && <span className="nav-count-pill">{item.badge}</span>}
                 </NavLink>
               );
             })}
@@ -196,7 +227,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               <div className="progress-popover" role="dialog" aria-label="学习档案面板">
                 <div className="progress-popover-head">
                   <div>
-                    <div className="progress-popover-title">工程师成长档案</div>
+                    <div className="progress-popover-title">我的学习进度</div>
                     <div
                       style={{
                         fontSize: 12,
@@ -249,11 +280,12 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   </div>
                 </div>
 
+                <p className="progress-popover-note">进度只保存在当前设备的这个浏览器（或本 App）里。</p>
+
                 <div style={{ marginBottom: 12 }}>
                   <div
                     style={{
                       fontSize: 11.5,
-                      fontFamily: 'var(--font-mono)',
                       color: 'var(--ink-muted)',
                       marginBottom: 6,
                     }}
@@ -352,16 +384,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           role="presentation"
         >
           <div className="mobile-drawer" onClick={(e) => e.stopPropagation()}>
-            <div
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 11,
-                color: 'var(--ink-muted)',
-                padding: '4px 10px 8px',
-              }}
-            >
-              NAVIGATION · 功能模块
-            </div>
+            <div className="mobile-drawer-title">全部功能</div>
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -377,7 +400,6 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                     <Icon size={16} />
                     {item.label}
                   </span>
-                  {item.badge && <span className="nav-count-pill">{item.badge}</span>}
                 </NavLink>
               );
             })}
@@ -389,31 +411,32 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
       <footer className="app-footer">
         <div className="spa-container app-footer-inner">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span className="telemetry-dot" />
-            <span>
-              西门子 PLC 工程师实训工坊 · 遵循 IEC 61131-3 与 TIA Portal S7-1200/1500 工程规范
-            </span>
+          <div className="footer-notes">
+            <p className="footer-brand">
+              <span className="telemetry-dot" />
+              西门子 PLC 实训工坊 · 面向零基础的 S7-1200 学习网站
+            </p>
+            <p>
+              <ShieldAlert size={13} />
+              安全提示：本站仿真不能代替真实设备的安全措施。实际接线、改线前请务必断电并验电，220V/380V 电压可致命，请勿独自带电操作。
+            </p>
+            <p>本站为个人学习项目，非西门子官方；SIEMENS、SIMATIC、TIA Portal 为西门子公司商标。</p>
           </div>
           <div className="footer-links">
-            <Link to="/learn">渐进课程</Link>
-            <Link to="/sim">仿真实验室</Link>
-            <Link to="/models">数字孪生</Link>
-            <Link to="/examples">工业实例</Link>
-            <Link to="/workflows">工作流解剖</Link>
-            <Link to="/capstone">毕业大项目 ★</Link>
+            <Link to="/glossary">术语表</Link>
+            <Link to="/glossary?section=faq">常见问题</Link>
+            <Link to="/learn/l00-before-you-start">新手准备</Link>
           </div>
         </div>
       </footer>
 
-      {/* Mobile Native-Style Bottom Tab Navigation (<= 768px) */}
-      <nav className="mobile-bottom-nav" aria-label="手机底部快捷导航">
+      {/* 手机底部导航（≤768px）：4 个常用入口 + “更多”打开完整菜单 */}
+      <nav className="mobile-bottom-nav" aria-label="手机底部导航">
         {[
-          { to: '/', label: '总览', icon: Home, end: true },
-          { to: '/learn', label: '15讲课程', icon: BookOpen },
-          { to: '/sim', label: 'PLC仿真', icon: Cpu },
-          { to: '/models', label: '数字孪生', icon: Boxes },
-          { to: '/capstone', label: '毕业项目', icon: Star, highlight: true },
+          { to: '/', label: '首页', icon: Home, end: true },
+          { to: '/learn', label: '课程', icon: BookOpen },
+          { to: '/ide', label: '博途编程', icon: TerminalSquare },
+          { to: '/sim', label: '仿真', icon: Cpu },
         ].map((tab) => {
           const TabIcon = tab.icon;
           return (
@@ -421,15 +444,23 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               key={tab.to}
               to={tab.to}
               end={tab.end}
-              className={({ isActive }) =>
-                `mobile-bottom-tab${tab.highlight ? ' is-highlight' : ''}${isActive ? ' active' : ''}`
-              }
+              className={({ isActive }) => `mobile-bottom-tab${isActive ? ' active' : ''}`}
             >
-              <TabIcon size={18} strokeWidth={2.1} />
+              <TabIcon size={20} strokeWidth={2.1} />
               <span>{tab.label}</span>
             </NavLink>
           );
         })}
+        <button
+          type="button"
+          className={`mobile-bottom-tab${mobileOpen ? ' active' : ''}`}
+          onClick={() => setMobileOpen((v) => !v)}
+          aria-expanded={mobileOpen}
+          aria-label="更多功能"
+        >
+          <LayoutGrid size={20} strokeWidth={2.1} />
+          <span>更多</span>
+        </button>
       </nav>
     </div>
   );

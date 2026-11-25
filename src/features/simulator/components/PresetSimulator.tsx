@@ -6,10 +6,15 @@ import {
   GraduationCap,
   Layers,
   Lightbulb,
+  Play,
+  RotateCcw,
+  Square,
+  StepForward,
 } from 'lucide-react';
 import type { SimPresetId } from '../../../types/content';
 import type { TagValue } from '../../../types/plc';
 import { useLadderSimulation } from '../../../core/plc';
+import { LandscapeSvgStage } from '../../../components/LandscapeSvgStage';
 import { SIM_PRESET_DEFINITIONS } from '../presets';
 import { CpuStatusBar } from './CpuStatusBar';
 import { FieldPanel, type InputOperationMode } from './FieldPanel';
@@ -32,7 +37,10 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
   const [inputMode, setInputMode] = useState<InputOperationMode>('momentary');
   const [closedLoopTank, setClosedLoopTank] = useState(false);
   const [embeddedTab, setEmbeddedTab] = useState<EmbeddedViewTab>('lad');
-  const [showGuide, setShowGuide] = useState(!embedded);
+  // 手机上默认收起实验指引：先让初学者看到按钮和指示灯，需要时再展开说明
+  const [showGuide, setShowGuide] = useState(
+    () => !embedded && !(typeof window !== 'undefined' && window.matchMedia?.('(max-width: 768px)').matches),
+  );
 
   const closedLoopRef = useRef(closedLoopTank);
   closedLoopRef.current = closedLoopTank;
@@ -90,6 +98,51 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
     runtime.setFieldInput(tagName, !cur);
   };
 
+  const landscapeCpuControls = (
+    <>
+      <button
+        type="button"
+        className={`lss-ctrl-btn ${snapshot.metrics.running ? 'is-warn' : 'is-success'}`}
+        onClick={handleToggleRun}
+      >
+        {snapshot.metrics.running ? <Square size={12} /> : <Play size={12} />}
+        <span>{snapshot.metrics.running ? 'STOP 停机' : 'RUN 运行'}</span>
+      </button>
+      <button type="button" className="lss-ctrl-btn" onClick={handleSingleScan}>
+        <StepForward size={12} />
+        <span>单步扫描</span>
+      </button>
+      <button type="button" className="lss-ctrl-btn" onClick={() => runtime.reset()}>
+        <RotateCcw size={12} />
+        <span>复位</span>
+      </button>
+    </>
+  );
+
+  const landscapeFieldFooter =
+    preset.fieldInputs.length > 0 ? (
+      <>
+        <span className="plc-sim-lss-io-label">快捷 %I 触发:</span>
+        {preset.fieldInputs.map((fi) => {
+          const on = Boolean(snapshot.fieldInputs[fi.tag]);
+          const def = preset.tagDefs.find((d) => d.name === fi.tag);
+          return (
+            <button
+              key={fi.tag}
+              type="button"
+              className={`plc-sim-lss-io-btn ${on ? 'is-on' : ''}`}
+              onClick={() => handleSetInput(fi.tag, !on)}
+              title={`${def?.address ?? ''} ${fi.label}（点击切换 0/1）`}
+            >
+              <span className="plc-sim-lss-io-addr">{def?.address ?? fi.tag}</span>
+              <span>{fi.label}</span>
+              <span className="plc-sim-lss-io-state">{on ? '1' : '0'}</span>
+            </button>
+          );
+        })}
+      </>
+    ) : undefined;
+
   if (embedded) {
     return (
       <div className="plc-sim-root is-embedded">
@@ -135,15 +188,27 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
         <div className="plc-sim-embedded-grid">
           <div className="plc-sim-embedded-main">
             {embeddedTab === 'lad' && (
-              <LadderCanvas
-                program={preset.program}
-                tagDefs={preset.tagDefs}
-                tags={snapshot.tags}
-                evalSnapshot={snapshot.evalSnapshot}
-                running={snapshot.metrics.running}
-                compact
-                onToggleInputTag={handleToggleInputFromSvg}
-              />
+              <LandscapeSvgStage
+                title={`${preset.title} · 梯形图监控 (LAD)`}
+                subtitle={`Cycle #${snapshot.metrics.cycleCount} · ${snapshot.metrics.running ? 'RUN' : 'STOP'}`}
+                compactHud
+                hint="点击蓝色 %I 触点切换通断 · 绿色实线 = 通电"
+                scopeClassName="plc-sim-root"
+                fitMode="width"
+                controls={landscapeCpuControls}
+                landscapeFooter={landscapeFieldFooter}
+                landscapeFooterLabel="现场输入按钮"
+              >
+                <LadderCanvas
+                  program={preset.program}
+                  tagDefs={preset.tagDefs}
+                  tags={snapshot.tags}
+                  evalSnapshot={snapshot.evalSnapshot}
+                  running={snapshot.metrics.running}
+                  compact
+                  onToggleInputTag={handleToggleInputFromSvg}
+                />
+              </LandscapeSvgStage>
             )}
             {embeddedTab === 'trace' && (
               <TraceViewer
@@ -153,6 +218,9 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
                 onTogglePause={toggleTracePaused}
                 onClear={() => runtime.clearTrace()}
                 compact
+                landscapeTitle={`${preset.title} · 实时逻辑分析仪波形 (Trace)`}
+                landscapeControls={landscapeCpuControls}
+                landscapeFooter={landscapeFieldFooter}
               />
             )}
             {embeddedTab === 'scl' && (
@@ -207,9 +275,10 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
             type="button"
             className="plc-sim-mini-btn"
             onClick={() => setShowGuide((v) => !v)}
+            aria-expanded={showGuide}
           >
             <BookOpen size={13} />
-            {showGuide ? '收起实验指引' : '展开实验指引'}
+            {showGuide ? '收起实验指引' : '展开实验指引（怎么玩这个实验）'}
           </button>
         </div>
 
@@ -244,18 +313,33 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
           <div className="plc-sim-pane-bar">
             <div className="plc-sim-pane-title">
               <Layers size={14} />
-              <span>TIA Portal 在线梯形图监控 (LAD Online Monitor)</span>
+              <span>梯形图 · 在线监视</span>
             </div>
-            <span className="plc-sim-pane-hint">提示：可直接点击蓝色 %I 触点或右侧按钮调试</span>
+            <span className="plc-sim-pane-hint">
+              <span className="hint-wide">提示：可直接点击蓝色 %I 触点或右侧按钮调试</span>
+              <span className="hint-narrow">左右滑动查看完整梯形图；按钮和指示灯在上方</span>
+            </span>
           </div>
-          <LadderCanvas
-            program={preset.program}
-            tagDefs={preset.tagDefs}
-            tags={snapshot.tags}
-            evalSnapshot={snapshot.evalSnapshot}
-            running={snapshot.metrics.running}
-            onToggleInputTag={handleToggleInputFromSvg}
-          />
+          <LandscapeSvgStage
+            title={`${preset.title} · 梯形图在线监视 (LAD)`}
+            subtitle={`Cycle #${snapshot.metrics.cycleCount} · ${snapshot.metrics.running ? 'RUN' : 'STOP'} · ${snapshot.metrics.lastScanMs.toFixed(2)}ms`}
+            compactHud
+            hint="直接点击蓝色 %I 触点可切换通断 · 横屏可全幅调试"
+            scopeClassName="plc-sim-root"
+            fitMode="width"
+            controls={landscapeCpuControls}
+            landscapeFooter={landscapeFieldFooter}
+            landscapeFooterLabel="现场输入按钮"
+          >
+            <LadderCanvas
+              program={preset.program}
+              tagDefs={preset.tagDefs}
+              tags={snapshot.tags}
+              evalSnapshot={snapshot.evalSnapshot}
+              running={snapshot.metrics.running}
+              onToggleInputTag={handleToggleInputFromSvg}
+            />
+          </LandscapeSvgStage>
         </div>
 
         <aside className="plc-sim-field-pane">
@@ -286,6 +370,9 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
           paused={tracePaused}
           onTogglePause={toggleTracePaused}
           onClear={() => runtime.clearTrace()}
+          landscapeTitle={`${preset.title} · 实时逻辑分析仪波形 (Trace)`}
+          landscapeControls={landscapeCpuControls}
+          landscapeFooter={landscapeFieldFooter}
         />
         <SclCodePanel code={preset.sclCode} tags={snapshot.tags} />
       </div>

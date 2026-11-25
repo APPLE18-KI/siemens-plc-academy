@@ -728,8 +728,8 @@
 
 .reader-sidebar {
   position: sticky;
-  top: calc(var(--nav-height) + 18px);
-  max-height: calc(100vh - var(--nav-height) - 36px);
+  top: calc(var(--nav-offset) + 18px);
+  max-height: calc(100vh - var(--nav-offset) - 36px);
   overflow-y: auto;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-hairline);
@@ -1350,4 +1350,413 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+}
+
+/* ============================================================================
+   新手体验改版：首页、目录、课程页、术语表、常见问题、页脚（2026-11）
+   ============================================================================ */
+.hero-outcomes {
+  list-style: none;
+  margin: -12px 0 26px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 15px;
+  color: var(--ink-primary);
+}
+
+.hero-outcomes li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.6;
+}
+
+.hero-outcomes svg {
+  flex-shrink: 0;
+  margin-top: 4px;
+  color: var(--power-green);
+}
+
+.hero-cta-row {
+  margin-bottom: 14px;
+}
+
+.hero-cta-main {
+  min-width: 220px;
+  justify-content: center;
+}
+
+.hero-secondary-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-bottom: 28px;
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+
+.hero-secondary-links a {
+  color: var(--ink-secondary);
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 3px;
+  padding: 10px 2px;
+}
+
+.hero-secondary-links a:hover {
+  color: var(--siemens-teal-bright);
+}
+
+.hero-rack-led {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: led-pulse 2s infinite;
+}
+
+.hero-pipe-summary {
+  font-size: 12px;
+  color: #2dd4bf;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.hero-pipe-cta {
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e9f1f8;
+  border-color: rgba(148, 179, 206, 0.3);
+}
+
+.hero-pipe-btn {
+  min-height: 44px;
+}
+
+.section-footnote {
+  margin: 16px 0 0;
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+
+.section-footnote a {
+  color: var(--siemens-teal-bright);
+}
+
+.pillar-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.roadmap-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+@media (max-width: 768px) {
+  .hero-cta-row {
+    grid-template-columns: 1fr;
+  }
+  .hero-outcomes {
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+  .hero-secondary-links {
+    margin-bottom: 20px;
+  }
+}
+
+@media (max-width: 560px) {
+  /* 手机上隐藏装饰性的路线图 SVG，只保留可点的步骤和说明，避免横向滚动 */
+  .hero-rack-svg-wrap {
+    display: none;
+  }
+  .hero-pipeline-tabs {
+    padding-top: 14px;
+  }
+}
+
+/* 目录卡片 */
+.lesson-card-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  margin: -2px 0 8px;
+}
+
+.difficulty-stars {
+  display: inline-flex;
+  gap: 1px;
+  font-size: 10px;
+  letter-spacing: 0;
+  margin-right: 3px;
+  color: var(--border-strong);
+}
+
+.difficulty-stars .on {
+  color: var(--alarm-amber);
+}
+
+/* 课程页小结 */
+.lesson-recap {
+  margin: 28px 0 16px;
+  padding: 16px 18px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--siemens-teal-border);
+  background: var(--siemens-teal-soft);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lesson-recap-tag {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: var(--siemens-teal);
+  color: #fff;
+}
+
+.lesson-recap p {
+  margin: 0;
+  flex: 1;
+  min-width: 220px;
+  font-size: 15.5px;
+  font-weight: 600;
+  line-height: 1.65;
+}
+
+/* 术语表 */
+.glossary-page {
+  padding: 8px 0 72px;
+}
+
+.glossary-grid {
+  margin: 18px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.glossary-card {
+  padding: 16px 18px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-surface);
+  scroll-margin-top: calc(var(--nav-offset) + 16px);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.glossary-card.is-highlight {
+  border-color: var(--siemens-teal-bright);
+  box-shadow: 0 0 0 3px var(--siemens-teal-soft);
+}
+
+.glossary-term {
+  font-size: 17px;
+  font-weight: 800;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.glossary-en {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+}
+
+.glossary-def {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--ink-secondary);
+}
+
+.glossary-def p {
+  margin: 8px 0 0;
+}
+
+.glossary-detail {
+  font-size: 13.5px;
+  color: var(--ink-muted);
+}
+
+.glossary-cat {
+  font-size: 11px;
+}
+
+.glossary-lesson-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--siemens-teal-bright);
+}
+
+.glossary-faq-wrap {
+  margin-top: 40px;
+}
+
+/* 常见问题 */
+.faq-section {
+  scroll-margin-top: calc(var(--nav-offset) + 16px);
+}
+
+.faq-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.faq-item {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+
+.faq-item.open {
+  border-color: var(--siemens-teal-border);
+}
+
+.faq-q {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-primary);
+  background: transparent;
+}
+
+.faq-q:hover {
+  background: var(--bg-surface-2);
+}
+
+.faq-chevron {
+  flex-shrink: 0;
+  color: var(--ink-muted);
+  transition: transform var(--transition-fast);
+}
+
+.faq-item.open .faq-chevron {
+  transform: rotate(180deg);
+}
+
+.faq-a {
+  padding: 0 16px 14px;
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: var(--ink-secondary);
+}
+
+.faq-a a {
+  color: var(--siemens-teal-bright);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 仿真与博途区别 */
+.sim-vs-tia {
+  margin: 0 0 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--info-cyan-border);
+  background: var(--info-cyan-soft);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.sim-vs-tia summary {
+  cursor: pointer;
+  padding: 12px 16px;
+  min-height: 44px;
+  font-weight: 700;
+  color: var(--ink-primary);
+}
+
+.sim-vs-tia ul {
+  margin: 0;
+  padding: 0 16px 14px 34px;
+  color: var(--ink-secondary);
+}
+
+/* ---- 第 1 轮评审修复 ---- */
+@media (max-width: 640px) {
+  .md-table th,
+  .md-table td {
+    min-width: 6.5em;
+    padding: 9px 10px;
+  }
+  .md-table th:first-child,
+  .md-table td:first-child {
+    min-width: 5.5em;
+  }
+  .chapter-head-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
+/* 触屏设备：所有小按钮/筛选标签至少 44px 高，方便手指点按 */
+@media (pointer: coarse) {
+  .btn-sm,
+  .filter-pill,
+  .icon-btn,
+  .quiz-opt,
+  .sidebar-lesson-link,
+  .reader-mobile-toc-btn {
+    min-height: 44px;
+  }
+  .icon-btn {
+    min-width: 44px;
+  }
+  .filter-pill {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+
+/* ---- 第 2 轮评审修复 ---- */
+.md-table .md-inline-code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.md-table td,
+.md-table th {
+  /* 第 5 轮：break-word 不会把 RUN/STOP、%MW10 这类短词从中间劈开（列会按最长单词撑宽，表格可横向滑动） */
+  overflow-wrap: break-word;
 }

@@ -96,11 +96,11 @@ export const SimulatorWorkbench: React.FC = () => {
           <div>
             <div className="plc-sim-wb-eyebrow">
               <Cpu size={14} />
-              <span>SIEMENS S7-1200 · TIA PORTAL ONLINE LAB</span>
+              <span>S7-1200 网页仿真</span>
             </div>
-            <h1 className="plc-sim-wb-title">西门子 S7-1200 交互式 PLC 仿真实验室</h1>
+            <h1 className="plc-sim-wb-title">PLC 仿真实验室</h1>
             <p className="plc-sim-wb-desc">
-              真实 PII → OB1 → PIQ 扫描周期内核 · 荧光导通梯形图 (LAD) · 同步 SCL 等效代码 · 实时 Trace 逻辑分析仪 · 自由搭图沙盒
+              按下按钮（电脑上在右侧，手机上在梯形图上方），看梯形图哪里“通电”（变绿）、哪个输出动作。可以单步执行、放慢速度，也可以在沙盒里自己搭程序。
             </p>
           </div>
         </div>
@@ -133,6 +133,16 @@ export const SimulatorWorkbench: React.FC = () => {
           </button>
         </nav>
       </header>
+
+      <details className="sim-vs-tia">
+        <summary>这个网页仿真和真实博途（TIA Portal）有什么不同？</summary>
+        <ul>
+          <li>这是<strong>简化的教学版</strong>：只支持常用指令（触点、线圈、置位/复位、边沿、定时器、计数器、比较和少量模拟量换算）。</li>
+          <li>没有硬件组态、编译报错、下载和在线诊断；扫描周期的时间是模拟出来的，不代表真实 CPU 的速度。</li>
+          <li>界面颜色参考了博途的在线监视风格，但操作方式不同。</li>
+          <li>学会逻辑后，建议在 TIA Portal + S7-PLCSIM 中把同样的程序再做一遍（见课程“动手第一步：在博途中新建项目”）。</li>
+        </ul>
+      </details>
 
       {/* Key resets runtime cleanly when switching presets */}
       {activeTab === 'sandbox' ? (

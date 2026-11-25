@@ -3,8 +3,8 @@ import type { ChapterMeta, Lesson } from '../../types/content';
 export const ch3Meta: ChapterMeta = {
   id: 'ch3',
   order: 3,
-  title: '第 3 章：时序、计数与多工位联动——掌控时间与节拍',
-  subtitle: '驾驭 IEC 定时器三剑客、星三角降压启动、满箱自动计件打包，打通多步顺序控制与防冲突联锁',
+  title: '第 3 章：定时、计数与顺序动作',
+  subtitle: '用定时器做“延时启动/延时停止”，用计数器数产品个数，再把多个动作按先后顺序串起来（如红绿灯、分拣线）',
   badge: '基础→进阶',
 };
 
@@ -13,10 +13,10 @@ export const ch3Lessons: Lesson[] = [
     id: 'l07-iec-timers',
     chapterId: 'ch3',
     order: 7,
-    title: 'IEC 定时器三剑客（TON/TOF/TP）、传感器防抖与星三角降压启动',
+    title: '定时器 TON/TOF/TP：延时启动、延时停止与星三角启动',
     subtitle: '告别老式 S5 定时器，用 IEC 定时器搞定光电防抖滤波、风机延时散热与大功率电机星三角无弧切换',
     level: '基础',
-    minutes: 30,
+    minutes: 35,
     tags: ['TON', 'TOF', 'TP', '信号防抖', '星三角启动', 'IEC定时器'],
     objectives: [
       '彻底区分西门子三大 IEC 定时器（TON 接通延时 / TOF 断开延时 / TP 脉冲）的时序波形与适用场景',
@@ -46,6 +46,11 @@ export const ch3Lessons: Lesson[] = [
 | **\`TP\`** | **脉冲定时器** | \`IN\` 出现上升沿瞬间 \`Q\` 变 \`1\`，并**雷打不动持续输出恰好 \`PT\` 时长**（即使 \`IN\` 提前变 \`0\` 也不打断！） | 气动吹气嘴定点喷气 300ms 剔除次品、报警蜂鸣器定长鸣响 |
 
 - **四个标准管脚**：\`IN\`（\`Bool\` 启动条件）、\`PT\`（\`Time\` 预设时间，如 \`T#5s\`）、\`Q\`（\`Bool\` 定时输出）、\`ET\`（\`Time\` 当前已经走过的时间，可送到 HMI 显示倒计时！）。`,
+      },
+      {
+        kind: 'demo',
+        id: 'timer-diagram',
+        instruction: '分别选 TON、TOF、TP，按住“IN”按钮 1 秒后松开，再按住 4 秒后松开，对比下方波形。',
       },
       {
         kind: 'sim',
@@ -205,7 +210,7 @@ END_IF;
       },
       {
         kind: 'practice-task',
-        title: '第 7 讲实训打卡：星三角降压启动全流程波形验收',
+        title: '本讲实训打卡：星三角降压启动全流程波形验收',
         scenario: '在上方星三角仿真实验室中，对一台 45kW 车间空压机执行启动、正常切换与中途急停三项测试。',
         steps: [
           '点击启动按钮，紧盯底部数字时序图（Trace）：确认 KM_Main 与 KM_Star 同步变高，KM_Delta 保持低电平。',
@@ -266,10 +271,10 @@ END_IF;
     id: 'l08-iec-counters',
     chapterId: 'ch3',
     order: 8,
-    title: 'IEC 计数器（CTU/CTD/CTUD）与产线自动计件满箱打包逻辑',
+    title: '计数器 CTU/CTD：数产品个数，满箱自动打包',
     subtitle: '掌握自动化包装线核心“计件→满箱推料→自动清零→班产累计”闭环，避开 Int 溢出与断电丢数坑',
     level: '基础',
-    minutes: 25,
+    minutes: 35,
     tags: ['CTU', 'CTD', 'CTUD', '满箱打包', 'DInt断电保持', 'HSC高速计数'],
     objectives: [
       '掌握西门子三大 IEC 计数器（CTU 加计数 / CTD 减计数 / CTUD 双向加减计数）的引脚机制与内置边沿特性',
@@ -450,7 +455,7 @@ END_IF;
       },
       {
         kind: 'practice-task',
-        title: '第 8 讲实训打卡：满箱打包循环与异常处理验证',
+        title: '本讲实训打卡：满箱打包循环与异常处理验证',
         scenario: '在上方“满箱自动打包”仿真器中，完整运行两箱生产周期并模拟人工介入清零。',
         steps: [
           '打开自动运行开关，确认传送带开始运行；连续点击触发工件传感器 5 次，观察 CV 升至 5 且此时推箱气缸尚未动作。',
@@ -506,10 +511,10 @@ END_IF;
     id: 'l09-sequence-traffic-sorting',
     chapterId: 'ch3',
     order: 9,
-    title: '多步顺序控制实战：十字路口防冲突联锁与三工位气动分拣线',
+    title: '按步骤动作的顺序控制：红绿灯与分拣线',
     subtitle: '从单台电机跨入整机工艺编排！掌握“工步转移层 + 输出映射层”解耦架构，彻底告别面条联锁',
     level: '进阶',
-    minutes: 35,
+    minutes: 50,
     tags: ['顺序控制', '工步编号', '防跳步', '十字路口联锁', '三工位分拣'],
     objectives: [
       '掌握工业标准“工步号法（Step 0 / 10 / 20 / 30）”将复杂多工位工艺拆解为清晰互斥的状态流程',
@@ -734,7 +739,7 @@ END_IF;
       },
       {
         kind: 'practice-task',
-        title: '第 9 讲实训打卡：双数字孪生顺控联锁与故障安全检验',
+        title: '本讲实训打卡：双数字孪生顺控联锁与故障安全检验',
         scenario: '在上方十字路口与三工位分拣线两个数字孪生模型中，以验收工程师视角验证顺序流转的严谨性。',
         steps: [
           '在十字路口模型中，开启自动模式完整观察一个周期，重点确认“南北黄灯结束 → 全红清场缓冲 → 东西绿灯”之间没有绿灯重叠冲突。',

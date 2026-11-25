@@ -4,6 +4,7 @@ import {
   CapstoneStudio,
   ModelsShowcase,
   SimulatorWorkbench,
+  TiaPortalIdeWorkbench,
   WorkflowsShowcase,
 } from '../registry';
 import { ProgressProvider } from './store/progressStore';
@@ -13,6 +14,8 @@ import { LearnCatalogPage } from './pages/LearnCatalogPage';
 import { LessonReaderPage } from './pages/LessonReaderPage';
 import { ExamplesHallPage } from './pages/ExamplesHallPage';
 import { ExampleDetailPage } from './pages/ExampleDetailPage';
+import { GlossaryPage } from './pages/GlossaryPage';
+import { useNativeBridge } from './native/useNativeBridge';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 
 const FeatureRouteStage: React.FC<{ title: string; children: React.ReactNode }> = ({
@@ -24,15 +27,30 @@ const FeatureRouteStage: React.FC<{ title: string; children: React.ReactNode }> 
   </div>
 );
 
+/** 在 HashRouter 内挂载原生桥接（Android 返回键等），网页端无副作用 */
+const NativeBridgeMount: React.FC = () => {
+  useNativeBridge();
+  return null;
+};
+
 export const App: React.FC = () => {
   return (
     <ProgressProvider>
       <HashRouter>
+        <NativeBridgeMount />
         <AppShell>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/learn" element={<LearnCatalogPage />} />
             <Route path="/learn/:lessonId" element={<LessonReaderPage />} />
+            <Route
+              path="/ide"
+              element={
+                <FeatureRouteStage title="博途在线编程与联调工作台">
+                  <TiaPortalIdeWorkbench />
+                </FeatureRouteStage>
+              }
+            />
             <Route
               path="/sim"
               element={
@@ -44,17 +62,18 @@ export const App: React.FC = () => {
             <Route
               path="/models"
               element={
-                <FeatureRouteStage title="2.5D 数字孪生建模大厅">
+                <FeatureRouteStage title="设备模型">
                   <ModelsShowcase />
                 </FeatureRouteStage>
               }
             />
             <Route path="/examples" element={<ExamplesHallPage />} />
             <Route path="/examples/:id" element={<ExampleDetailPage />} />
+            <Route path="/glossary" element={<GlossaryPage />} />
             <Route
               path="/workflows"
               element={
-                <FeatureRouteStage title="工业工作流解剖大厅">
+                <FeatureRouteStage title="原理动画">
                   <WorkflowsShowcase />
                 </FeatureRouteStage>
               }
@@ -62,7 +81,7 @@ export const App: React.FC = () => {
             <Route
               path="/capstone"
               element={
-                <FeatureRouteStage title="简历毕业大项目实训室">
+                <FeatureRouteStage title="毕业项目">
                   <CapstoneStudio />
                 </FeatureRouteStage>
               }

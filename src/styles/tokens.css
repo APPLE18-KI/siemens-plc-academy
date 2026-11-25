@@ -92,6 +92,12 @@
 
   /* Layout Rhythm */
   --nav-height: 64px;
+  /* 安全区：Android App 由 Capacitor SystemBars 注入 --safe-area-inset-*；网页端回退到 env() */
+  --sat: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --sar: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  --sab: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --sal: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  --nav-offset: calc(var(--nav-height) + var(--sat));
   --container-max: 1360px;
   --radius-xs: 6px;
   --radius-sm: 8px;

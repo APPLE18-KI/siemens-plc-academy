@@ -1,0 +1,16 @@
+{
+  "name": "西门子PLC实训工坊",
+  "short_name": "PLC实训工坊",
+  "description": "面向零基础的西门子 S7-1200 PLC 学习网站：分步课程、网页仿真、设备模型与术语表。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0f14",
+  "theme_color": "#0a0f14",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

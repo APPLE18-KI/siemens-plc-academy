@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { Check, Copy, Download, FileCode2, FileSpreadsheet, FileText, FolderOpen, Info } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Check, Copy, Download, FileCode2, FileSpreadsheet, FileText, FolderOpen, Info, Zap } from 'lucide-react';
 import { CAPSTONE_SOURCE_FILES, type CapstoneSourceFile } from '../data/sourceFiles';
+import { haptic, isNativeApp } from '../../../app/native/platform';
+import { showToast } from '../../../app/native/useNativeBridge';
 
 const FOLDERS: Array<{ id: CapstoneSourceFile['folder']; label: string }> = [
   { id: 'types', label: 'types/ · PLC 数据类型 (UDT)' },
@@ -10,31 +13,65 @@ const FOLDERS: Array<{ id: CapstoneSourceFile['folder']; label: string }> = [
 ];
 
 export const SourceBrowserTab: React.FC = () => {
+  const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState<string>(CAPSTONE_SOURCE_FILES[0].id);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const activeFile =
     CAPSTONE_SOURCE_FILES.find((f) => f.id === selectedId) ?? CAPSTONE_SOURCE_FILES[0];
 
-  const handleCopy = async () => {
+  const copyTextToClipboard = async (text: string): Promise<boolean> => {
     try {
-      await navigator.clipboard.writeText(activeFile.content);
-      setCopiedId(activeFile.id);
-      window.setTimeout(() => setCopiedId(null), 2000);
+      await navigator.clipboard.writeText(text);
+      return true;
     } catch {
-      // Fallback copy via textarea
-      const ta = document.createElement('textarea');
-      ta.value = activeFile.content;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      setCopiedId(activeFile.id);
-      window.setTimeout(() => setCopiedId(null), 2000);
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        return true;
+      } catch {
+        return false;
+      }
     }
   };
 
-  const handleDownload = () => {
+  const handleCopy = async () => {
+    haptic('tap');
+    await copyTextToClipboard(activeFile.content);
+    setCopiedId(activeFile.id);
+    showToast('已复制源码全文');
+    window.setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleDownload = async () => {
+    haptic('tap');
+    if (isNativeApp()) {
+      if (typeof navigator.share === 'function') {
+        try {
+          await navigator.share({
+            title: activeFile.fileName,
+            text: activeFile.content,
+          });
+          return;
+        } catch (err) {
+          if (err instanceof DOMException && err.name === 'AbortError') {
+            return;
+          }
+        }
+      }
+      await copyTextToClipboard(activeFile.content);
+      setCopiedId(activeFile.id);
+      window.setTimeout(() => setCopiedId(null), 2000);
+      showToast('已复制源码，可直接粘贴至电脑博途软件', 2600);
+      return;
+    }
+
     const blob = new Blob([activeFile.content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -43,7 +80,19 @@ export const SourceBrowserTab: React.FC = () => {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+  };
+
+  const handleSendToIde = () => {
+    haptic('press');
+    try {
+      sessionStorage.setItem('plc_ide_import_code', activeFile.content);
+      sessionStorage.setItem('plc_ide_import_name', activeFile.fileName);
+    } catch {
+      // Ignore storage quota issues
+    }
+    showToast(`正在载入 ${activeFile.fileName} 至在线博途 IDE…`);
+    navigate('/ide?from=capstone');
   };
 
   const getFileIcon = (lang: CapstoneSourceFile['lang']) => {
@@ -58,7 +107,7 @@ export const SourceBrowserTab: React.FC = () => {
     <div className="cap-panel">
       <div className="cap-panel-head">
         <h2 className="cap-panel-title">
-          <FileCode2 size={18} color="#14b8a6" /> TIA Portal V18/V19 可导入工程源码浏览器（10 份真实工程文件）
+          <FileCode2 size={18} color="#14b8a6" /> 可导入 TIA Portal 的工程源码（建议 V17 及以上）
         </h2>
         <span className="cap-badge teal">已同步落盘至 capstone/tia-portal-project/</span>
       </div>
@@ -80,10 +129,14 @@ export const SourceBrowserTab: React.FC = () => {
       >
         <Info size={16} color="#38bdf8" style={{ flexShrink: 0, marginTop: 2 }} />
         <div>
-          <strong>博途“外部源文件”一键生成块顺序（严防 Unresolved Type 报错）：</strong>
-          先导入 <code>PLC_TagTable_S71215C.csv</code> → 再导入 <code>UDT_ModuleRecipeAndStation.scl</code> 右键“从源生成块” →
-          接着导入 3 个底层设备块 (<code>FB_Cylinder2Pos</code> / <code>FB_SinamicsDrive_Tel1</code> / <code>FB_ThermalPress_PID</code>) →
-          最后导入主控 <code>FB_CellSortingStation_Main</code> 与 <code>OB100/OB1/OB30</code> 并整机编译！
+          <strong>如何导入到 TIA Portal（建议 V17 或更新版本，目标 CPU 为 S7-1200，如 CPU 1215C DC/DC/DC）：</strong>
+          <ol style={{ margin: '6px 0 6px 18px', padding: 0 }}>
+            <li>在项目树中展开 PLC → <strong>外部源文件</strong>，双击 <strong>添加新的外部文件</strong>，选择 <code>.scl</code> 文件。</li>
+            <li>右键导入的源文件 → <strong>从源生成块</strong>。请按依赖顺序：先 <code>UDT_ModuleRecipeAndStation</code>，再 3 个设备 FB（<code>FB_Cylinder2Pos</code> / <code>FB_SinamicsDrive_Tel1</code> / <code>FB_ThermalPress_PID</code>），然后主控 <code>FB_CellSortingStation_Main</code>，最后 <code>OB100 / OB1</code>，否则会提示找不到数据类型或块。</li>
+            <li>变量表 <code>PLC_TagTable_S71215C.csv</code> 是文本清单：博途的变量表导入使用 Excel（.xlsx）格式，可以照着 CSV 手动建立变量，或先从博途导出一个变量表模板，再把 CSV 内容按列粘贴进去后导入。</li>
+            <li>全部生成后编译整个 PLC，按提示补齐缺少的硬件组态（如 SINAMICS 驱动的报文配置）。</li>
+          </ol>
+          这些源文件是教学示例，导入真实项目前请结合现场硬件逐项检查和测试。
         </div>
       </div>
 
@@ -154,7 +207,22 @@ export const SourceBrowserTab: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {activeFile.lang === 'scl' && (
+                <button
+                  type="button"
+                  className="cap-btn"
+                  onClick={handleSendToIde}
+                  style={{
+                    borderColor: 'var(--alarm-amber-border)',
+                    background: 'var(--alarm-amber-soft)',
+                    color: 'var(--alarm-amber)',
+                    fontWeight: 700,
+                  }}
+                >
+                  <Zap size={14} /> 复制到在线博途 IDE 试编辑
+                </button>
+              )}
               <button type="button" className="cap-btn" onClick={handleCopy}>
                 {copiedId === activeFile.id ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
                 {copiedId === activeFile.id ? '已复制源码' : '复制全文'}

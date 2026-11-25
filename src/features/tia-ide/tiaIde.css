@@ -1,0 +1,1492 @@
+/* ============================================================================
+   Siemens TIA Portal Online Programming & Live Plant Co-Simulation Workbench
+   Aesthetic: Authentic TIA Portal V19 Precision + Dual Dark/Light Themes
+   ============================================================================ */
+
+.tia-root {
+  --tia-online-orange: #f97316;
+  --tia-online-orange-deep: #ea580c;
+  --tia-online-bg: rgba(249, 115, 22, 0.14);
+  --tia-online-border: rgba(249, 115, 22, 0.55);
+  --tia-force-yellow: #facc15;
+  --tia-force-ink: #422006;
+  --tia-editor-bg: #0b1118;
+  --tia-editor-gutter: #0f1722;
+  --tia-editor-ink: #e2ecf6;
+  --tia-editor-line-h: 24px;
+  --tia-panel-bg: var(--bg-surface);
+  --tia-panel-alt: var(--bg-surface-2);
+  --tia-border: var(--border-medium);
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  color: var(--ink-primary);
+  font-family: var(--font-sans);
+}
+
+[data-theme='light'] .tia-root {
+  --tia-online-orange: #ea580c;
+  --tia-online-orange-deep: #c2410c;
+  --tia-online-bg: rgba(234, 88, 12, 0.1);
+  --tia-online-border: rgba(234, 88, 12, 0.5);
+  --tia-editor-bg: #0f1722;
+  --tia-editor-gutter: #141e2c;
+  --tia-editor-ink: #eaf1f8;
+}
+
+/* ---------- Outer Shell Frame (turns iconic TIA Orange border when Online) ---------- */
+.tia-workbench-frame {
+  display: flex;
+  flex-direction: column;
+  background: var(--tia-panel-bg);
+  border: 1px solid var(--tia-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  transition: border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.tia-workbench-frame.is-online {
+  border-color: var(--tia-online-border);
+  box-shadow: 0 0 0 1px var(--tia-online-border), var(--shadow-md);
+}
+
+/* Iconic Siemens TIA Portal Online Top Strip */
+.tia-online-strip {
+  height: 4px;
+  background: linear-gradient(90deg, var(--siemens-teal), var(--siemens-teal-bright));
+  transition: background 240ms ease;
+}
+
+.tia-workbench-frame.is-online .tia-online-strip {
+  background: linear-gradient(90deg, #ea580c, #f97316, #fb923c, #ea580c);
+  background-size: 200% 100%;
+  animation: tia-online-sheen 4s linear infinite;
+}
+
+@keyframes tia-online-sheen {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+/* ---------- Top TIA Ribbon Bar ---------- */
+.tia-ribbon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 12px;
+  padding: 10px 14px;
+  background: var(--tia-panel-alt);
+  border-bottom: 1px solid var(--tia-border);
+}
+
+.tia-workbench-frame.is-online .tia-ribbon {
+  background: linear-gradient(180deg, rgba(249, 115, 22, 0.11) 0%, var(--tia-panel-alt) 100%);
+  border-bottom-color: rgba(249, 115, 22, 0.35);
+}
+
+.tia-ribbon-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tia-brand-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--siemens-teal-soft);
+  border: 1px solid var(--siemens-teal-border);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--siemens-teal-bright);
+  letter-spacing: 0.01em;
+}
+
+[data-theme='light'] .tia-brand-pill {
+  color: var(--siemens-teal);
+}
+
+.tia-workbench-frame.is-online .tia-brand-pill {
+  background: var(--tia-online-bg);
+  border-color: var(--tia-online-border);
+  color: var(--tia-online-orange);
+}
+
+.tia-online-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--ink-muted);
+}
+
+.tia-online-dot.active {
+  background: var(--tia-online-orange);
+  box-shadow: 0 0 8px var(--tia-online-orange);
+  animation: led-pulse 1.5s infinite;
+}
+
+/* Template Selector */
+.tia-template-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tia-select {
+  appearance: none;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  color: var(--ink-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 28px 6px 10px;
+  min-height: 34px;
+  max-width: 260px;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-muted) 50%),
+    linear-gradient(135deg, var(--ink-muted) 50%, transparent 50%);
+  background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  transition: border-color var(--transition-fast);
+}
+
+.tia-select:hover,
+.tia-select:focus {
+  border-color: var(--siemens-teal);
+  outline: none;
+}
+
+/* Ribbon Buttons */
+.tia-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 11px;
+  min-height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  color: var(--ink-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.tia-btn:hover:not(:disabled) {
+  border-color: var(--siemens-teal);
+  background: var(--siemens-teal-soft);
+}
+
+.tia-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tia-btn--primary {
+  background: var(--siemens-teal);
+  border-color: var(--siemens-teal);
+  color: #ffffff;
+}
+
+.tia-btn--primary:hover:not(:disabled) {
+  background: var(--siemens-teal-hover);
+  border-color: var(--siemens-teal-hover);
+  color: #ffffff;
+}
+
+.tia-btn--dirty {
+  background: linear-gradient(135deg, #ea580c, #f97316);
+  border-color: #fb923c;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(249, 115, 22, 0.35);
+}
+
+.tia-btn--dirty:hover:not(:disabled) {
+  background: linear-gradient(135deg, #c2410c, #ea580c);
+  border-color: #fb923c;
+  color: #ffffff;
+}
+
+.tia-btn--monitor-on {
+  background: var(--tia-online-bg);
+  border-color: var(--tia-online-border);
+  color: var(--tia-online-orange);
+}
+
+.tia-btn--monitor-on:hover:not(:disabled) {
+  background: rgba(249, 115, 22, 0.22);
+  border-color: var(--tia-online-orange);
+}
+
+.tia-btn--sm {
+  padding: 4px 8px;
+  min-height: 28px;
+  font-size: 11.5px;
+}
+
+/* Warm-start OB100 toggle inside ribbon */
+.tia-ob100-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--ink-secondary);
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  cursor: pointer;
+  user-select: none;
+}
+
+.tia-ob100-check input {
+  accent-color: var(--siemens-teal);
+  margin: 0;
+}
+
+/* CPU Operator Mini Panel */
+.tia-cpu-panel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+}
+
+.tia-cpu-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  min-height: 26px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-muted);
+  transition: all var(--transition-fast);
+}
+
+.tia-cpu-mode-btn.is-run {
+  background: var(--power-green-soft);
+  border-color: var(--power-green-border);
+  color: var(--power-green);
+}
+
+.tia-cpu-mode-btn.is-stop {
+  background: var(--alarm-amber-soft);
+  border-color: var(--alarm-amber-border);
+  color: var(--alarm-amber);
+}
+
+.tia-led {
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--ink-muted);
+  opacity: 0.4;
+}
+
+.tia-led.green {
+  background: var(--power-green);
+  opacity: 1;
+  box-shadow: 0 0 8px var(--power-green);
+}
+
+.tia-led.amber {
+  background: var(--alarm-amber);
+  opacity: 1;
+  box-shadow: 0 0 8px var(--alarm-amber);
+}
+
+.tia-cpu-metrics {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 6px;
+  border-left: 1px solid var(--border-hairline);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-secondary);
+}
+
+.tia-force-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: var(--tia-force-yellow);
+  color: var(--tia-force-ink);
+  font-size: 11px;
+  font-weight: 800;
+  border: none;
+}
+
+/* ---------- Status & Dirty Banners ---------- */
+.tia-dirty-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px;
+  background: linear-gradient(90deg, rgba(249, 115, 22, 0.16), rgba(245, 158, 11, 0.12));
+  border-bottom: 1px solid rgba(249, 115, 22, 0.42);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--alarm-amber);
+}
+
+[data-theme='light'] .tia-dirty-banner {
+  color: #b45309;
+  background: linear-gradient(90deg, rgba(249, 115, 22, 0.12), rgba(245, 158, 11, 0.08));
+}
+
+.tia-import-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--info-cyan-soft);
+  border-bottom: 1px solid var(--info-cyan-border);
+  font-size: 12.5px;
+  color: var(--info-cyan);
+}
+
+/* ---------- Mobile Main Pane Switcher ---------- */
+.tia-mobile-tabs {
+  display: none;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--tia-panel-alt);
+  border-bottom: 1px solid var(--tia-border);
+}
+
+.tia-mobile-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 6px;
+  min-height: 38px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-surface);
+  color: var(--ink-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tia-mobile-tab.active {
+  background: var(--siemens-teal-soft);
+  border-color: var(--siemens-teal-border);
+  color: var(--siemens-teal-bright);
+}
+
+[data-theme='light'] .tia-mobile-tab.active {
+  color: var(--siemens-teal);
+}
+
+/* ---------- Main 3-Pane Desktop Grid ---------- */
+.tia-workspace-grid {
+  display: grid;
+  grid-template-columns: 212px minmax(0, 1.15fr) minmax(360px, 0.95fr);
+  min-height: 680px;
+  background: var(--bg-canvas);
+}
+
+.tia-workspace-grid.tree-collapsed {
+  grid-template-columns: 46px minmax(0, 1.2fr) minmax(360px, 0.95fr);
+}
+
+/* ---------- Left Project Tree ---------- */
+.tia-tree {
+  display: flex;
+  flex-direction: column;
+  background: var(--tia-panel-alt);
+  border-right: 1px solid var(--tia-border);
+  min-width: 0;
+  user-select: none;
+}
+
+.tia-tree-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border-hairline);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tia-tree-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-muted);
+}
+
+.tia-tree-collapse-btn:hover {
+  background: var(--bg-surface-3);
+  color: var(--ink-primary);
+}
+
+.tia-tree-body {
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.tia-tree-device {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-primary);
+  border-radius: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  margin-bottom: 4px;
+}
+
+.tia-tree-folder {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px 3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+
+.tia-tree-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 9px 7px 18px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.tia-tree-item:hover {
+  background: var(--bg-surface);
+  color: var(--ink-primary);
+}
+
+.tia-tree-item.active {
+  background: var(--siemens-teal-soft);
+  border-color: var(--siemens-teal-border);
+  color: var(--siemens-teal-bright);
+  font-weight: 700;
+}
+
+[data-theme='light'] .tia-tree-item.active {
+  color: var(--siemens-teal);
+}
+
+.tia-tree-item-main {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tia-tree-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tia-tree-badge {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: var(--bg-surface-3);
+  color: var(--ink-secondary);
+  flex-shrink: 0;
+}
+
+.tia-tree-badge.force {
+  background: var(--tia-force-yellow);
+  color: var(--tia-force-ink);
+}
+
+.tia-tree-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px;
+}
+
+.tia-tree-rail-btn {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-secondary);
+}
+
+.tia-tree-rail-btn.active {
+  background: var(--siemens-teal-soft);
+  border-color: var(--siemens-teal-border);
+  color: var(--siemens-teal-bright);
+}
+
+/* Compact Project Sub-tabs on Mobile/Tablet */
+.tia-compact-subtabs {
+  display: none;
+  gap: 6px;
+  padding: 7px 10px;
+  background: var(--tia-panel-alt);
+  border-bottom: 1px solid var(--border-hairline);
+  overflow-x: auto;
+}
+
+.tia-subtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-surface);
+  color: var(--ink-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tia-subtab.active {
+  background: var(--siemens-teal-soft);
+  border-color: var(--siemens-teal-border);
+  color: var(--siemens-teal-bright);
+}
+
+[data-theme='light'] .tia-subtab.active {
+  color: var(--siemens-teal);
+}
+
+/* ---------- Center Workspace Pane ---------- */
+.tia-center-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--tia-panel-bg);
+  border-right: 1px solid var(--tia-border);
+}
+
+/* Editor Header & Quick-Insert Bar */
+.tia-editor-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--tia-panel-alt);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.tia-block-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tia-block-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-secondary);
+}
+
+.tia-block-tab.active {
+  background: var(--bg-surface);
+  border-color: var(--border-medium);
+  color: var(--ink-primary);
+}
+
+.tia-quick-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #101824;
+  border-bottom: 1px solid rgba(148, 179, 206, 0.16);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.tia-quick-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #7b93ac;
+  white-space: nowrap;
+  padding-right: 4px;
+}
+
+.tia-quick-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  min-height: 26px;
+  border-radius: 5px;
+  border: 1px solid rgba(148, 179, 206, 0.22);
+  background: rgba(30, 44, 62, 0.85);
+  color: #dbeafe;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 140ms ease;
+}
+
+.tia-quick-chip:hover {
+  border-color: #14d4d4;
+  background: rgba(0, 153, 153, 0.25);
+  color: #ffffff;
+}
+
+.tia-quick-chip--tag {
+  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(16, 185, 129, 0.14);
+  color: #6ee7b7;
+}
+
+/* ---------- Dual-Layer SCL Code Editor + Live Glasses Telemetry ---------- */
+.tia-code-stage {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 360px;
+  max-height: 520px;
+  background: var(--tia-editor-bg);
+  color: var(--tia-editor-ink);
+  overflow: hidden;
+}
+
+.tia-code-scroll {
+  display: flex;
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+/* Line Number & Power-Flow Gutter */
+.tia-gutter {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  flex-shrink: 0;
+  width: 48px;
+  padding: 12px 0;
+  background: var(--tia-editor-gutter);
+  border-right: 1px solid rgba(148, 179, 206, 0.14);
+  user-select: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.tia-gutter-row {
+  position: relative;
+  height: var(--tia-editor-line-h);
+  line-height: var(--tia-editor-line-h);
+  padding: 0 8px 0 10px;
+  text-align: right;
+  color: #5b7087;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.tia-gutter-row.is-exec {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.tia-gutter-row.is-exec::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 3.5px;
+  border-radius: 0 2px 2px 0;
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+}
+
+.tia-gutter-row.is-unexec {
+  color: #465769;
+}
+
+.tia-gutter-row.is-unexec::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 2.5px;
+  background: rgba(100, 116, 139, 0.35);
+}
+
+.tia-gutter-row.has-error {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.22);
+}
+
+.tia-gutter-row.has-error::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 1px;
+  bottom: 1px;
+  width: 4px;
+  background: #ef4444;
+}
+
+.tia-gutter-row.has-warn {
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.16);
+}
+
+.tia-gutter-row.is-jumped {
+  background: rgba(56, 189, 248, 0.28);
+  color: #e0f2fe;
+}
+
+/* Editable Layered Code Area */
+.tia-editor-layer-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 360px;
+}
+
+.tia-code-backdrop,
+.tia-code-textarea {
+  margin: 0;
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: var(--tia-editor-line-h);
+  tab-size: 2;
+  white-space: pre;
+  letter-spacing: 0;
+  word-spacing: 0;
+  border: none;
+  outline: none;
+  width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.tia-code-backdrop {
+  position: relative;
+  pointer-events: none;
+  z-index: 1;
+  color: var(--tia-editor-ink);
+}
+
+.tia-code-line-bg {
+  height: var(--tia-editor-line-h);
+  line-height: var(--tia-editor-line-h);
+  padding-right: 12px;
+}
+
+.tia-code-line-bg.is-exec {
+  background: rgba(16, 185, 129, 0.065);
+}
+
+.tia-code-line-bg.is-unexec {
+  opacity: 0.56;
+}
+
+.tia-code-line-bg.has-error {
+  background: rgba(239, 68, 68, 0.16);
+  box-shadow: inset 0 -1px 0 rgba(239, 68, 68, 0.65);
+}
+
+.tia-code-line-bg.has-warn {
+  background: rgba(245, 158, 11, 0.11);
+}
+
+.tia-code-line-bg.is-jumped {
+  background: rgba(56, 189, 248, 0.22);
+  animation: tia-jump-pulse 1.4s ease;
+}
+
+@keyframes tia-jump-pulse {
+  0% { background: rgba(56, 189, 248, 0.45); }
+  100% { background: rgba(56, 189, 248, 0.08); }
+}
+
+.tia-code-textarea {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  resize: none;
+  background: transparent;
+  color: transparent;
+  caret-color: #38bdf8;
+  overflow: hidden;
+  -webkit-text-fill-color: transparent;
+}
+
+.tia-code-textarea::selection {
+  background: rgba(0, 153, 153, 0.38);
+}
+
+/* SCL Syntax Token Colors (High Contrast Dark Industrial Terminal) */
+.tia-tok-comment { color: #6c849d; font-style: italic; }
+.tia-tok-keyword { color: #2dd4bf; font-weight: 600; }
+.tia-tok-builtin { color: #38bdf8; font-weight: 600; }
+.tia-tok-symbol { color: #34d399; }
+.tia-tok-local { color: #c4b5fd; }
+.tia-tok-address { color: #fbbf24; font-weight: 600; }
+.tia-tok-time { color: #fb923c; font-weight: 600; }
+.tia-tok-number { color: #d8b4fe; }
+.tia-tok-string { color: #fda4af; }
+.tia-tok-operator { color: #94a3b8; }
+
+/* Right-Side TIA Portal "Live Glasses" Monitor Column */
+.tia-telemetry-lane {
+  position: relative;
+  flex-shrink: 0;
+  min-width: 210px;
+  width: max-content;
+  padding: 12px 10px;
+  background: rgba(13, 21, 31, 0.96);
+  border-left: 1px solid rgba(249, 115, 22, 0.35);
+  user-select: none;
+}
+
+.tia-telemetry-row {
+  height: var(--tia-editor-line-h);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.tia-val-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 16px;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 1px solid rgba(148, 179, 206, 0.2);
+  background: rgba(25, 37, 52, 0.9);
+  color: #cbd5e1;
+}
+
+.tia-val-pill.is-true {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.55);
+  color: #6ee7b7;
+}
+
+.tia-val-pill.is-false {
+  background: rgba(71, 85, 105, 0.25);
+  border-color: rgba(100, 116, 139, 0.35);
+  color: #94a3b8;
+}
+
+.tia-val-pill.is-num {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.42);
+  color: #7dd3fc;
+}
+
+.tia-val-expr {
+  opacity: 0.78;
+}
+
+/* ---------- Bottom Inspector Drawer (Info/Compile + Guide + FB Instances) ---------- */
+.tia-inspector {
+  border-top: 1px solid var(--tia-border);
+  background: var(--tia-panel-alt);
+  display: flex;
+  flex-direction: column;
+}
+
+.tia-inspector-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.tia-inspector-tab-list {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.tia-inspector-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-secondary);
+  white-space: nowrap;
+}
+
+.tia-inspector-tab.active {
+  background: var(--bg-surface);
+  border-color: var(--border-medium);
+  color: var(--ink-primary);
+}
+
+.tia-inspector-body {
+  max-height: 190px;
+  overflow-y: auto;
+  padding: 8px 12px;
+  font-size: 12.5px;
+}
+
+.tia-diag-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: var(--bg-surface);
+  margin-bottom: 6px;
+  transition: border-color var(--transition-fast);
+}
+
+.tia-diag-row:hover {
+  border-color: var(--siemens-teal);
+}
+
+.tia-diag-row.error {
+  border-color: var(--fault-red-border);
+  background: var(--fault-red-soft);
+}
+
+.tia-diag-row.warning {
+  border-color: var(--alarm-amber-border);
+  background: var(--alarm-amber-soft);
+}
+
+.tia-diag-line {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.16);
+  flex-shrink: 0;
+}
+
+.tia-guide-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tia-guide-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  cursor: pointer;
+}
+
+.tia-guide-item.done {
+  opacity: 0.72;
+  border-color: var(--power-green-border);
+}
+
+/* ---------- PLC Tag Table & Watch/Force Table ---------- */
+.tia-table-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 460px;
+  background: var(--tia-panel-bg);
+}
+
+.tia-table-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--tia-panel-alt);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.tia-input {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 12.5px;
+  color: var(--ink-primary);
+  min-height: 32px;
+}
+
+.tia-input:focus {
+  outline: none;
+  border-color: var(--siemens-teal);
+}
+
+.tia-add-tag-form {
+  display: grid;
+  grid-template-columns: 1.1fr 0.85fr 0.7fr 0.7fr 1.3fr auto;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--siemens-teal-soft);
+  border-bottom: 1px solid var(--siemens-teal-border);
+  align-items: center;
+}
+
+.tia-table-scroll {
+  flex: 1;
+  overflow: auto;
+  max-height: 520px;
+}
+
+.tia-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.tia-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--tia-panel-alt);
+  color: var(--ink-secondary);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-medium);
+  white-space: nowrap;
+}
+
+.tia-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border-hairline);
+  vertical-align: middle;
+}
+
+.tia-table tr:hover td {
+  background: var(--bg-surface-2);
+}
+
+.tia-table tr.is-forced td {
+  background: rgba(250, 204, 21, 0.08);
+}
+
+.tia-addr-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.tia-addr-chip.area-I { background: var(--info-cyan-soft); color: var(--info-cyan); border: 1px solid var(--info-cyan-border); }
+.tia-addr-chip.area-Q { background: var(--power-green-soft); color: var(--power-green); border: 1px solid var(--power-green-border); }
+.tia-addr-chip.area-M { background: var(--alarm-amber-soft); color: var(--alarm-amber); border: 1px solid var(--alarm-amber-border); }
+.tia-addr-chip.area-DB { background: var(--db-violet-soft); color: var(--db-violet); border: 1px solid var(--db-violet-border); }
+
+.tia-force-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: var(--tia-force-yellow);
+  color: var(--tia-force-ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 0 8px rgba(250, 204, 21, 0.45);
+}
+
+.tia-live-val {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: var(--bg-surface-3);
+  color: var(--ink-secondary);
+}
+
+.tia-live-val.is-true {
+  background: var(--power-green-soft);
+  color: var(--power-green);
+  border: 1px solid var(--power-green-border);
+}
+
+.tia-live-val.is-num {
+  background: var(--info-cyan-soft);
+  color: var(--info-cyan);
+  border: 1px solid var(--info-cyan-border);
+}
+
+/* ---------- Right Live Plant & Virtual I/O Dock ---------- */
+.tia-plant-dock {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-canvas-alt);
+}
+
+.tia-plant-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--tia-panel-alt);
+  border-bottom: 1px solid var(--tia-border);
+}
+
+.tia-plant-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tia-plant-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.tia-plant-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-surface);
+  color: var(--ink-secondary);
+  font-size: 11.5px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.tia-plant-pill:hover {
+  border-color: var(--siemens-teal);
+  color: var(--ink-primary);
+}
+
+.tia-plant-pill.active {
+  background: var(--siemens-teal-soft);
+  border-color: var(--siemens-teal-border);
+  color: var(--siemens-teal-bright);
+  font-weight: 700;
+}
+
+[data-theme='light'] .tia-plant-pill.active {
+  color: var(--siemens-teal);
+}
+
+.tia-plant-mismatch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--alarm-amber-soft);
+  border-bottom: 1px solid var(--alarm-amber-border);
+  font-size: 12px;
+  color: var(--alarm-amber);
+}
+
+.tia-plant-stage {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+/* ---------- Virtual I/O Box & Live Waveform ---------- */
+.tia-vio-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tia-vio-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.tia-vio-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.tia-vio-switches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.tia-vio-switch {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface-2);
+  transition: all var(--transition-fast);
+}
+
+.tia-vio-switch.is-on {
+  border-color: var(--power-green-border);
+  background: var(--power-green-soft);
+}
+
+.tia-vio-btn-press {
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  color: var(--ink-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.tia-vio-switch.is-on .tia-vio-btn-press {
+  background: var(--power-green);
+  border-color: var(--power-green);
+  color: #ffffff;
+}
+
+.tia-vio-leds {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 8px;
+}
+
+.tia-vio-led-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-surface-2);
+}
+
+.tia-vio-led-item.is-on {
+  border-color: var(--power-green-border);
+  background: var(--power-green-soft);
+}
+
+.tia-vio-lamp {
+  width: 14px;
+  height: 14px;
+  border-radius: 99px;
+  background: #334155;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+.tia-vio-led-item.is-on .tia-vio-lamp {
+  background: #10b981;
+  box-shadow: 0 0 12px #10b981;
+  border-color: #a7f3d0;
+}
+
+.tia-vio-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-hairline);
+  margin-bottom: 8px;
+}
+
+.tia-vio-slider-row input[type='range'] {
+  width: 100%;
+  accent-color: var(--siemens-teal);
+}
+
+.tia-scope-svg {
+  width: 100%;
+  height: 170px;
+  display: block;
+  border-radius: 8px;
+  background: #080e15;
+  border: 1px solid rgba(148, 179, 206, 0.2);
+}
+
+/* ---------- Responsive Breakpoints ---------- */
+@media (max-width: 1180px) {
+  .tia-workspace-grid,
+  .tia-workspace-grid.tree-collapsed {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .tia-tree {
+    display: none;
+  }
+
+  .tia-mobile-tabs {
+    display: flex;
+  }
+
+  .tia-compact-subtabs {
+    display: flex;
+  }
+
+  .tia-center-pane {
+    border-right: none;
+  }
+
+  .tia-pane-hidden-mobile {
+    display: none !important;
+  }
+
+  .tia-telemetry-lane {
+    width: 165px;
+  }
+}
+
+@media (max-width: 720px) {
+  .tia-ribbon {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .tia-select {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .tia-template-wrap {
+    width: 100%;
+  }
+
+  .tia-add-tag-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tia-telemetry-lane {
+    width: 132px;
+  }
+
+  .tia-code-stage {
+    min-height: 310px;
+    max-height: 440px;
+  }
+
+  .tia-cpu-panel {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+}

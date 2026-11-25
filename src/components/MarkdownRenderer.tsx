@@ -1,5 +1,6 @@
 import React from 'react';
 import { CodeViewer } from './CodeViewer';
+import { Term } from './Term';
 
 interface MarkdownRendererProps {
   content: string;
@@ -11,13 +12,13 @@ const PLC_ADDRESS_PATTERN =
 
 /**
  * Render inline markdown safely into React nodes:
- * Supports `code`, **bold**, __bold__, *italic*, ~~strike~~, [link](href).
+ * Supports `code`, **bold**, __bold__, *italic*, ~~strike~~, [link](href), [[术语]] glossary terms.
  */
 export function renderInline(text: string, keyPrefix = 'inl'): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
   // Combined tokenizer ordered by specificity
   const tokenRegex =
-    /(`[^`]+`|\*\*[^*]+?\*\*|__[^_]+?__|~~[^~]+?~~|\*[^*\n]+?\*|\[[^\]]+\]\([^)]+\))/g;
+    /(`[^`]+`|\[\[[^\]]+\]\]|\*\*[^*]+?\*\*|__[^_]+?__|~~[^~]+?~~|\*[^*\n]+?\*|\[[^\]]+\]\([^)]+\))/g;
 
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -31,7 +32,16 @@ export function renderInline(text: string, keyPrefix = 'inl'): React.ReactNode[]
     const raw = match[0];
     const key = `${keyPrefix}-${idx++}`;
 
-    if (raw.startsWith('`') && raw.endsWith('`')) {
+    if (raw.startsWith('[[') && raw.endsWith(']]')) {
+      // [[词条]] 或 [[词条|显示文字]]
+      const inner = raw.slice(2, -2);
+      const [name, display] = inner.split('|');
+      nodes.push(
+        <Term key={key} name={name.trim()}>
+          {(display ?? name).trim()}
+        </Term>
+      );
+    } else if (raw.startsWith('`') && raw.endsWith('`')) {
       const code = raw.slice(1, -1);
       const isAddr = PLC_ADDRESS_PATTERN.test(code.trim());
       nodes.push(

@@ -341,3 +341,43 @@ svg tspan {
     min-height: 40px;
   }
 }
+
+/* ---------- 触控手感（手机网页 + Android App） ---------- */
+html {
+  -webkit-tap-highlight-color: transparent; /* 去掉安卓点按时的蓝色闪块，改由 :active 反馈 */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+button,
+[role='button'],
+a {
+  touch-action: manipulation; /* 取消双击缩放等待，点按立即响应 */
+}
+@media (pointer: coarse) {
+  button:active:not(:disabled),
+  [role='button']:active {
+    transform: scale(0.98);
+  }
+}
+/* App 内：页面不整体回弹拉伸；按钮、导航不可长按选中文字（正文仍可选中复制） */
+.is-native-app body {
+  overscroll-behavior-y: none;
+}
+.is-native-app button,
+.is-native-app .mobile-bottom-nav,
+.is-native-app .app-header {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* 跳转/聚焦时不要让目标藏在吸顶导航或底部导航后面 */
+html {
+  scroll-padding-top: calc(var(--nav-offset) + 8px);
+}
+@media (max-width: 768px) {
+  html {
+    scroll-padding-top: calc(56px + var(--sat) + 8px);
+    scroll-padding-bottom: calc(72px + var(--sab));
+  }
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">西门子PLC实训工坊</string>
+    <string name="title_activity_main">西门子PLC实训工坊</string>
+    <string name="package_name">com.plcacademy.app</string>
+    <string name="custom_url_scheme">com.plcacademy.app</string>
+</resources>

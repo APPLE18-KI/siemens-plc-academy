@@ -23,6 +23,16 @@ export type WorkflowId =
   | 'grafcet-packml'
   | 'project-lifecycle';
 
+/** 课内交互演示组件 ID（src/features/demos 实现） */
+export type DemoId =
+  | 'tia-first-project'
+  | 'tia-download-monitor'
+  | 'data-type-explorer'
+  | 'instruction-lab'
+  | 'troubleshoot-guide'
+  | 'hmi-first-screen'
+  | 'timer-diagram';
+
 export interface QuizQuestion {
   question: string;
   options: string[];
@@ -57,6 +67,7 @@ export type LessonBlock =
   | { kind: 'sim'; preset: SimPresetId; title?: string; instruction?: string }
   | { kind: 'model'; id: ModelId; title?: string; instruction?: string }
   | { kind: 'workflow'; id: WorkflowId; title?: string; instruction?: string }
+  | { kind: 'demo'; id: DemoId; title?: string; instruction?: string }
   | {
       kind: 'practice-task';
       title: string;
@@ -86,6 +97,8 @@ export interface Lesson {
   tags: string[];
   objectives: string[];
   interviewTip?: string;
+  /** 一句话小结，显示在课程末尾 */
+  recap?: string;
   blocks: LessonBlock[];
 }
 

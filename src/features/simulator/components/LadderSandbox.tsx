@@ -3,8 +3,12 @@ import {
   AlertTriangle,
   GitBranch,
   Layers,
+  Play,
   Plus,
+  RotateCcw,
   Sparkles,
+  Square,
+  StepForward,
   Trash2,
   Wrench,
 } from 'lucide-react';
@@ -17,6 +21,7 @@ import {
   type TimerType,
   type TraceChannelDef,
 } from '../../../core/plc';
+import { LandscapeSvgStage } from '../../../components/LandscapeSvgStage';
 import type { FieldInputMeta, FieldOutputMeta } from '../presets';
 import { generateSclFromLadder } from '../sclGenerator';
 import { CpuStatusBar } from './CpuStatusBar';
@@ -357,6 +362,49 @@ export const LadderSandbox: React.FC = () => {
     if (snapshot.metrics.running) runtime.setRunning?.(false);
     runtime.singleScan(intervalMs);
   };
+
+  const landscapeCpuControls = (
+    <>
+      <button
+        type="button"
+        className={`lss-ctrl-btn ${snapshot.metrics.running ? 'is-warn' : 'is-success'}`}
+        onClick={handleToggleRun}
+      >
+        {snapshot.metrics.running ? <Square size={12} /> : <Play size={12} />}
+        <span>{snapshot.metrics.running ? 'STOP 停机' : 'RUN 运行'}</span>
+      </button>
+      <button type="button" className="lss-ctrl-btn" onClick={handleSingleScan}>
+        <StepForward size={12} />
+        <span>单步扫描</span>
+      </button>
+      <button type="button" className="lss-ctrl-btn" onClick={() => runtime.reset()}>
+        <RotateCcw size={12} />
+        <span>复位</span>
+      </button>
+    </>
+  );
+
+  const landscapeFieldFooter = (
+    <>
+      <span className="plc-sim-lss-io-label">沙盒 %I 输入:</span>
+      {SANDBOX_FIELD_INPUTS.map((fi) => {
+        const on = Boolean(snapshot.fieldInputs[fi.tag]);
+        const def = SANDBOX_TAG_DEFS.find((d) => d.name === fi.tag);
+        return (
+          <button
+            key={fi.tag}
+            type="button"
+            className={`plc-sim-lss-io-btn ${on ? 'is-on' : ''}`}
+            onClick={() => runtime.setFieldInput(fi.tag, !on)}
+          >
+            <span className="plc-sim-lss-io-addr">{def?.address ?? fi.tag}</span>
+            <span>{fi.label}</span>
+            <span className="plc-sim-lss-io-state">{on ? '1' : '0'}</span>
+          </button>
+        );
+      })}
+    </>
+  );
 
   const activeTemplate = SANDBOX_TEMPLATES.find((t) => t.id === activeTemplateId);
 
@@ -784,14 +832,26 @@ export const LadderSandbox: React.FC = () => {
               </span>
             )}
           </div>
-          <LadderCanvas
-            program={compiledProgram}
-            tagDefs={SANDBOX_TAG_DEFS}
-            tags={snapshot.tags}
-            evalSnapshot={snapshot.evalSnapshot}
-            running={snapshot.metrics.running}
-            onToggleInputTag={(t) => runtime.setFieldInput(t, !Boolean(runtime.getFieldInput(t)))}
-          />
+          <LandscapeSvgStage
+            title="自定义梯形图沙盒 · 实时能流监控 (LAD)"
+            subtitle={`Cycle #${snapshot.metrics.cycleCount} · ${snapshot.metrics.running ? 'RUN' : 'STOP'} · ${compiledProgram.networks.length} 个网段`}
+            compactHud
+            hint="直接点击蓝色 %I 触点可切换通断 · 横屏可查看全幅多网段能流"
+            scopeClassName="plc-sim-root"
+            fitMode="width"
+            controls={landscapeCpuControls}
+            landscapeFooter={landscapeFieldFooter}
+            landscapeFooterLabel="沙盒输入按钮"
+          >
+            <LadderCanvas
+              program={compiledProgram}
+              tagDefs={SANDBOX_TAG_DEFS}
+              tags={snapshot.tags}
+              evalSnapshot={snapshot.evalSnapshot}
+              running={snapshot.metrics.running}
+              onToggleInputTag={(t) => runtime.setFieldInput(t, !Boolean(runtime.getFieldInput(t)))}
+            />
+          </LandscapeSvgStage>
         </div>
 
         <aside className="plc-sim-field-pane">
@@ -819,6 +879,9 @@ export const LadderSandbox: React.FC = () => {
           paused={tracePaused}
           onTogglePause={toggleTracePaused}
           onClear={() => runtime.clearTrace()}
+          landscapeTitle="自定义梯形图沙盒 · 逻辑分析仪波形 (Trace)"
+          landscapeControls={landscapeCpuControls}
+          landscapeFooter={landscapeFieldFooter}
         />
         <SclCodePanel
           code={liveScl}

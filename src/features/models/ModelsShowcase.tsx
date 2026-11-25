@@ -46,7 +46,7 @@ interface ModelShowcaseMeta {
 const MODEL_META_LIST: ModelShowcaseMeta[] = [
   {
     id: 's7-1200-wiring',
-    badge: 'MODEL 01 · 电气硬件',
+    badge: '模型 01 · 电气硬件',
     title: 'S7-1200 CPU 1214C 硬件拆解与接线实训台',
     subtitle: '24V 电源、断路器、NPN/PNP 双向光耦极性校验、KA 继电器与 KM 电机主回路',
     tags: ['DC/DC/DC', 'PNP vs NPN', '1M 公共端', 'KA/KM 隔离'],
@@ -88,7 +88,7 @@ const MODEL_META_LIST: ModelShowcaseMeta[] = [
   },
   {
     id: 'sorting-conveyor',
-    badge: 'MODEL 02 · 产线顺控',
+    badge: '模型 02 · 产线顺控',
     title: '三工位视觉检测与气动分拣传送带',
     subtitle: '一维位移物理仿真 · 对射光电 + 电感接近 + 工业相机 + 双气缸磁性开关超时保护',
     tags: ['电感接近', '视觉分拣', '双磁性开关', '声光报警塔'],
@@ -131,7 +131,7 @@ const MODEL_META_LIST: ModelShowcaseMeta[] = [
   },
   {
     id: 'tank-pressure-pid',
-    badge: 'MODEL 03 · 过程控制',
+    badge: '模型 03 · 过程控制',
     title: '双泵恒压供水与储液罐热工 PID 闭环',
     subtitle: '真实液位/热工微分方程积分 · 4-20mA 断线保护 + 双泵自动加减泵 + 实时三曲线趋势',
     tags: ['4-20mA 断线', 'PID_Compact', '一阶惯性 ODE', '双泵联控'],
@@ -172,7 +172,7 @@ const MODEL_META_LIST: ModelShowcaseMeta[] = [
   },
   {
     id: 'traffic-intersection',
-    badge: 'MODEL 04 · 状态机联锁',
+    badge: '模型 04 · 状态机联锁',
     title: '智能十字路口四向车流与人行请求联锁',
     subtitle: '2.5D 俯视车流排队仿真 · 多时段状态机 + 行人优先 + 消防绿波 + 绿灯冲突安全继电器',
     tags: ['状态机 CASE', '全红清空', '行人优先', '绿灯冲突检测'],
@@ -252,28 +252,28 @@ export const ModelsShowcase: React.FC = () => {
         <div>
           <div className="dt-hero-kicker">
             <Layers size={14} />
-            SIEMENS DIGITAL TWIN LAB · 工业被控对象建模展示中心
+            设备模型 · 看程序如何驱动真实设备
           </div>
-          <h1 className="dt-hero-title">4 大工业数字孪生实训模型</h1>
+          <h1 className="dt-hero-title">4 套可操作的设备模型</h1>
           <p className="dt-hero-desc">
-            告别“只看枯燥梯形图不知现场怎么动”！每套模型均内置真实物理动力学方程与西门子 S7-1200 标准控制逻辑，
-            支持<strong> PLC 自动运行 / 手动强制调试</strong>、<strong>实时 %I/%Q/%IW/%QW 映像监控</strong>与
-            <strong> 现场故障注入排错演练</strong>。
+            光看梯形图，很难想象现场设备怎么动。这里每套模型都按 S7-1200 的控制逻辑运行：
+            你可以让 <strong>PLC 自动运行</strong>，也可以<strong>手动强制</strong>某个输出；
+            旁边实时显示输入/输出点（%I、%Q）和模拟量（%IW、%QW）的数值，还能<strong>人为制造故障</strong>来练习排错。
           </p>
         </div>
 
         <div className="dt-hero-metrics">
           <div className="dt-metric-box">
             <div className="dt-metric-val">4 套</div>
-            <div className="dt-metric-lbl">高精度 SCADA 孪生</div>
+            <div className="dt-metric-lbl">设备模型</div>
           </div>
           <div className="dt-metric-box">
             <div className="dt-metric-val">13 项</div>
-            <div className="dt-metric-lbl">工业真实故障注入</div>
+            <div className="dt-metric-lbl">可模拟的现场故障</div>
           </div>
           <div className="dt-metric-box">
-            <div className="dt-metric-val">100%</div>
-            <div className="dt-metric-lbl">西门子博途规范地址</div>
+            <div className="dt-metric-val">%I/%Q</div>
+            <div className="dt-metric-lbl">博途标准地址写法</div>
           </div>
         </div>
       </section>

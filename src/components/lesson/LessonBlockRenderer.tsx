@@ -7,6 +7,7 @@ import { CalloutBlock } from './CalloutBlock';
 import { EmbeddedStageBlock } from './EmbeddedStageBlock';
 import { PracticeTaskBlock } from './PracticeTaskBlock';
 import { QuizBlock } from './QuizBlock';
+import { DemoBlock } from './DemoBlock';
 
 interface LessonBlockRendererProps {
   lessonId: string;
@@ -85,6 +86,9 @@ export const LessonBlockRenderer: React.FC<LessonBlockRendererProps> = ({
           instruction={block.instruction}
         />
       );
+
+    case 'demo':
+      return <DemoBlock id={block.id} title={block.title} instruction={block.instruction} />;
 
     case 'practice-task':
       return (

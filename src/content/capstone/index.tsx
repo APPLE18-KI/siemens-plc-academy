@@ -107,7 +107,7 @@ export const CapstoneStudio: React.FC = () => {
             <h1>新能源锂电模组柔性视觉分拣、热压恒温固化与立体入库工作站</h1>
             <p>
               涵盖 PROFINET 实时组网（G120 / V90 / ET200SP / TP700 / 智能视觉）、PackML + GRAFCET 双层状态机、
-              OB30 PID 恒温闭环与超温回差联锁、4×3 立体库掉电保持算法、可导入 TIA Portal V18/V19 的真实{' '}
+              OB30 PID 恒温闭环与超温回差联锁、4×3 立体库掉电保持算法、可导入 TIA Portal（建议 V17 及以上）的{' '}
               <code className="md-inline-code">.scl</code> 工程包，
               以及一键生成 STAR 简历经历与 15 道面试官高频追问满分话术！
             </p>

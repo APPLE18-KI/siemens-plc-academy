@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Cpu, Network, Package, Search, Server, TableProperties } from 'lucide-react';
+import { LandscapeSvgStage } from '../../../components/LandscapeSvgStage';
 import { HARDWARE_BOM, PROFINET_NODES, STATION_IO_TABLE } from '../data/projectData';
 
 export const ArchitectureTab: React.FC = () => {
@@ -43,7 +44,38 @@ export const ArchitectureTab: React.FC = () => {
         </div>
 
         <div className="cap-topo-grid">
-          <div className="cap-svg-stage">
+          <LandscapeSvgStage
+            title="PROFINET IO (RT) 工业实时星型网络拓扑"
+            subtitle={`192.168.0.0/24 · SCALANCE XB008 · 选中: ${selectedNode.label} (${selectedNode.ip})`}
+            scopeClassName="cap-root"
+            fitMode="contain"
+            inlineMinWidth={580}
+            inlinePadding
+            hint="⇄ 点击任意设备节点查看订货号与报文 · 推荐横屏大图查看"
+            landscapeFooterLabel="节点详情"
+            controls={
+              <span className="cap-badge teal">
+                <Server size={11} /> {selectedNode.label} · {selectedNode.ip} · {selectedNode.orderNumber}
+              </span>
+            }
+            landscapeFooter={
+              <>
+                <span className="cap-badge teal">{selectedNode.ip}</span>
+                <strong style={{ fontSize: 12, color: '#f8fafc', whiteSpace: 'nowrap' }}>
+                  {selectedNode.model}
+                </strong>
+                <span style={{ fontSize: 11.5, color: '#14d4d4', whiteSpace: 'nowrap' }}>
+                  {selectedNode.role}
+                </span>
+                <span className="cap-mono" style={{ fontSize: 11, color: '#38bdf8', whiteSpace: 'nowrap' }}>
+                  地址: {selectedNode.ioRange}
+                </span>
+                <span style={{ fontSize: 11, color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                  报文: {selectedNode.telegram}
+                </span>
+              </>
+            }
+          >
             <svg viewBox="0 0 720 330" width="100%" style={{ display: 'block', minWidth: 560 }}>
               {/* Subnet backdrop */}
               <rect
@@ -134,7 +166,7 @@ export const ArchitectureTab: React.FC = () => {
                 );
               })}
             </svg>
-          </div>
+          </LandscapeSvgStage>
 
           {/* Selected Node Inspector */}
           <div className="cap-node-detail">

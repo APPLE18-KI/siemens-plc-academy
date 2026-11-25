@@ -20,14 +20,14 @@ export const EmbeddedStageBlock: React.FC<StageProps> = (props) => {
           <div className="embedded-stage-title-wrap">
             <span className="embedded-stage-kicker">
               <Cpu size={13} />
-              实时 PLC 仿真实验室 · {props.preset}
+              动手仿真
             </span>
             <span className="embedded-stage-title">
               {props.title || entry?.title || `PLC 仿真预设：${props.preset}`}
             </span>
           </div>
           <Link to={`/sim?preset=${encodeURIComponent(props.preset)}`} className="btn btn-sm">
-            在全屏仿真台打开
+            全屏打开
             <ExternalLink size={13} />
           </Link>
         </div>
@@ -74,14 +74,14 @@ export const EmbeddedStageBlock: React.FC<StageProps> = (props) => {
           <div className="embedded-stage-title-wrap">
             <span className="embedded-stage-kicker">
               <Boxes size={13} />
-              2.5D 工业数字孪生模型 · {props.id}
+              设备模型
             </span>
             <span className="embedded-stage-title">
               {props.title || entry?.title || `数字孪生模型：${props.id}`}
             </span>
           </div>
           <Link to={`/models?model=${encodeURIComponent(props.id)}`} className="btn btn-sm">
-            在建模大厅全屏查看
+            全屏打开
             <ExternalLink size={13} />
           </Link>
         </div>
@@ -124,14 +124,14 @@ export const EmbeddedStageBlock: React.FC<StageProps> = (props) => {
         <div className="embedded-stage-title-wrap">
           <span className="embedded-stage-kicker">
             <GitBranch size={13} />
-            交互式工业工作流 · {props.id}
+            原理动画
           </span>
           <span className="embedded-stage-title">
             {props.title || entry?.title || `工业工作流：${props.id}`}
           </span>
         </div>
         <Link to={`/workflows?workflow=${encodeURIComponent(props.id)}`} className="btn btn-sm">
-          在工作流大厅全屏探索
+          全屏打开
           <ExternalLink size={13} />
         </Link>
       </div>

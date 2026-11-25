@@ -1,22 +1,31 @@
 {
   "name": "siemens-plc-academy",
   "private": true,
-  "version": "1.0.0",
-  "description": "西门子 S7-1200/1500 PLC 从零基础到简历级工业项目的互动式学习与数字孪生平台",
+  "version": "1.2.0",
+  "description": "西门子 S7-1200/1500 PLC 从零基础到简历级工业项目的互动式学习、在线博途编程与数字孪生平台",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:offline": "node -e \"process.env.VITE_OFFLINE='1'; require('child_process').execSync('npm run build', {stdio:'inherit', env:process.env})\"",
+    "build:android": "npm run build:offline && npx cap sync android",
+    "android:release": "npm run build:android && node -e \"const cp=require('child_process'); cp.execSync(process.platform==='win32'?'gradlew.bat assembleRelease':'./gradlew assembleRelease',{cwd:'android',stdio:'inherit'})\""
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/splash-screen": "^8.0.2",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",

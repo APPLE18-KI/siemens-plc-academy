@@ -261,6 +261,28 @@
   color: #5eead4;
 }
 
+.dt-btn--landscape {
+  background: linear-gradient(135deg, rgba(0, 153, 153, 0.22), rgba(14, 116, 144, 0.2));
+  border-color: rgba(20, 184, 166, 0.55);
+  color: #5eead4;
+}
+
+.dt-btn--landscape:hover:not(:disabled) {
+  background: #009999;
+  border-color: #2dd4bf;
+  color: #ffffff;
+}
+
+[data-theme='light'] .dt-btn--landscape {
+  color: #0f766e;
+  background: rgba(0, 153, 153, 0.14);
+}
+
+[data-theme='light'] .dt-btn--landscape:hover:not(:disabled) {
+  color: #ffffff;
+  background: #008585;
+}
+
 [data-theme='light'] .dt-btn--active {
   color: #0f766e;
   background: rgba(0, 153, 153, 0.14);
@@ -990,12 +1012,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 7px 12px;
   background: rgba(9, 15, 28, 0.88);
   border-bottom: 1px solid rgba(148, 163, 184, 0.16);
   position: relative;
   z-index: 3;
+}
+
+.dt-hud-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .dt-pan-hint {
@@ -1068,7 +1098,7 @@
   z-index: 120;
   background: rgba(4, 8, 15, 0.92);
   backdrop-filter: blur(10px);
-  padding: 16px;
+  padding: calc(16px + var(--sat)) calc(16px + var(--sar)) calc(16px + var(--sab)) calc(16px + var(--sal));
   overflow-y: auto;
 }
 
@@ -1084,6 +1114,26 @@
   }
 
   .dt-topbar-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dt-btn--landscape {
+    background: linear-gradient(135deg, #009999, #0d9488);
+    border-color: #2dd4bf;
+    color: #ffffff !important;
+    box-shadow: 0 2px 10px rgba(0, 153, 153, 0.4);
+  }
+
+  .dt-stage-hud {
+    padding: 7px 10px;
+  }
+
+  .dt-pan-hint {
+    font-size: 11px;
+  }
+
+  .dt-hud-actions {
     width: 100%;
     justify-content: space-between;
   }
@@ -1107,12 +1157,24 @@
   }
 
   .dt-fullscreen-backdrop {
-    padding: 8px;
+    padding: calc(8px + var(--sat)) calc(8px + var(--sar)) calc(8px + var(--sab)) calc(8px + var(--sal));
   }
 }
 
 @media (max-width: 440px) {
   .dt-io-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* 手机：三个指标等宽一行，避免第三个落单 */
+@media (max-width: 768px) {
+  .dt-hero-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .dt-hero-metrics .dt-metric-box {
+    min-width: 0;
   }
 }

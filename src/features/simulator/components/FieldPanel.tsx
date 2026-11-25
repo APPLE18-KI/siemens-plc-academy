@@ -1,4 +1,5 @@
 import React from 'react';
+import { haptic } from '../../../app/native/platform';
 import {
   AlertOctagon,
   Cog,
@@ -89,7 +90,7 @@ export const FieldPanel: React.FC<FieldPanelProps> = ({
         <div className="plc-sim-sec-head">
           <div className="plc-sim-sec-title">
             <Radio size={14} />
-            <span>数字量输入 %I 调试按钮</span>
+            <span>输入：按钮与开关（%I）</span>
           </div>
           <div className="plc-sim-mode-switch" role="group" aria-label="输入操作模式">
             <button
@@ -111,6 +112,11 @@ export const FieldPanel: React.FC<FieldPanelProps> = ({
           </div>
         </div>
 
+        {fieldInputMetas.some((m) => m.physicalType === 'NC') && (
+          <p className="plc-sim-nc-hint">
+            标着“常闭”的按钮平时就是接通的（显示 24V · 1），按下才变成 0——这是正常现象，不是故障。
+          </p>
+        )}
         <div className="plc-sim-io-grid">
           {fieldInputMetas.map((meta) => {
             const def = defByName.get(meta.tag);
@@ -127,19 +133,39 @@ export const FieldPanel: React.FC<FieldPanelProps> = ({
             const pressedVal = meta.physicalType === 'NC' ? false : true;
             const releasedVal = meta.physicalType === 'NC' ? true : false;
 
-            const handlePointerDown = () => {
+            const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
               if (useMomentary) {
+                // 捕获指针：手指轻微移动也不会被当作“松开”
+                e.currentTarget.setPointerCapture?.(e.pointerId);
+                haptic('press');
                 onSetInput(meta.tag, pressedVal);
               }
             };
             const handlePointerUp = () => {
               if (useMomentary) {
+                haptic('tap'); // 松手时轻一下：模拟按钮回弹
                 onSetInput(meta.tag, releasedVal);
               }
             };
             const handleClick = () => {
               if (!useMomentary) {
+                haptic('tap');
                 onSetInput(meta.tag, !physicalVal);
+              }
+            };
+            // 键盘操作：空格/回车按住 = 按下，松开 = 释放（点动模式）
+            const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+              if (!useMomentary || e.repeat) return;
+              if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                onSetInput(meta.tag, pressedVal);
+              }
+            };
+            const handleKeyUp = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+              if (!useMomentary) return;
+              if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                onSetInput(meta.tag, releasedVal);
               }
             };
 
@@ -157,12 +183,20 @@ export const FieldPanel: React.FC<FieldPanelProps> = ({
                 }}
                 onPointerCancel={handlePointerUp}
                 onClick={handleClick}
+                onKeyDown={handleKeyDown}
+                onKeyUp={handleKeyUp}
+                onBlur={() => {
+                  if (useMomentary && isActuated) onSetInput(meta.tag, releasedVal);
+                }}
+                onContextMenu={(e) => e.preventDefault()}
+                aria-pressed={isActuated}
+                aria-label={`${meta.label}（${addr}），${meta.hint}`}
                 title={meta.hint}
               >
                 <div className="plc-sim-io-top">
                   <span className="plc-sim-addr-chip area-i">{addr}</span>
                   <span className={`plc-sim-phy-tag ${meta.physicalType === 'NC' ? 'nc' : 'no'}`}>
-                    {meta.physicalType === 'NC' ? '物理NC' : '物理NO'}
+                    {meta.physicalType === 'NC' ? '常闭' : '常开'}
                     {useMomentary ? '·点动' : '·保持'}
                   </span>
                 </div>
@@ -261,7 +295,7 @@ export const FieldPanel: React.FC<FieldPanelProps> = ({
         <div className="plc-sim-sec-head">
           <div className="plc-sim-sec-title">
             <Lightbulb size={14} />
-            <span>数字量输出 %Q LED 阵列与执行态</span>
+            <span>输出：接触器与指示灯（%Q）</span>
           </div>
           {!running && <span className="plc-sim-stop-tag">STOP 安全切断</span>}
         </div>

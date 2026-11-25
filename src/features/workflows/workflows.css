@@ -974,6 +974,11 @@
   .wf-root svg[viewBox="0 0 640 132"] {
     min-width: 580px;
   }
+
+  .lss-overlay.wf-root svg[viewBox="0 0 680 228"],
+  .lss-overlay.wf-root svg[viewBox="0 0 640 132"] {
+    min-width: 0;
+  }
 }
 
 .wf-svg-wrap,
