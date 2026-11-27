@@ -386,35 +386,9 @@ export const LessonReaderPage: React.FC = () => {
               }}
             >
               <PlayCircle size={18} />
-              讲课模式：{script.beats.length} 步带你过一遍骨架
+              讲课模式：{script.beats.length} 步像老师写板书一样带你过一遍
             </button>
           )}
-
-          <div className="v3-reader-tools">
-            <button
-              type="button"
-              className={`btn btn-sm press${notesOpen ? ' btn-primary' : ''}`}
-              aria-expanded={notesOpen}
-              onClick={() => {
-                haptic('tap');
-                setNotesOpen((v) => !v);
-              }}
-            >
-              <NotebookPen size={15} aria-hidden />
-              {notesOpen ? '收起随堂笔记' : '本讲随堂笔记'}
-              {currentNote && (
-                <span className="v3-tool-badge">{currentNote.text.trim().length} 字</span>
-              )}
-            </button>
-            <button
-              type="button"
-              className={`btn btn-sm press${copiedCard ? ' btn-success' : ''}`}
-              onClick={handleCopyCheatSheet}
-            >
-              {copiedCard ? <Check size={15} aria-hidden /> : <Copy size={15} aria-hidden />}
-              {copiedCard ? '已复制速查卡 (Markdown)' : '一键复制本讲速查卡'}
-            </button>
-          </div>
 
           {lesson.objectives && lesson.objectives.length > 0 && (
             <div className="objectives-panel">
@@ -440,7 +414,9 @@ export const LessonReaderPage: React.FC = () => {
 
         <FoldContext.Provider value={{ level: foldLevel, setLevel: setFoldLevel, explicitMarks }}>
         <div className="reader-fold-bar">
-          <span className="reader-fold-label">阅读详略</span>
+          <span className="reader-fold-label" title="第一次学推荐保持默认「精读」；考前快速过一遍可切「要点」或「结论」">
+            阅读详略
+          </span>
           <FoldSwitch />
           <div className="v3-fold-actions">
             <button

@@ -320,49 +320,13 @@ export const ModelsShowcase: React.FC = () => {
       {/* Full-Width Active Digital Twin Interactive Canvas */}
       <section aria-label="数字孪生交互仿真画布">{renderActiveTwin()}</section>
 
-      {/* v3.0 Blind Fault Troubleshooting Drill Workbench */}
-      <FaultDrillPanel
-        activeModelId={activeId}
-        onSelectModel={handleSelectModel}
-        onProgressChange={(solved) => setDrillSolvedCount(solved)}
-      />
-
-      {/* Supporting Engineering Knowledge: Sensor/Actuator Selection + PLC Variable Mapping */}
+      {/* Supporting Engineering Knowledge: Put I/O Table & Sensor Specs right below the twin so beginners see %I/%Q mapping immediately! */}
       <section className="dt-knowledge-grid">
         <div className="dt-info-panel">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <h3 className="dt-info-title" style={{ margin: 0 }}>
-              <ListChecks size={17} color="#00c4c4" />
-              配套传感器与执行器工程选型要点
-            </h3>
-            <Link
-              to={`/examples/${activeMeta.exampleId}`}
-              className="dt-btn dt-btn--primary"
-              style={{ textDecoration: 'none' }}
-            >
-              看完整 LAD/SCL 实例
-              <ArrowUpRight size={14} />
-            </Link>
-          </div>
-
-          <div className="dt-device-list">
-            {activeMeta.devices.map((d) => (
-              <div key={d.name} className="dt-device-item">
-                <div className="dt-device-top">
-                  <span className="dt-device-name">{d.name}</span>
-                  <span className="dt-device-spec">{d.model}</span>
-                </div>
-                <p className="dt-device-note">{d.note}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="dt-info-panel">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
             <h3 className="dt-info-title" style={{ margin: 0 }}>
               <Table2 size={17} color="#38bdf8" />
-              PLC 标准 I/O 变量映射表（TIA Portal 规范）
+              先看懂点表：PLC 标准 I/O 变量映射（TIA Portal 规范）
             </h3>
             <Link to="/sim" className="dt-btn" style={{ textDecoration: 'none' }}>
               去仿真实验室写程序
@@ -395,7 +359,43 @@ export const ModelsShowcase: React.FC = () => {
             </table>
           </div>
         </div>
+
+        <div className="dt-info-panel">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+            <h3 className="dt-info-title" style={{ margin: 0 }}>
+              <ListChecks size={17} color="#00c4c4" />
+              配套传感器与执行器工程选型要点
+            </h3>
+            <Link
+              to={`/examples/${activeMeta.exampleId}`}
+              className="dt-btn dt-btn--primary"
+              style={{ textDecoration: 'none' }}
+            >
+              看完整 LAD/SCL 实例
+              <ArrowUpRight size={14} />
+            </Link>
+          </div>
+
+          <div className="dt-device-list">
+            {activeMeta.devices.map((d) => (
+              <div key={d.name} className="dt-device-item">
+                <div className="dt-device-top">
+                  <span className="dt-device-name">{d.name}</span>
+                  <span className="dt-device-spec">{d.model}</span>
+                </div>
+                <p className="dt-device-note">{d.note}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
+
+      {/* Blind Fault Troubleshooting Drill Workbench (placed after normal operation & I/O table so newcomers aren't overwhelmed first) */}
+      <FaultDrillPanel
+        activeModelId={activeId}
+        onSelectModel={handleSelectModel}
+        onProgressChange={(solved) => setDrillSolvedCount(solved)}
+      />
     </div>
   );
 };

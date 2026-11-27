@@ -24,6 +24,7 @@ import { HomeStudyStrip } from '../../features/study/HomeStudyStrip';
 import { preloadRoute } from '../layout/routePreload';
 import { triggerCommandPaletteOpen } from '../layout/shortcuts';
 import { useProgress } from '../store/progressStore';
+import { HeroMiniPlcBox } from './HeroMiniPlcBox';
 
 interface PipelineNode {
   id: string;
@@ -96,7 +97,7 @@ const PIPELINE_NODES: PipelineNode[] = [
 const CUSTOM_TRACKS: CustomTrack[] = [
   {
     id: 'beginner',
-    index: 'TRACK 01',
+    index: '路线一',
     tabLabel: '零基础电工 / 转行入门',
     shortTag: '零基础起步',
     duration: '建议 10–14 天 · 每日 45 分钟',
@@ -128,7 +129,7 @@ const CUSTOM_TRACKS: CustomTrack[] = [
   },
   {
     id: 'pro-upgrade',
-    index: 'TRACK 02',
+    index: '路线二',
     tabLabel: '在职电气技术员补齐 SCL / PID',
     shortTag: '进阶补强',
     duration: '建议 5–7 天 · 聚焦模块化与闭环',
@@ -160,7 +161,7 @@ const CUSTOM_TRACKS: CustomTrack[] = [
   },
   {
     id: 'interview',
-    index: 'TRACK 03',
+    index: '路线三',
     tabLabel: '自动化应届 / 社招面试冲刺',
     shortTag: '求职冲刺',
     duration: '建议 3–5 天 · 高频追问与简历定稿',
@@ -437,372 +438,50 @@ export const HomePage: React.FC = () => {
             </div>
           </div>
 
-          {/* 学习路线示意 */}
-          <div className="hero-rack-card">
-            <div className="hero-rack-bar">
-              <span>LEARNING PIPELINE // 4 STEPS</span>
-              <span className="hero-rack-status">
-                <span className="hero-rack-led" />
-                RUN
-              </span>
-            </div>
+          {/* 首屏右侧：30 秒真交互微电柜 + 4 步成长全貌 */}
+          <div className="hero-right-stack">
+            <HeroMiniPlcBox />
 
-            <div className="hero-rack-svg-wrap">
-              <svg
-                viewBox="0 0 540 228"
-                width="100%"
-                style={{ height: 'auto', display: 'block' }}
-                role="img"
-                aria-label="学习路线示意：认识 PLC、写程序看效果、控制设备模型、完成项目"
-              >
-                <defs>
-                  <linearGradient id="plcFace" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#1c2735" />
-                    <stop offset="100%" stopColor="#121a24" />
-                  </linearGradient>
-                  <linearGradient id="busLine" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#009999" />
-                    <stop offset="50%" stopColor="#10b981" />
-                    <stop offset="100%" stopColor="#f59e0b" />
-                  </linearGradient>
-                </defs>
-
-                {/* DIN Rail */}
-                <rect x="14" y="96" width="512" height="14" rx="3" fill="#18222e" stroke="#2a3a4d" />
-
-                {/* Connecting Animated PROFINET / Closed-Loop Bus */}
-                <path
-                  d="M 118 103 L 222 103 M 272 103 L 368 103 M 418 103 L 495 103"
-                  stroke="url(#busLine)"
-                  strokeWidth="2.5"
-                  strokeDasharray="6 6"
-                  style={{ animation: 'dash-flow 1.4s linear infinite' }}
-                />
-
-                {/* Module 1: S7-1200 CPU Hardware */}
-                <g
-                  transform="translate(18, 22)"
-                  onClick={() => setActivePipeIdx(0)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <rect
-                    width="116"
-                    height="156"
-                    rx="10"
-                    fill="url(#plcFace)"
-                    stroke={activePipeIdx === 0 ? '#14d4d4' : '#2d3f54'}
-                    strokeWidth={activePipeIdx === 0 ? '2' : '1.2'}
-                  />
-                  <rect x="0" y="0" width="116" height="24" rx="10" fill="#007d7d" />
-                  <rect x="0" y="14" width="116" height="10" fill="#007d7d" />
-                  <text
-                    x="10"
-                    y="16"
-                    fill="#ffffff"
-                    fontSize="11"
-                    fontWeight="700"
-                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
-                  >
-                    SIEMENS S7-1200
-                  </text>
-
-                  {/* Status LEDs */}
-                  <circle cx="18" cy="40" r="3.5" fill="#10b981" />
-                  <text
-                    x="27"
-                    y="43"
-                    fill="#9fb4c8"
-                    fontSize="10.4"
-                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
-                  >
-                    RUN/STOP
-                  </text>
-                  <circle cx="18" cy="54" r="3.5" fill="#334155" />
-                  <text
-                    x="27"
-                    y="57"
-                    fill="#94a3b8"
-                    fontSize="10.4"
-                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
-                  >
-                    ERROR
-                  </text>
-                  <circle cx="18" cy="68" r="3.5" fill="#f59e0b" opacity="0.85" />
-                  <text
-                    x="27"
-                    y="71"
-                    fill="#9fb4c8"
-                    fontSize="10.4"
-                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
-                  >
-                    MAINT
-                  </text>
-
-                  {/* DI / DQ LED Strip */}
-                  <text
-                    x="12"
-                    y="92"
-                    fill="#6d839a"
-                    fontSize="9.8"
-                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
-                  >
-                    DI %I0.0–0.7
-                  </text>
-                  {[0, 1, 2, 3, 4, 5, 6, 7].map((ch) => (
-                    <rect
-                      key={`di-${ch}`}
-                      x={12 + ch * 12}
-                      y="97"
-                      width="8"
-                      height="6"
-                      rx="1.5"
-                      fill={ch === 0 || ch === 2 || ch === 5 ? '#38bdf8' : '#223142'}
-                    />
-                  ))}
-                  <text
-                    x="12"
-                    y="117"
-                    fill="#6d839a"
-                    fontSize="9.8"
-                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
-                  >
-                    DQ %Q0.0–0.5
-                  </text>
-                  {[0, 1, 2, 3, 4, 5].map((ch) => (
-                    <rect
-                      key={`dq-${ch}`}
-                      x={12 + ch * 12}
-                      y="122"
-                      width="8"
-                      height="6"
-                      rx="1.5"
-                      fill={ch === 0 || ch === 1 || ch === 3 ? '#10b981' : '#223142'}
-                    />
-                  ))}
-                  {/* RJ45 Port */}
-                  <rect x="42" y="136" width="32" height="13" rx="2.5" fill="#091017" stroke="#39506a" />
-                  <circle cx="48" cy="142.5" r="2" fill="#10b981" />
-                  <circle cx="68" cy="142.5" r="2" fill="#f59e0b" />
-                </g>
-
-                {/* Module 2: PROFINET & Live LAD Engine */}
-                <g
-                  transform="translate(154, 42)"
-                  onClick={() => setActivePipeIdx(1)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <rect
-                    width="112"
-                    height="120"
-                    rx="10"
-                    fill="#121c27"
-                    stroke={activePipeIdx === 1 ? '#14d4d4' : '#2b3e52'}
-                    strokeWidth={activePipeIdx === 1 ? '2' : '1.2'}
-                  />
-                  <text
-                    x="12"
-                    y="22"
-                    fill="#2dd4bf"
-                    fontSize="11"
-                    fontWeight="700"
-                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
-                  >
-                    梯形图仿真
-                  </text>
-                  {/* Mini Energized Ladder Rung */}
-                  <line x1="14" y1="42" x2="14" y2="90" stroke="#00b8b8" strokeWidth="2.5" />
-                  <line x1="14" y1="54" x2="34" y2="54" stroke="#10b981" strokeWidth="2" />
-                  <text
-                    x="34"
-                    y="57"
-                    fill="#10b981"
-                    fontSize="11"
-                    fontWeight="700"
-                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
-                  >
-                    | |
-                  </text>
-                  <line x1="53" y1="54" x2="74" y2="54" stroke="#10b981" strokeWidth="2" />
-                  <text
-                    x="74"
-                    y="57"
-                    fill="#f59e0b"
-                    fontSize="11"
-                    fontWeight="700"
-                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
-                  >
-                    ( )
-                  </text>
-                  <line x1="92" y1="54" x2="100" y2="54" stroke="#00b8b8" strokeWidth="2" />
-                  {/* Seal-in branch */}
-                  <path
-                    d="M 24 54 L 24 76 L 34 76 M 53 76 L 62 76 L 62 54"
-                    fill="none"
-                    stroke="#10b981"
-                    strokeWidth="1.8"
-                  />
-                  <text
-                    x="34"
-                    y="79"
-                    fill="#10b981"
-                    fontSize="11"
-                    fontWeight="700"
-                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
-                  >
-                    | |
-                  </text>
-                  <text
-                    x="12"
-                    y="106"
-                    fill="#8ca3ba"
-                    fontSize="10.4"
-                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
-                  >
-                    看见“通电”
-                  </text>
-                </g>
-
-                {/* Module 3: 2.5D Digital Twin */}
-                <g
-                  transform="translate(286, 42)"
-                  onClick={() => setActivePipeIdx(2)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <rect
-                    width="112"
-                    height="120"
-                    rx="10"
-                    fill="#121c27"
-                    stroke={activePipeIdx === 2 ? '#14d4d4' : '#2b3e52'}
-                    strokeWidth={activePipeIdx === 2 ? '2' : '1.2'}
-                  />
-                  <text
-                    x="12"
-                    y="22"
-                    fill="#38bdf8"
-                    fontSize="11"
-                    fontWeight="700"
-                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
-                  >
-                    设备模型
-                  </text>
-                  {/* Conveyor + Workpiece Icon */}
-                  <rect x="14" y="70" width="84" height="14" rx="7" fill="#1e2d3d" stroke="#38bdf8" strokeWidth="1.2" />
-                  <circle cx="24" cy="77" r="4" fill="#38bdf8" />
-                  <circle cx="56" cy="77" r="4" fill="#38bdf8" />
-                  <circle cx="88" cy="77" r="4" fill="#38bdf8" />
-                  <rect x="44" y="47" width="24" height="20" rx="3" fill="#009999" stroke="#2dd4bf" />
-                  <line x1="56" y1="32" x2="56" y2="46" stroke="#10b981" strokeWidth="1.6" strokeDasharray="3 2" />
-                  <text
-                    x="12"
-                    y="106"
-                    fill="#8ca3ba"
-                    fontSize="10.4"
-                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
-                  >
-                    4 套设备模型
-                  </text>
-                </g>
-
-                {/* Module 4: Capstone Job Project */}
-                <g
-                  transform="translate(418, 42)"
-                  onClick={() => setActivePipeIdx(3)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <rect
-                    width="104"
-                    height="120"
-                    rx="10"
-                    fill="#181915"
-                    stroke={activePipeIdx === 3 ? '#f59e0b' : '#4a3d22'}
-                    strokeWidth={activePipeIdx === 3 ? '2' : '1.2'}
-                  />
-                  <text
-                    x="11"
-                    y="22"
-                    fill="#f59e0b"
-                    fontSize="11"
-                    fontWeight="700"
-                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
-                  >
-                    毕业项目 ★
-                  </text>
-                  {/* Mini SCADA Trend */}
-                  <polyline
-                    points="12,78 28,68 42,72 58,48 74,52 92,38"
-                    fill="none"
-                    stroke="#10b981"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <circle cx="92" cy="38" r="3.5" fill="#f59e0b" />
-                  <text x="11" y="94" fill="#e5d5b3" fontSize="10.4" fontWeight="600">
-                    锂电视觉热压站
-                  </text>
-                  <text
-                    x="11"
-                    y="108"
-                    fill="#a89b7e"
-                    fontSize="10.4"
-                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
-                  >
-                    含博途源码
-                  </text>
-                </g>
-
-                {/* Bottom closed-loop return line */}
-                <path
-                  d="M 470 164 L 470 198 L 76 198 L 76 180"
-                  fill="none"
-                  stroke="#009999"
-                  strokeWidth="1.5"
-                  strokeDasharray="4 4"
-                  opacity="0.7"
-                />
-                <text
-                  x="184"
-                  y="213"
-                  fill="#6f879e"
-                  fontSize="11"
-                  fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
-                >
-                  学习路线：认识硬件 → 仿真调试 → 控制设备 → 完成项目
-                </text>
-              </svg>
-            </div>
-
-            <div className="hero-pipeline-tabs" role="tablist" aria-label="学习路线步骤">
-              {PIPELINE_NODES.map((node, idx) => (
-                <button
-                  key={node.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={activePipeIdx === idx}
-                  className={`hero-pipe-btn${activePipeIdx === idx ? ' active' : ''}`}
-                  onClick={() => setActivePipeIdx(idx)}
-                >
-                  <div className="hero-pipe-step">{node.step}</div>
-                  <div className="hero-pipe-name">{node.name}</div>
-                </button>
-              ))}
-            </div>
-
-            <div className="hero-pipe-readout" role="tabpanel">
-              <div>
-                <div className="hero-pipe-summary">{activePipe.summary}</div>
-                <div>{activePipe.desc}</div>
+            <div className="hero-rack-card is-compact-pipeline">
+              <div className="hero-rack-bar">
+                <span>从零到做出项目的 4 个阶段</span>
+                <span className="hero-rack-status">
+                  <span className="hero-rack-led" />
+                  循序渐进
+                </span>
               </div>
-              <Link
-                to={activePipe.route}
-                onMouseEnter={() => preloadRoute(activePipe.route)}
-                onFocus={() => preloadRoute(activePipe.route)}
-                className="btn btn-sm hero-pipe-cta"
-              >
-                {activePipe.cta}
-                <ArrowRight size={13} />
-              </Link>
+
+              <div className="hero-pipeline-tabs" role="tablist" aria-label="学习路线步骤">
+                {PIPELINE_NODES.map((node, idx) => (
+                  <button
+                    key={node.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={activePipeIdx === idx}
+                    className={`hero-pipe-btn${activePipeIdx === idx ? ' active' : ''}`}
+                    onClick={() => setActivePipeIdx(idx)}
+                  >
+                    <div className="hero-pipe-step">{node.step}</div>
+                    <div className="hero-pipe-name">{node.name}</div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="hero-pipe-readout" role="tabpanel">
+                <div>
+                  <div className="hero-pipe-summary">{activePipe.summary}</div>
+                  <div>{activePipe.desc}</div>
+                </div>
+                <Link
+                  to={activePipe.route}
+                  onMouseEnter={() => preloadRoute(activePipe.route)}
+                  onFocus={() => preloadRoute(activePipe.route)}
+                  className="btn btn-sm hero-pipe-cta"
+                >
+                  {activePipe.cta}
+                  <ArrowRight size={13} />
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -919,7 +598,7 @@ export const HomePage: React.FC = () => {
                   <div className="track-col-heading">
                     <span>推荐学习顺序</span>
                     <span className="track-col-mono">
-                      CURATED SEQUENCE · {activeTrackLessons.length} LESSONS
+                      精选必学 · 共 {activeTrackLessons.length} 讲
                     </span>
                   </div>
                   <ol className="track-lesson-list">
@@ -965,7 +644,7 @@ export const HomePage: React.FC = () => {
                 <div className="track-workbenches-col">
                   <div className="track-col-heading">
                     <span>直达配套实训台</span>
-                    <span className="track-col-mono">HANDS-ON LABS</span>
+                    <span className="track-col-mono">边学边练</span>
                   </div>
                   <div className="track-wb-list">
                     {activeTrack.workbenches.map((wb) => (

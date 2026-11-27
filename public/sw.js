@@ -1,5 +1,5 @@
 /* 简单的离线缓存：同源 GET 请求“先用缓存、后台更新”。仅在 http(s) 网页环境注册，App 内不使用。 */
-const CACHE = 'plc-academy-v3';
+const CACHE = 'plc-academy-v3.1';
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches

@@ -1,0 +1,656 @@
+/* ============================================================================
+   v3.1 新手视角减负与手把手互动引导补丁 (Beginner-First Empathy Polish)
+   1. 首页首屏 30 秒真交互微电柜 (HeroMiniPlcBox)
+   2. 零进度新手三步无压力引导条 (HomeStudyStrip)
+   3. 桌面顶栏“助学工具 ▾”收纳下拉菜单 (AppShell)
+   4. Ctrl+K 任意西门子地址/常数大白话实时拆解卡 (CommandPalette)
+   5. 仿真台新手 3 步跟做打卡条与“点一下锁住”开关 (PlcsimWorkbench)
+   6. 数字孪生盲测排故折叠引导条 (FaultDrillPanel)
+   ============================================================================ */
+
+/* ── 1. 首页首屏右侧布局与 30 秒微电柜 ── */
+.hero-right-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.mini-plc-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--siemens-teal-border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mini-plc-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mini-plc-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--teal-text, var(--siemens-teal-bright));
+}
+
+.mini-plc-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-secondary);
+}
+
+.mini-plc-progress {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-hairline);
+}
+
+.mini-plc-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-medium);
+  background: transparent;
+  color: var(--ink-secondary);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.mini-plc-reset:hover {
+  color: var(--ink-primary);
+  border-color: var(--border-strong);
+}
+
+.mini-plc-io-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mini-plc-btns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mini-io-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface-2);
+  color: var(--ink-primary);
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 90ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.mini-io-btn strong {
+  display: block;
+  font-size: 12.5px;
+  line-height: 1.25;
+}
+
+.mini-io-btn small {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-secondary);
+}
+
+.mini-io-btn:active,
+.mini-io-btn.is-pressed {
+  transform: translateY(1.5px) scale(0.985);
+}
+
+.mini-io-btn.is-start {
+  border-color: var(--power-green-border);
+}
+
+.mini-io-btn.is-start.pulse-guide {
+  box-shadow: 0 0 0 2px var(--power-green-soft);
+}
+
+.mini-io-btn.is-stop {
+  border-color: var(--fault-red-border);
+}
+
+.mini-io-btn.is-jog {
+  border-color: var(--info-cyan-border);
+}
+
+.mini-io-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mini-io-dot.green {
+  background: #10b981;
+}
+
+.mini-io-dot.red {
+  background: #ef4444;
+}
+
+.mini-io-dot.blue {
+  background: #38bdf8;
+}
+
+.mini-plc-lamp {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-surface-2);
+  transition: background 180ms ease, border-color 180ms ease;
+}
+
+.mini-plc-lamp.is-on {
+  background: var(--power-green-soft);
+  border-color: var(--power-green-border);
+}
+
+.mini-lamp-bulb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #334155;
+  border: 2px solid #475569;
+  flex-shrink: 0;
+  transition: background 160ms ease, box-shadow 160ms ease;
+}
+
+.mini-plc-lamp.is-on .mini-lamp-bulb {
+  background: #10b981;
+  border-color: #6ee7b7;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.55);
+}
+
+.mini-lamp-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-primary);
+}
+
+.mini-lamp-sub {
+  font-size: 11.5px;
+  font-family: var(--font-mono);
+  color: var(--ink-secondary);
+}
+
+.mini-plc-rung-wrap {
+  background: #0b121b;
+  border: 1px solid rgba(148, 179, 206, 0.2);
+  border-radius: 10px;
+  padding: 8px 10px 6px;
+  overflow-x: auto;
+}
+
+.mini-plc-rung-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 11px;
+  color: #9fb3c8;
+  margin-bottom: 4px;
+}
+
+.mini-plc-rung-legend .legend-on {
+  color: #34d399;
+  font-weight: 600;
+}
+
+.mini-plc-rung-legend .legend-off {
+  color: #94a3b8;
+}
+
+.mini-plc-coach {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--siemens-teal-soft);
+  border: 1px solid var(--siemens-teal-border);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-primary);
+}
+
+.mini-plc-coach.is-success {
+  background: var(--power-green-soft);
+  border-color: var(--power-green-border);
+}
+
+.mini-plc-coach-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  flex: 1 1 240px;
+}
+
+.mini-plc-full-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--teal-text, var(--siemens-teal-bright));
+  white-space: nowrap;
+  align-self: center;
+}
+
+.hero-rack-card.is-compact-pipeline {
+  padding-top: 10px;
+}
+
+/* ── 2. 首页零进度新手欢迎条 ── */
+.beginner-welcome-strip {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+}
+
+.beginner-welcome-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--teal-text, var(--siemens-teal-bright));
+  margin-bottom: 12px;
+}
+
+.beginner-welcome-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.home-study-card.is-btn-card {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ── 3. 顶栏“助学工具 ▾”下拉菜单 ── */
+.nav-dropdown-wrap {
+  position: relative;
+}
+
+.nav-dropdown-trigger {
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.nav-chevron {
+  transition: transform 160ms ease;
+  opacity: 0.78;
+}
+
+.nav-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.nav-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 288px;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 90;
+}
+
+.nav-dropdown-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  color: var(--ink-primary);
+  text-decoration: none;
+  transition: background 140ms ease;
+}
+
+.nav-dropdown-item:hover,
+.nav-dropdown-item.active {
+  background: var(--siemens-teal-soft);
+}
+
+.nav-dropdown-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-hairline);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--teal-text, var(--siemens-teal-bright));
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.nav-dropdown-item strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.nav-dropdown-item small {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--ink-secondary);
+  line-height: 1.4;
+}
+
+/* ── 4. Ctrl+K 西门子地址/常数大白话实时拆解卡 ── */
+.cmdk-decoder-card {
+  margin: 8px 14px 4px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--siemens-teal-soft);
+  border: 1px solid var(--siemens-teal-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cmdk-decoder-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cmdk-decoder-code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--bg-code);
+  color: #34d399;
+}
+
+.cmdk-decoder-tag {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-surface);
+  color: var(--teal-text, var(--siemens-teal-bright));
+  border: 1px solid var(--border-hairline);
+}
+
+.cmdk-decoder-headline {
+  font-size: 13px;
+  color: var(--ink-primary);
+}
+
+.cmdk-decoder-parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cmdk-decoder-part {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  font-size: 12px;
+  color: var(--ink-secondary);
+}
+
+.cmdk-decoder-part code {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--ink-primary);
+}
+
+.cmdk-decoder-explain {
+  margin: 0;
+  font-size: 12.8px;
+  line-height: 1.55;
+  color: var(--ink-primary);
+}
+
+.cmdk-decoder-pitfall {
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--alarm-amber-soft);
+  border: 1px solid var(--alarm-amber-border);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-primary);
+}
+
+.cmdk-decoder-goto {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--siemens-teal-border);
+  background: var(--bg-surface);
+  color: var(--teal-text, var(--siemens-teal-bright));
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ── 5. 仿真台新手 3 步引导条 & 按钮锁住开关 ── */
+.ps-coach-bar {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--siemens-teal-soft);
+  border: 1px solid var(--siemens-teal-border);
+  margin-bottom: 10px;
+}
+
+.ps-coach-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  font-size: 13.5px;
+  color: var(--ink-primary);
+}
+
+.ps-coach-dismiss,
+.ps-coach-reopen {
+  padding: 4px 10px;
+  min-height: 32px;
+  border-radius: 7px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  color: var(--ink-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ps-coach-reopen-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 6px;
+}
+
+.ps-coach-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ps-coach-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink-secondary);
+}
+
+.ps-coach-steps li.done {
+  border-color: var(--power-green-border);
+  color: var(--ink-primary);
+}
+
+.ps-coach-no {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-medium);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.ps-coach-steps li.done .ps-coach-no {
+  background: var(--power-green);
+  border-color: var(--power-green);
+  color: #052014;
+}
+
+.ps-field-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.ps-field-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-primary);
+}
+
+.ps-field-title small {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--ink-secondary);
+  margin-left: 4px;
+}
+
+.ps-latch-toggle {
+  min-height: 38px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface-2);
+  color: var(--ink-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ps-latch-toggle.is-on {
+  background: var(--siemens-teal-soft);
+  border-color: var(--siemens-teal-border);
+  color: var(--teal-text, var(--siemens-teal-bright));
+}
+
+/* ── 6. 数字孪生排故折叠引导卡 ── */
+.dt-drill-collapsed-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  margin-top: 12px;
+  border-radius: 12px;
+  background: var(--bg-surface-2);
+  border: 1px dashed var(--border-strong);
+}
+
+.dt-drill-collapsed-cta p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-secondary);
+  flex: 1 1 260px;
+}
+
+/* ── 窄屏手机自适应 (≤768px / 360px) ── */
+@media (max-width: 768px) {
+  .mini-plc-btns {
+    grid-template-columns: 1fr;
+  }
+
+  .beginner-welcome-grid,
+  .ps-coach-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .ps-latch-toggle,
+  .mini-io-btn {
+    min-height: 44px;
+    width: 100%;
+  }
+}

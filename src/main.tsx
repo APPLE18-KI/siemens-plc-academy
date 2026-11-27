@@ -8,6 +8,7 @@ import './styles/v2.css';
 import './styles/mobile-fit.css';
 import './styles/v22.css';
 import './styles/v30.css';
+import './styles/v31-beginner.css';
 import { installHScrollHints } from './app/hscrollHints';
 import { App } from './app/App';
 

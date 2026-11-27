@@ -102,9 +102,10 @@ const FieldButton = memo<{
   meta: FieldInputMeta;
   def?: TagDef;
   value: boolean;
+  forceLatch?: boolean;
   onSet: (tag: string, v: boolean) => void;
-}>(function FieldButton({ meta, def, value, onSet }) {
-  const momentary = meta.defaultMomentary !== false;
+}>(function FieldButton({ meta, def, value, forceLatch = false, onSet }) {
+  const momentary = !forceLatch && meta.defaultMomentary !== false;
   const pressedVal = meta.physicalType === 'NC' ? false : true;
   const restVal = !pressedVal;
   const pressed = momentary ? value === pressedVal : value !== (meta.physicalType === 'NC');
@@ -151,7 +152,7 @@ const FieldButton = memo<{
       <span className="ps-fbtn-addr">{def?.address}</span>
       <span className="ps-fbtn-label">{meta.label}</span>
       <span className="ps-fbtn-hint">
-        {meta.physicalType === 'NC' ? '常闭' : '常开'} · {momentary ? '按住' : '保持'} · {value ? '1' : '0'}
+        {meta.physicalType === 'NC' ? '常闭(不按=1)' : '常开(按下=1)'} · {momentary ? '按住生效' : '点一下锁住'} · 当前={value ? '1' : '0'}
       </span>
     </button>
   );
@@ -175,6 +176,16 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
   const [forceRows, setForceRows] = useState<Record<string, { on: boolean; value: string }>>({});
   const [openDiag, setOpenDiag] = useState<number | null>(null);
   const [focusedNetwork, setFocusedNetwork] = useState<number | null>(null);
+  const [latchMode, setLatchMode] = useState(false);
+  const [hideCoach, setHideCoach] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem('plc_sim_coach_hide_v1') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [coachTriedInput, setCoachTriedInput] = useState(false);
+  const [coachTriedStepOrStop, setCoachTriedStepOrStop] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
   const focusTimer = useRef<number | undefined>(undefined);
@@ -225,6 +236,7 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
   const doStop = useCallback(() => {
     if (!running) return;
     haptic('press');
+    setCoachTriedStepOrStop(true);
     runtime.setRunning?.(false);
   }, [running, runtime]);
 
@@ -233,6 +245,7 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
       runtime.setRunning?.(false);
     }
     haptic('tap');
+    setCoachTriedStepOrStop(true);
     runtime.singleScan(intervalMs);
     say('已执行单步 OB1 扫描（PII → OB1 → PIQ）。');
   }, [running, runtime, intervalMs, say]);
@@ -308,7 +321,10 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
   };
 
   const writeInput = useCallback(
-    (name: string, v: TagValue) => runtime.setFieldInput(name, v),
+    (name: string, v: TagValue) => {
+      setCoachTriedInput(true);
+      runtime.setFieldInput(name, v);
+    },
     [runtime],
   );
 
@@ -457,11 +473,89 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
         </div>
       </section>
 
+      {/* ── 新手 30 秒跟做引导条（可一键收起） ── */}
+      {!hideCoach ? (
+        <section className="ps-coach-bar" aria-label="仿真新手三步引导">
+          <div className="ps-coach-head">
+            <strong>第一次用仿真台？跟着做这 3 步就能看懂：</strong>
+            <button
+              type="button"
+              className="ps-coach-dismiss"
+              onClick={() => {
+                setHideCoach(true);
+                try {
+                  window.localStorage.setItem('plc_sim_coach_hide_v1', '1');
+                } catch {
+                  /* ignore */
+                }
+              }}
+            >
+              我会用了，收起
+            </button>
+          </div>
+          <ol className="ps-coach-steps">
+            <li className={running ? 'done' : ''}>
+              <span className="ps-coach-no">{running ? '✓' : '1'}</span>
+              <span>确认上方 CPU 处于绿色 <b>RUN 运行</b>（停机时程序不会算）</span>
+            </li>
+            <li className={coachTriedInput ? 'done' : ''}>
+              <span className="ps-coach-no">{coachTriedInput ? '✓' : '2'}</span>
+              <span>点下方<b>现场按钮</b>，同时往下看梯形图哪根线变成<b>绿色实线</b>、右侧哪个输出灯亮起</span>
+            </li>
+            <li className={coachTriedStepOrStop ? 'done' : ''}>
+              <span className="ps-coach-no">{coachTriedStepOrStop ? '✓' : '3'}</span>
+              <span>手机/触控板可开下方<b>「点一下锁住」</b>腾出手滚屏；想慢动作看过程就点上方<b>「单步 OB1」</b></span>
+            </li>
+          </ol>
+        </section>
+      ) : (
+        <div className="ps-coach-reopen-row">
+          <button
+            type="button"
+            className="ps-coach-reopen"
+            onClick={() => {
+              setHideCoach(false);
+              try {
+                window.localStorage.removeItem('plc_sim_coach_hide_v1');
+              } catch {
+                /* ignore */
+              }
+            }}
+          >
+            展开新手 3 步操作提示
+          </button>
+        </div>
+      )}
+
       {/* ── 现场 I/O ── */}
       <section className="ps-field" aria-label="现场按钮与输出">
+        <div className="ps-field-toolbar">
+          <span className="ps-field-title">
+            现场电柜按钮与指示灯
+            <small>（注：红色常闭按钮平时接通=1，点下断开=0）</small>
+          </span>
+          <button
+            type="button"
+            className={`ps-latch-toggle${latchMode ? ' is-on' : ''}`}
+            aria-pressed={latchMode}
+            onClick={() => {
+              haptic('tap');
+              setLatchMode((v) => !v);
+            }}
+          >
+            {latchMode ? '当前：点一下锁住（方便腾手滚屏看梯形图）' : '切换为：点一下锁住按钮'}
+          </button>
+        </div>
         <div className="ps-field-inputs">
           {preset.fieldInputs.map((m) => (
-            <FieldButton key={m.tag} meta={m} def={defMap.get(m.tag)} value={Boolean(snapshot.fieldInputs[m.tag])} onSet={writeInput} />
+            <FieldButton
+              key={m.tag}
+              meta={m}
+              def={defMap.get(m.tag)}
+              value={Boolean(snapshot.fieldInputs[m.tag])}
+              forceLatch={latchMode}
+              onSet={writeInput}
+            />
           ))}
         </div>
         <div className="ps-field-outputs">

@@ -130,7 +130,7 @@ export const EmbeddedStageBlock: React.FC<StageProps> = (props) => {
             {props.title || entry?.title || `工业工作流：${props.id}`}
           </span>
         </div>
-        <Link to={`/workflows?workflow=${encodeURIComponent(props.id)}`} className="btn btn-sm">
+        <Link to={`/workflows?wf=${encodeURIComponent(props.id)}`} className="btn btn-sm">
           全屏打开
           <ExternalLink size={13} />
         </Link>

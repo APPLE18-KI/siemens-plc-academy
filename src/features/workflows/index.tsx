@@ -54,7 +54,9 @@ export const WorkflowsShowcase: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [copiedLink, setCopiedLink] = useState(false);
 
-  const activeId: WorkflowId = parseWorkflowParam(searchParams.get('wf'));
+  const activeId: WorkflowId = parseWorkflowParam(
+    searchParams.get('wf') ?? searchParams.get('workflow'),
+  );
   const activeEntry = workflowRegistry[activeId];
   const ActiveComponent = activeEntry.Component;
 

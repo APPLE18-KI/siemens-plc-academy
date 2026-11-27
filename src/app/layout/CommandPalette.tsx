@@ -26,6 +26,7 @@ import { GLOSSARY } from '../../content/glossary';
 import { useBackDismiss } from '../native/overlay';
 import { useProgress } from '../store/progressStore';
 import { exportArchiveToJsonFile } from '../store/archiveBackup';
+import { decodePlcToken } from './plcAddressDecoder';
 import { preloadRoute } from './routePreload';
 import { runViewTransition } from './viewTransition';
 
@@ -71,7 +72,7 @@ const CATEGORY_TABS: Array<{ id: PaletteCategory; label: string }> = [
   { id: 'action', label: '快捷操作' },
 ];
 
-const QUICK_CHIPS = ['TON', 'NORM_X', '%IW64', '27648', '047F', '双线圈', '自锁', 'PID'];
+const QUICK_CHIPS = ['%I0.0', '%MW12', '%IW64', '27648', '16#047F', 'T#3s', '1M', '双线圈', '自锁'];
 
 /** 常见工程指令、地址与口语别名补充表，保障毫秒级离线直达 */
 const LESSON_EXTRA_ALIASES: Record<string, string> = {
@@ -585,6 +586,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     ];
   }, [chapterMap, continueLesson, onClose, state.completedLessonIds, state.lastVisitedLessonId, state.theme, toggleTheme]);
 
+  const decodedHint = useMemo(() => decodePlcToken(query), [query]);
+
   const filteredItems = useMemo(() => {
     const raw = normalizeText(deferredQuery);
     const pool = category === 'all' ? allItems : allItems.filter((item) => item.category === category);
@@ -838,6 +841,41 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           <div className="cmdk-feedback" role="status" aria-live="polite">
             <CheckCircle2 size={15} />
             <span>{feedback}</span>
+          </div>
+        )}
+
+        {decodedHint && (
+          <div className="cmdk-decoder-card" role="region" aria-label="西门子地址与常数大白话拆解">
+            <div className="cmdk-decoder-head">
+              <span className="cmdk-decoder-code">{decodedHint.code}</span>
+              <span className="cmdk-decoder-tag">{decodedHint.tag}</span>
+              <strong className="cmdk-decoder-headline">{decodedHint.headline}</strong>
+            </div>
+            <div className="cmdk-decoder-parts">
+              {decodedHint.parts.map((p) => (
+                <span key={p.token} className="cmdk-decoder-part">
+                  <code>{p.token}</code>
+                  <span>{p.meaning}</span>
+                </span>
+              ))}
+            </div>
+            <p className="cmdk-decoder-explain">{decodedHint.plainExplain}</p>
+            {decodedHint.pitfall && <p className="cmdk-decoder-pitfall">{decodedHint.pitfall}</p>}
+            {decodedHint.relatedTo && (
+              <button
+                type="button"
+                className="cmdk-decoder-goto"
+                onClick={() => {
+                  const target = decodedHint.relatedTo!.to;
+                  onClose();
+                  preloadRoute(target);
+                  runViewTransition(() => navigate(target), 'route');
+                }}
+              >
+                <span>{decodedHint.relatedTo.label}</span>
+                <ArrowRight size={13} />
+              </button>
+            )}
           </div>
         )}
 

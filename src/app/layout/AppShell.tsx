@@ -7,6 +7,7 @@ import {
   Boxes,
   Check,
   CheckCircle2,
+  ChevronDown,
   Cpu,
   Download,
   Flame,
@@ -94,6 +95,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInitialQuery, setPaletteInitialQuery] = useState('');
@@ -103,6 +105,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   } | null>(null);
 
   const popoverRef = useRef<HTMLDivElement | null>(null);
+  const toolsRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isMac = useMemo(() => isApplePlatform(), []);
 
@@ -117,6 +120,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
     setMobileOpen(false);
     setPopoverOpen(false);
+    setToolsOpen(false);
     setConfirmReset(false);
     setArchiveNotice(null);
   }, [location.pathname]);
@@ -134,6 +138,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const dismissShellOverlays = useCallback(() => {
     setMobileOpen(false);
     setPopoverOpen(false);
+    setToolsOpen(false);
     setConfirmReset(false);
   }, []);
 
@@ -163,27 +168,49 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    const open = mobileOpen || popoverOpen;
+    const open = mobileOpen || popoverOpen || toolsOpen;
     if (!open) return;
     return subscribeShortcut('escape', () => {
       if (!paletteOpen) dismissShellOverlays();
     });
-  }, [mobileOpen, popoverOpen, paletteOpen, dismissShellOverlays]);
+  }, [mobileOpen, popoverOpen, toolsOpen, paletteOpen, dismissShellOverlays]);
 
-  useBackDismiss(mobileOpen || popoverOpen, dismissShellOverlays);
+  useBackDismiss(mobileOpen || popoverOpen || toolsOpen, dismissShellOverlays);
 
-  // Close progress popover on outside click
+  // Close progress popover or tools dropdown on outside click
   useEffect(() => {
-    if (!popoverOpen) return;
+    if (!popoverOpen && !toolsOpen) return;
     const onDocClick = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+      if (popoverOpen && popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
         setPopoverOpen(false);
         setConfirmReset(false);
+      }
+      if (toolsOpen && toolsRef.current && !toolsRef.current.contains(e.target as Node)) {
+        setToolsOpen(false);
       }
     };
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
-  }, [popoverOpen]);
+  }, [popoverOpen, toolsOpen]);
+
+  const primaryDesktopNav = [
+    { to: '/', label: '首页', icon: Home, end: true },
+    { to: '/learn', label: '课程', icon: BookOpen },
+    { to: '/sim', label: '仿真台', icon: Cpu },
+    { to: '/models', label: '设备模型', icon: Boxes },
+    { to: '/examples', label: '工程实例', icon: FolderKanban },
+  ];
+
+  const studyToolNav = [
+    { to: '/review', label: '间隔复习中心', desc: '记忆闪卡、错题本与五章薄弱点诊断', icon: Repeat2 },
+    { to: '/qa', label: '新手问答库 (130题)', desc: '“停止为什么用常闭”等高频疑问离线搜', icon: MessagesSquare },
+    { to: '/glossary', label: 'PLC 大白话术语表', desc: 'NPN/PNP、PII/PIQ、27648 一点就懂', icon: Library },
+    { to: '/workflows', label: '底层原理动画', desc: 'CPU 扫描周期、状态机与项目交付流', icon: GitBranch },
+  ];
+
+  const isToolRouteActive = ['/review', '/qa', '/glossary', '/workflows'].some((p) =>
+    location.pathname.startsWith(p),
+  );
 
   const navItems = [
     { to: '/', label: '首页', icon: Home, end: true },
@@ -301,7 +328,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           </Link>
 
           <nav className="nav-links" aria-label="主导航">
-            {navItems.map((item) => {
+            {primaryDesktopNav.map((item) => {
               const Icon = item.icon;
               return (
                 <NavLink
@@ -311,15 +338,69 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   onMouseEnter={() => preloadRoute(item.to)}
                   onFocus={() => preloadRoute(item.to)}
                   onClick={(e) => handleTransitionNavClick(e, item.to)}
-                  className={({ isActive }) =>
-                    `nav-item${item.isCapstone ? ' capstone-link' : ''}${isActive ? ' active' : ''}`
-                  }
+                  className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
                 >
                   <Icon size={15} />
                   <span>{item.label}</span>
                 </NavLink>
               );
             })}
+
+            <div className="nav-dropdown-wrap" ref={toolsRef}>
+              <button
+                type="button"
+                className={`nav-item nav-dropdown-trigger${isToolRouteActive || toolsOpen ? ' active' : ''}`}
+                aria-expanded={toolsOpen}
+                aria-haspopup="menu"
+                onClick={() => setToolsOpen((v) => !v)}
+              >
+                <Library size={15} />
+                <span>助学工具</span>
+                <ChevronDown size={13} className={`nav-chevron${toolsOpen ? ' is-open' : ''}`} />
+              </button>
+
+              {toolsOpen && (
+                <div className="nav-dropdown-menu" role="menu" aria-label="助学工具菜单">
+                  {studyToolNav.map((tool) => {
+                    const ToolIcon = tool.icon;
+                    const active = location.pathname.startsWith(tool.to);
+                    return (
+                      <Link
+                        key={tool.to}
+                        to={tool.to}
+                        role="menuitem"
+                        onMouseEnter={() => preloadRoute(tool.to)}
+                        onFocus={() => preloadRoute(tool.to)}
+                        onClick={(e) => {
+                          setToolsOpen(false);
+                          handleTransitionNavClick(e, tool.to);
+                        }}
+                        className={`nav-dropdown-item${active ? ' active' : ''}`}
+                      >
+                        <span className="nav-dropdown-icon">
+                          <ToolIcon size={16} />
+                        </span>
+                        <span>
+                          <strong>{tool.label}</strong>
+                          <small>{tool.desc}</small>
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <NavLink
+              to="/capstone"
+              onMouseEnter={() => preloadRoute('/capstone')}
+              onFocus={() => preloadRoute('/capstone')}
+              onClick={(e) => handleTransitionNavClick(e, '/capstone')}
+              className={({ isActive }) => `nav-item capstone-link${isActive ? ' active' : ''}`}
+            >
+              <Star size={15} />
+              <span>毕业项目</span>
+            </NavLink>
           </nav>
 
           <div className="header-actions" ref={popoverRef}>

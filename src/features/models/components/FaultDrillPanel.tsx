@@ -46,6 +46,11 @@ export const FaultDrillPanel: React.FC<FaultDrillPanelProps> = ({
   const [probedWatch, setProbedWatch] = useState<string[]>([]);
   const [selectedOpt, setSelectedOpt] = useState<string | null>(null);
   const [submitState, setSubmitState] = useState<'idle' | 'wrong' | 'correct'>('idle');
+  const [expanded, setExpanded] = useState<boolean>(() => {
+    const initialSolved = loadDrillProgress().solvedIds.length > 0;
+    const urlWantsDrill = typeof window !== 'undefined' && window.location.hash.includes('drill=1');
+    return initialSolved || urlWantsDrill;
+  });
 
   const pool = useMemo(
     () => (scope === 'current' ? FAULT_DRILLS.filter((d) => d.modelId === activeModelId) : FAULT_DRILLS),
@@ -139,7 +144,7 @@ export const FaultDrillPanel: React.FC<FaultDrillPanelProps> = ({
         <div className="dt-drill-head-left">
           <div className="dt-drill-eyebrow">
             <Wrench size={13} />
-            BLIND FAULT TROUBLESHOOTING DRILL · 现场盲测排故实训台
+            进阶实战挑战 · 建议先熟悉上方模型的正常运转再做题
           </div>
           <h2 className="dt-drill-title">12 道工厂真实故障工单盲测</h2>
           <p className="dt-drill-sub">
@@ -174,7 +179,33 @@ export const FaultDrillPanel: React.FC<FaultDrillPanelProps> = ({
         </div>
       </div>
 
-      {/* Draw & Filter Toolbar */}
+      {!expanded ? (
+        <div className="dt-drill-collapsed-cta">
+          <p>
+            已经玩懂上面设备的正常启停和 `%I / %Q` 信号了吗？来试试像真正的售后调试工程师一样，用万用表排查现场棘手故障！
+          </p>
+          <button
+            type="button"
+            className="dt-btn dt-btn--primary"
+            onClick={() => setExpanded(true)}
+          >
+            <Wrench size={14} />
+            开始排故挑战（展开 12 张故障工单）
+          </button>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <button
+              type="button"
+              className="dt-drill-link-btn"
+              onClick={() => setExpanded(false)}
+            >
+              暂时收起排故工单面板
+            </button>
+          </div>
+
+          {/* Draw & Filter Toolbar */}
       <div className="dt-drill-toolbar">
         <div className="dt-drill-toolbar-group">
           <button type="button" className="dt-btn dt-btn--primary dt-drill-draw-btn" onClick={handleDrawRandom}>
@@ -447,6 +478,8 @@ export const FaultDrillPanel: React.FC<FaultDrillPanelProps> = ({
           </div>
         ) : null}
       </div>
+        </>
+      )}
     </section>
   );
 };
