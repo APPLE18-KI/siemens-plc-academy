@@ -1,12 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useBackDismiss } from '../native/overlay';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
+  AlertCircle,
   Award,
   BookOpen,
   Boxes,
   Check,
+  CheckCircle2,
   Cpu,
+  Download,
   Flame,
   FolderKanban,
   GitBranch,
@@ -14,16 +16,33 @@ import {
   LayoutGrid,
   Library,
   Menu,
+  MessagesSquare,
   Moon,
+  Repeat2,
   RotateCcw,
+  Search,
   ShieldAlert,
   Star,
   Sun,
-  TerminalSquare,
+  Upload,
   X,
 } from 'lucide-react';
-import { lessons } from '../../registry';
-import { CAPSTONE_MILESTONE_CATALOG, useProgress } from '../store/progressStore';
+import { lessons } from '../../content/curriculum';
+import { useBackDismiss } from '../native/overlay';
+import {
+  exportArchiveToJsonFile,
+  getLocalArchiveSummary,
+  validateAndRestoreArchiveJson,
+} from '../store/archiveBackup';
+import {
+  CAPSTONE_MILESTONE_CATALOG,
+  invalidateProgressStorageCache,
+  useProgress,
+} from '../store/progressStore';
+import { CommandPalette } from './CommandPalette';
+import { preloadRoute } from './routePreload';
+import { OPEN_COMMAND_PALETTE_EVENT, subscribeShortcut } from './shortcuts';
+import { runViewTransition } from './viewTransition';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -63,6 +82,11 @@ const ProgressRingSvg: React.FC<{ pct: number; size?: number }> = ({ pct, size =
   );
 };
 
+function isApplePlatform(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
+}
+
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const { state, toggleTheme, getStats, toggleCapstoneMilestone, resetAllProgress } = useProgress();
   const location = useLocation();
@@ -71,18 +95,30 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteInitialQuery, setPaletteInitialQuery] = useState('');
+  const [archiveNotice, setArchiveNotice] = useState<{
+    tone: 'ok' | 'err';
+    text: string;
+  } | null>(null);
+
   const popoverRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const isMac = useMemo(() => isApplePlatform(), []);
 
   const safeLessons = Array.isArray(lessons) ? lessons : [];
   const totalLessons = safeLessons.length || 1;
   const stats = getStats(totalLessons);
 
+  const archiveSummary = popoverOpen ? getLocalArchiveSummary() : null;
+
   // Scroll to top & close drawers on route navigation
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'auto' });
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
     setMobileOpen(false);
     setPopoverOpen(false);
     setConfirmReset(false);
+    setArchiveNotice(null);
   }, [location.pathname]);
 
   // 手机抽屉打开时锁定背景滚动
@@ -95,25 +131,46 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     };
   }, [mobileOpen]);
 
-  const dismissShellOverlays = () => {
+  const dismissShellOverlays = useCallback(() => {
     setMobileOpen(false);
     setPopoverOpen(false);
     setConfirmReset(false);
-  };
+  }, []);
 
-  // 告诉原生返回键：当前有打开的抽屉/弹层，先关闭它
+  // 全局去重快捷键：Ctrl+K / ⌘K 开关命令面板；Esc 关闭抽屉与进度弹层
+  useEffect(() => {
+    const unsubModK = subscribeShortcut('mod+k', (e) => {
+      e.preventDefault();
+      setMobileOpen(false);
+      setPopoverOpen(false);
+      setPaletteInitialQuery('');
+      setPaletteOpen((prev) => !prev);
+    });
+
+    const unsubOpenEvent = (e: Event) => {
+      const detail = (e as CustomEvent<{ query?: string }>).detail;
+      setMobileOpen(false);
+      setPopoverOpen(false);
+      setPaletteInitialQuery(detail?.query ?? '');
+      setPaletteOpen(true);
+    };
+
+    window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, unsubOpenEvent);
+    return () => {
+      unsubModK();
+      window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, unsubOpenEvent);
+    };
+  }, []);
+
   useEffect(() => {
     const open = mobileOpen || popoverOpen;
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') dismissShellOverlays();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [mobileOpen, popoverOpen]);
-  useBackDismiss(mobileOpen || popoverOpen, () => dismissShellOverlays());
+    return subscribeShortcut('escape', () => {
+      if (!paletteOpen) dismissShellOverlays();
+    });
+  }, [mobileOpen, popoverOpen, paletteOpen, dismissShellOverlays]);
+
+  useBackDismiss(mobileOpen || popoverOpen, dismissShellOverlays);
 
   // Close progress popover on outside click
   useEffect(() => {
@@ -131,41 +188,115 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const navItems = [
     { to: '/', label: '首页', icon: Home, end: true },
     { to: '/learn', label: '课程', icon: BookOpen },
-    { to: '/ide', label: '博途编程', icon: TerminalSquare, badge: '新' },
-    { to: '/sim', label: '梯形图仿真', icon: Cpu },
+    { to: '/sim', label: '仿真实验室', icon: Cpu },
     { to: '/models', label: '设备模型', icon: Boxes },
     { to: '/examples', label: '实例', icon: FolderKanban },
     { to: '/workflows', label: '原理动画', icon: GitBranch },
+    { to: '/review', label: '复习', icon: Repeat2 },
     { to: '/glossary', label: '术语表', icon: Library },
+    { to: '/qa', label: '问答库', icon: MessagesSquare },
     { to: '/capstone', label: '毕业项目', icon: Star, isCapstone: true },
   ];
 
-  const handleContinueLearning = () => {
-    setPopoverOpen(false);
-    if (state.lastVisitedLessonId && safeLessons.some((l) => l.id === state.lastVisitedLessonId)) {
-      navigate(`/learn/${state.lastVisitedLessonId}`);
+  const handleTransitionNavClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    to: string
+  ) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
       return;
     }
-    const nextUnfinished = safeLessons.find((l) => !state.completedLessonIds.includes(l.id));
-    if (nextUnfinished) {
-      navigate(`/learn/${nextUnfinished.id}`);
+    if (location.pathname === to) return;
+    e.preventDefault();
+    preloadRoute(to);
+    runViewTransition(() => {
+      navigate(to);
+    }, 'route');
+  };
+
+  const handleContinueLearning = () => {
+    setPopoverOpen(false);
+    let target = '/learn';
+    if (state.lastVisitedLessonId && safeLessons.some((l) => l.id === state.lastVisitedLessonId)) {
+      target = `/learn/${state.lastVisitedLessonId}`;
     } else {
-      navigate('/learn');
+      const nextUnfinished = safeLessons.find((l) => !state.completedLessonIds.includes(l.id));
+      if (nextUnfinished) {
+        target = `/learn/${nextUnfinished.id}`;
+      }
     }
+    preloadRoute(target);
+    runViewTransition(() => navigate(target), 'route');
+  };
+
+  const handleExportArchive = () => {
+    try {
+      const result = exportArchiveToJsonFile();
+      setArchiveNotice({
+        tone: 'ok',
+        text: `已导出 ${result.fileName}（含 ${result.keyCount} 项档案数据）`,
+      });
+    } catch {
+      setArchiveNotice({
+        tone: 'err',
+        text: '导出学习档案失败，请检查浏览器下载权限后重试。',
+      });
+    }
+  };
+
+  const handleImportFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const res = validateAndRestoreArchiveJson(text);
+      if (!res.ok) {
+        setArchiveNotice({ tone: 'err', text: res.message });
+        return;
+      }
+      invalidateProgressStorageCache();
+      setArchiveNotice({ tone: 'ok', text: res.message });
+      window.setTimeout(() => {
+        window.location.reload();
+      }, 750);
+    } catch {
+      setArchiveNotice({
+        tone: 'err',
+        text: '读取备份文件失败，请确认文件未被损坏。',
+      });
+    }
+  };
+
+  const openCommandPalette = () => {
+    setMobileOpen(false);
+    setPopoverOpen(false);
+    setPaletteInitialQuery('');
+    setPaletteOpen(true);
   };
 
   return (
     <div className="app-shell">
+      {/* 无障碍隐藏锚点：键盘 Tab 首个聚焦元素，直达主内容区 */}
+      <a href="#main-content" className="skip-to-main">
+        跳至正文内容
+      </a>
+
       <header className="app-header">
         <div className="app-header-inner">
-          <Link to="/" className="brand-link" aria-label="西门子 PLC 工程师实训工坊首页">
+          <Link
+            to="/"
+            className="brand-link"
+            aria-label="西门子 PLC 工程师实训工坊首页"
+            onClick={(e) => handleTransitionNavClick(e, '/')}
+          >
             <span className="brand-mark">
               <Cpu size={18} strokeWidth={2.2} />
               <span className="brand-mark-led" />
             </span>
             <span className="brand-text">
               <span className="brand-title">西门子 PLC 实训工坊</span>
-              <span className="brand-sub">S7-1200 零基础入门</span>
+              <span className="brand-sub">S7-1200 STUDIO · v3.0</span>
             </span>
           </Link>
 
@@ -177,6 +308,9 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   key={item.to}
                   to={item.to}
                   end={item.end}
+                  onMouseEnter={() => preloadRoute(item.to)}
+                  onFocus={() => preloadRoute(item.to)}
+                  onClick={(e) => handleTransitionNavClick(e, item.to)}
                   className={({ isActive }) =>
                     `nav-item${item.isCapstone ? ' capstone-link' : ''}${isActive ? ' active' : ''}`
                   }
@@ -191,11 +325,25 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           <div className="header-actions" ref={popoverRef}>
             <button
               type="button"
+              className="cmdk-trigger-btn"
+              onClick={openCommandPalette}
+              aria-label="打开全站命令面板与指令速查（快捷键 Ctrl+K 或 Command+K）"
+              title={`全站速查与命令面板 (${isMac ? '⌘K' : 'Ctrl+K'})`}
+            >
+              <Search size={15} aria-hidden="true" />
+              <span className="cmdk-trigger-label">速查</span>
+              <kbd className="cmdk-trigger-kbd" aria-hidden="true">
+                {isMac ? '⌘K' : 'Ctrl K'}
+              </kbd>
+            </button>
+
+            <button
+              type="button"
               className="progress-ring-trigger"
               onClick={() => setPopoverOpen((v) => !v)}
               aria-expanded={popoverOpen}
-              aria-label="查看学习进度与综合掌握度"
-              title="查看学习进度与掌握度"
+              aria-label="查看学习进度、掌握度与学习档案备份"
+              title="查看学习进度与档案备份"
             >
               <ProgressRingSvg pct={stats.overallMasteryPct} />
               <span className="progress-ring-meta">
@@ -209,7 +357,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               className="icon-btn"
               onClick={toggleTheme}
               title={state.theme === 'dark' ? '切换浅色沉浸阅读模式' : '切换深色工业控制台模式'}
-              aria-label="切换深浅主题"
+              aria-label={state.theme === 'dark' ? '切换为浅色主题' : '切换为深色主题'}
             >
               {state.theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
             </button>
@@ -218,20 +366,21 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               type="button"
               className="icon-btn mobile-menu-btn"
               onClick={() => setMobileOpen((v) => !v)}
-              aria-label="展开导航菜单"
+              aria-expanded={mobileOpen}
+              aria-label={mobileOpen ? '关闭导航菜单' : '展开导航菜单'}
             >
               {mobileOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
 
             {popoverOpen && (
-              <div className="progress-popover" role="dialog" aria-label="学习档案面板">
+              <div className="progress-popover" role="dialog" aria-label="学习档案与进度面板">
                 <div className="progress-popover-head">
                   <div>
                     <div className="progress-popover-title">我的学习进度</div>
                     <div
                       style={{
                         fontSize: 12,
-                        color: 'var(--siemens-teal-bright)',
+                        color: 'var(--teal-text, var(--siemens-teal-bright))',
                         marginTop: 2,
                         display: 'flex',
                         alignItems: 'center',
@@ -279,8 +428,6 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                     <div className="progress-stat-lbl">毕业里程碑</div>
                   </div>
                 </div>
-
-                <p className="progress-popover-note">进度只保存在当前设备的这个浏览器（或本 App）里。</p>
 
                 <div style={{ marginBottom: 12 }}>
                   <div
@@ -337,6 +484,59 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   </div>
                 </div>
 
+                {/* v3.0 跨设备学习档案 JSON 一键备份与恢复 */}
+                <div className="archive-sync-box">
+                  <div className="archive-sync-head">
+                    <span className="archive-sync-title">跨设备档案备份 (JSON)</span>
+                    <span className="archive-sync-count">
+                      本机 {archiveSummary?.keyCount ?? 0} 项
+                    </span>
+                  </div>
+                  <p className="archive-sync-desc">
+                    导出课程进度、复习卡片、毕业打卡与课堂笔记到本地文件，电脑 ↔ 手机一键迁移。
+                  </p>
+                  <div className="archive-sync-actions">
+                    <button
+                      type="button"
+                      className="btn btn-sm archive-sync-btn"
+                      onClick={handleExportArchive}
+                    >
+                      <Download size={13} />
+                      导出备份
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm archive-sync-btn"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload size={13} />
+                      导入恢复
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".json,application/json"
+                      className="sr-only"
+                      aria-label="选择学习档案 JSON 备份文件"
+                      onChange={handleImportFileChange}
+                    />
+                  </div>
+                  {archiveNotice && (
+                    <div
+                      className={`archive-sync-notice is-${archiveNotice.tone}`}
+                      role="status"
+                      aria-live="polite"
+                    >
+                      {archiveNotice.tone === 'ok' ? (
+                        <CheckCircle2 size={14} />
+                      ) : (
+                        <AlertCircle size={14} />
+                      )}
+                      <span>{archiveNotice.text}</span>
+                    </div>
+                  )}
+                </div>
+
                 <div className="progress-popover-actions">
                   <button
                     type="button"
@@ -385,6 +585,17 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         >
           <div className="mobile-drawer" onClick={(e) => e.stopPropagation()}>
             <div className="mobile-drawer-title">全部功能</div>
+            <button
+              type="button"
+              className="nav-item mobile-drawer-search"
+              onClick={openCommandPalette}
+            >
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9 }}>
+                <Search size={16} />
+                全站指令与课程速查
+              </span>
+              <kbd className="cmdk-trigger-kbd">⌘K</kbd>
+            </button>
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -392,6 +603,9 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   key={item.to}
                   to={item.to}
                   end={item.end}
+                  onMouseEnter={() => preloadRoute(item.to)}
+                  onFocus={() => preloadRoute(item.to)}
+                  onClick={(e) => handleTransitionNavClick(e, item.to)}
                   className={({ isActive }) =>
                     `nav-item${item.isCapstone ? ' capstone-link' : ''}${isActive ? ' active' : ''}`
                   }
@@ -407,14 +621,16 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         </div>
       )}
 
-      <main className="app-main">{children}</main>
+      <main id="main-content" className="app-main" tabIndex={-1}>
+        {children}
+      </main>
 
       <footer className="app-footer">
         <div className="spa-container app-footer-inner">
           <div className="footer-notes">
             <p className="footer-brand">
               <span className="telemetry-dot" />
-              西门子 PLC 实训工坊 · 面向零基础的 S7-1200 学习网站
+              西门子 PLC 实训工坊 v3.0 · 面向零基础到在职进阶的 S7-1200 互动实训台
             </p>
             <p>
               <ShieldAlert size={13} />
@@ -423,9 +639,19 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             <p>本站为个人学习项目，非西门子官方；SIEMENS、SIMATIC、TIA Portal 为西门子公司商标。</p>
           </div>
           <div className="footer-links">
-            <Link to="/glossary">术语表</Link>
+            <Link to="/glossary" onMouseEnter={() => preloadRoute('/glossary')}>
+              术语表
+            </Link>
+            <Link to="/qa" onMouseEnter={() => preloadRoute('/qa')}>
+              问答库
+            </Link>
             <Link to="/glossary?section=faq">常见问题</Link>
-            <Link to="/learn/l00-before-you-start">新手准备</Link>
+            <Link to="/learn/l00-before-you-start" onMouseEnter={() => preloadRoute('/learn/l00-before-you-start')}>
+              新手准备
+            </Link>
+            <Link to="/about" onMouseEnter={() => preloadRoute('/about')}>
+              关于与开源许可
+            </Link>
           </div>
         </div>
       </footer>
@@ -435,8 +661,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         {[
           { to: '/', label: '首页', icon: Home, end: true },
           { to: '/learn', label: '课程', icon: BookOpen },
-          { to: '/ide', label: '博途编程', icon: TerminalSquare },
           { to: '/sim', label: '仿真', icon: Cpu },
+          { to: '/review', label: '复习', icon: Repeat2 },
         ].map((tab) => {
           const TabIcon = tab.icon;
           return (
@@ -444,6 +670,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               key={tab.to}
               to={tab.to}
               end={tab.end}
+              onClick={(e) => handleTransitionNavClick(e, tab.to)}
               className={({ isActive }) => `mobile-bottom-tab${isActive ? ' active' : ''}`}
             >
               <TabIcon size={20} strokeWidth={2.1} />
@@ -462,6 +689,12 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           <span>更多</span>
         </button>
       </nav>
+
+      <CommandPalette
+        open={paletteOpen}
+        initialQuery={paletteInitialQuery}
+        onClose={() => setPaletteOpen(false)}
+      />
     </div>
   );
 };

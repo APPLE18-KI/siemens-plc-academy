@@ -16,5 +16,6 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/core/scl", "src/features/tia-ide", "src/components/LandscapeSvgStage.tsx"]
 }

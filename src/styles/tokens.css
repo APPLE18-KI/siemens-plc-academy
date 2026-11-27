@@ -140,19 +140,19 @@
   --db-violet-border: rgba(124, 58, 237, 0.28);
 
   /* Architectural Stone Immersive Reading Surfaces */
-  --bg-canvas: #f2f4f7;
-  --bg-canvas-alt: #eaeef3;
+  --bg-canvas: #eef0f4;
+  --bg-canvas-alt: #e6eaf0;
   --bg-surface: #ffffff;
-  --bg-surface-2: #f6f8fa;
-  --bg-surface-3: #e9eef4;
+  --bg-surface-2: #f5f7fa;
+  --bg-surface-3: #e7ecf2;
   --bg-code: #0f1722;
-  --bg-glass: rgba(255, 255, 255, 0.88);
-  --bg-grid-line: rgba(15, 23, 42, 0.045);
-  --bg-grid-dot: rgba(15, 23, 42, 0.11);
+  --bg-glass: rgba(255, 255, 255, 0.9);
+  --bg-grid-line: rgba(15, 23, 42, 0.05);
+  --bg-grid-dot: rgba(15, 23, 42, 0.12);
 
-  --ink-primary: #0f1722;
-  --ink-secondary: #435368;
-  --ink-muted: #6b7d93;
+  --ink-primary: #0d1520;
+  --ink-secondary: #3f5066;
+  --ink-muted: #5a6c82;
   --ink-inverse: #ffffff;
 
   --border-hairline: rgba(15, 23, 42, 0.1);

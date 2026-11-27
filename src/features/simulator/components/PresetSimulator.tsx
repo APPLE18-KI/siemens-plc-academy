@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   BookOpen,
@@ -6,21 +6,18 @@ import {
   GraduationCap,
   Layers,
   Lightbulb,
-  Play,
-  RotateCcw,
-  Square,
-  StepForward,
 } from 'lucide-react';
 import type { SimPresetId } from '../../../types/content';
 import type { TagValue } from '../../../types/plc';
 import { useLadderSimulation } from '../../../core/plc';
-import { LandscapeSvgStage } from '../../../components/LandscapeSvgStage';
 import { SIM_PRESET_DEFINITIONS } from '../presets';
 import { CpuStatusBar } from './CpuStatusBar';
 import { FieldPanel, type InputOperationMode } from './FieldPanel';
-import { LadderCanvas } from './LadderCanvas';
+import { TiaLadder, TiaLegend } from './TiaLadder';
 import { SclCodePanel } from './SclCodePanel';
 import { TraceViewer } from './TraceViewer';
+import { ShortcutHintBar } from './ShortcutHintBar';
+import { useSimulatorShortcuts } from '../hooks/useSimulatorShortcuts';
 
 interface PresetSimulatorProps {
   presetId: SimPresetId;
@@ -78,70 +75,62 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
       onAfterScan: handleAfterScan,
     });
 
-  const handleToggleRun = () => {
-    runtime.setRunning?.(!snapshot.metrics.running);
-  };
+  const handleToggleRun = useCallback(() => {
+    const isRunning = runtime.getMetrics?.().running ?? true;
+    runtime.setRunning?.(!isRunning);
+  }, [runtime]);
 
-  const handleSingleScan = () => {
-    if (snapshot.metrics.running) {
+  const handleSingleScan = useCallback(() => {
+    if (runtime.getMetrics?.().running) {
       runtime.setRunning?.(false);
     }
     runtime.singleScan(intervalMs);
-  };
+  }, [runtime, intervalMs]);
 
-  const handleSetInput = (tag: string, value: TagValue) => {
-    runtime.setFieldInput(tag, value);
-  };
+  const handleReset = useCallback(() => {
+    runtime.reset();
+  }, [runtime]);
 
-  const handleToggleInputFromSvg = (tagName: string) => {
-    const cur = Boolean(runtime.getFieldInput(tagName));
-    runtime.setFieldInput(tagName, !cur);
-  };
+  const handleClearTrace = useCallback(() => {
+    runtime.clearTrace();
+  }, [runtime]);
 
-  const landscapeCpuControls = (
-    <>
-      <button
-        type="button"
-        className={`lss-ctrl-btn ${snapshot.metrics.running ? 'is-warn' : 'is-success'}`}
-        onClick={handleToggleRun}
-      >
-        {snapshot.metrics.running ? <Square size={12} /> : <Play size={12} />}
-        <span>{snapshot.metrics.running ? 'STOP 停机' : 'RUN 运行'}</span>
-      </button>
-      <button type="button" className="lss-ctrl-btn" onClick={handleSingleScan}>
-        <StepForward size={12} />
-        <span>单步扫描</span>
-      </button>
-      <button type="button" className="lss-ctrl-btn" onClick={() => runtime.reset()}>
-        <RotateCcw size={12} />
-        <span>复位</span>
-      </button>
-    </>
+  const handleSetInput = useCallback(
+    (tag: string, value: TagValue) => {
+      runtime.setFieldInput(tag, value);
+    },
+    [runtime],
   );
 
-  const landscapeFieldFooter =
-    preset.fieldInputs.length > 0 ? (
-      <>
-        <span className="plc-sim-lss-io-label">快捷 %I 触发:</span>
-        {preset.fieldInputs.map((fi) => {
-          const on = Boolean(snapshot.fieldInputs[fi.tag]);
-          const def = preset.tagDefs.find((d) => d.name === fi.tag);
-          return (
-            <button
-              key={fi.tag}
-              type="button"
-              className={`plc-sim-lss-io-btn ${on ? 'is-on' : ''}`}
-              onClick={() => handleSetInput(fi.tag, !on)}
-              title={`${def?.address ?? ''} ${fi.label}（点击切换 0/1）`}
-            >
-              <span className="plc-sim-lss-io-addr">{def?.address ?? fi.tag}</span>
-              <span>{fi.label}</span>
-              <span className="plc-sim-lss-io-state">{on ? '1' : '0'}</span>
-            </button>
-          );
-        })}
-      </>
-    ) : undefined;
+  const handleToggleInputFromSvg = useCallback(
+    (tagName: string) => {
+      const cur = Boolean(runtime.getFieldInput(tagName));
+      runtime.setFieldInput(tagName, !cur);
+    },
+    [runtime],
+  );
+
+  useSimulatorShortcuts(
+    {
+      onToggleRun: handleToggleRun,
+      onSingleScan: handleSingleScan,
+      onResetMres: handleReset,
+    },
+    !embedded,
+  );
+
+  const shortcutItems = useMemo(
+    () => [
+      {
+        keys: 'Alt+R',
+        label: snapshot.metrics.running ? '停止 CPU' : '运行 CPU',
+        onTrigger: handleToggleRun,
+      },
+      { keys: 'Alt+S', label: '单步扫描 OB1', onTrigger: handleSingleScan },
+      { keys: 'Alt+M', label: '全部复位 (MRES)', onTrigger: handleReset },
+    ],
+    [snapshot.metrics.running, handleToggleRun, handleSingleScan, handleReset],
+  );
 
   if (embedded) {
     return (
@@ -152,7 +141,7 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
           onToggleRun={handleToggleRun}
           onSingleScan={handleSingleScan}
           onChangeInterval={setScanInterval}
-          onReset={() => runtime.reset()}
+          onReset={handleReset}
           compact
         />
 
@@ -170,7 +159,7 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
               className={embeddedTab === 'trace' ? 'active' : ''}
               onClick={() => setEmbeddedTab('trace')}
             >
-              <Activity size={13} /> 实时波形 (Trace)
+              <Activity size={13} /> 实时波形
             </button>
             <button
               type="button"
@@ -188,27 +177,19 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
         <div className="plc-sim-embedded-grid">
           <div className="plc-sim-embedded-main">
             {embeddedTab === 'lad' && (
-              <LandscapeSvgStage
-                title={`${preset.title} · 梯形图监控 (LAD)`}
-                subtitle={`Cycle #${snapshot.metrics.cycleCount} · ${snapshot.metrics.running ? 'RUN' : 'STOP'}`}
-                compactHud
-                hint="点击蓝色 %I 触点切换通断 · 绿色实线 = 通电"
-                scopeClassName="plc-sim-root"
-                fitMode="width"
-                controls={landscapeCpuControls}
-                landscapeFooter={landscapeFieldFooter}
-                landscapeFooterLabel="现场输入按钮"
-              >
-                <LadderCanvas
+              <>
+                <p className="plc-sim-swipe-hint">梯形图较宽，可左右滑动查看；点带 %I 的触点也能切换输入</p>
+                <TiaLegend monitoring={snapshot.metrics.running} />
+                <TiaLadder
                   program={preset.program}
                   tagDefs={preset.tagDefs}
                   tags={snapshot.tags}
                   evalSnapshot={snapshot.evalSnapshot}
-                  running={snapshot.metrics.running}
+                  monitoring={snapshot.metrics.running}
                   compact
                   onToggleInputTag={handleToggleInputFromSvg}
                 />
-              </LandscapeSvgStage>
+              </>
             )}
             {embeddedTab === 'trace' && (
               <TraceViewer
@@ -216,11 +197,8 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
                 samples={snapshot.traceSamples}
                 paused={tracePaused}
                 onTogglePause={toggleTracePaused}
-                onClear={() => runtime.clearTrace()}
+                onClear={handleClearTrace}
                 compact
-                landscapeTitle={`${preset.title} · 实时逻辑分析仪波形 (Trace)`}
-                landscapeControls={landscapeCpuControls}
-                landscapeFooter={landscapeFieldFooter}
               />
             )}
             {embeddedTab === 'scl' && (
@@ -260,9 +238,11 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
         onToggleRun={handleToggleRun}
         onSingleScan={handleSingleScan}
         onChangeInterval={setScanInterval}
-        onReset={() => runtime.reset()}
+        onReset={handleReset}
         programLabel={preset.program.name}
       />
+
+      <ShortcutHintBar items={shortcutItems} variant="instrument" />
 
       {/* Collapsible Teaching Guidance Card */}
       <div className="plc-sim-guide-card">
@@ -316,30 +296,19 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
               <span>梯形图 · 在线监视</span>
             </div>
             <span className="plc-sim-pane-hint">
-              <span className="hint-wide">提示：可直接点击蓝色 %I 触点或右侧按钮调试</span>
+              <span className="hint-wide">提示：可直接点击带 %I 地址的触点或右侧按钮调试</span>
               <span className="hint-narrow">左右滑动查看完整梯形图；按钮和指示灯在上方</span>
             </span>
           </div>
-          <LandscapeSvgStage
-            title={`${preset.title} · 梯形图在线监视 (LAD)`}
-            subtitle={`Cycle #${snapshot.metrics.cycleCount} · ${snapshot.metrics.running ? 'RUN' : 'STOP'} · ${snapshot.metrics.lastScanMs.toFixed(2)}ms`}
-            compactHud
-            hint="直接点击蓝色 %I 触点可切换通断 · 横屏可全幅调试"
-            scopeClassName="plc-sim-root"
-            fitMode="width"
-            controls={landscapeCpuControls}
-            landscapeFooter={landscapeFieldFooter}
-            landscapeFooterLabel="现场输入按钮"
-          >
-            <LadderCanvas
-              program={preset.program}
-              tagDefs={preset.tagDefs}
-              tags={snapshot.tags}
-              evalSnapshot={snapshot.evalSnapshot}
-              running={snapshot.metrics.running}
-              onToggleInputTag={handleToggleInputFromSvg}
-            />
-          </LandscapeSvgStage>
+          <TiaLegend monitoring={snapshot.metrics.running} />
+          <TiaLadder
+            program={preset.program}
+            tagDefs={preset.tagDefs}
+            tags={snapshot.tags}
+            evalSnapshot={snapshot.evalSnapshot}
+            monitoring={snapshot.metrics.running}
+            onToggleInputTag={handleToggleInputFromSvg}
+          />
         </div>
 
         <aside className="plc-sim-field-pane">
@@ -369,10 +338,7 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
           samples={snapshot.traceSamples}
           paused={tracePaused}
           onTogglePause={toggleTracePaused}
-          onClear={() => runtime.clearTrace()}
-          landscapeTitle={`${preset.title} · 实时逻辑分析仪波形 (Trace)`}
-          landscapeControls={landscapeCpuControls}
-          landscapeFooter={landscapeFieldFooter}
+          onClear={handleClearTrace}
         />
         <SclCodePanel code={preset.sclCode} tags={snapshot.tags} />
       </div>

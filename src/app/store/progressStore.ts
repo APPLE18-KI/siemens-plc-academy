@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { runViewTransition } from '../layout/viewTransition';
 
 export type ThemeMode = 'dark' | 'light';
 
@@ -57,6 +58,58 @@ export const CAPSTONE_MILESTONE_CATALOG = [
 
 export const PROGRESS_STORAGE_KEY = 'siemens-plc-academy-progress-v1';
 
+/**
+ * 内存级 localStorage 缓存（vercel-react-best-practices: js-cache-storage）：
+ * 避免重复同步 I/O，并在跨标签页 storage 事件或页面重新可见时自动失效。
+ */
+const storageCache = new Map<string, string | null>();
+let storageCacheListenersInstalled = false;
+
+function ensureStorageCacheInvalidation(): void {
+  if (storageCacheListenersInstalled || typeof window === 'undefined') return;
+  storageCacheListenersInstalled = true;
+  window.addEventListener('storage', (e) => {
+    if (e.key) {
+      storageCache.delete(e.key);
+    } else {
+      storageCache.clear();
+    }
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      storageCache.clear();
+    }
+  });
+}
+
+export function invalidateProgressStorageCache(): void {
+  storageCache.clear();
+}
+
+function cachedGetItem(key: string): string | null {
+  if (typeof window === 'undefined') return null;
+  ensureStorageCacheInvalidation();
+  if (!storageCache.has(key)) {
+    storageCache.set(key, window.localStorage.getItem(key));
+  }
+  return storageCache.get(key) ?? null;
+}
+
+function cachedSetItem(key: string, value: string): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(key, value);
+  storageCache.set(key, value);
+}
+
+function syncDocumentTheme(theme: ThemeMode): void {
+  if (typeof document === 'undefined') return;
+  document.documentElement.setAttribute('data-theme', theme);
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  if (meta) {
+    meta.content = theme === 'light' ? '#eef0f4' : '#0a0f14';
+  }
+}
+
 function getTodayKey(): string {
   const now = new Date();
   const y = now.getFullYear();
@@ -111,7 +164,7 @@ function touchStudyActivity(state: ProgressState): ProgressState {
 
 export function loadProgressState(): ProgressState {
   try {
-    const raw = window.localStorage.getItem(PROGRESS_STORAGE_KEY);
+    const raw = cachedGetItem(PROGRESS_STORAGE_KEY);
     if (!raw) return createDefaultState();
     const parsed = JSON.parse(raw) as Partial<ProgressState>;
     if (!parsed || typeof parsed !== 'object') return createDefaultState();
@@ -154,7 +207,7 @@ export function loadProgressState(): ProgressState {
 
 export function saveProgressState(state: ProgressState): void {
   try {
-    window.localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(state));
+    cachedSetItem(PROGRESS_STORAGE_KEY, JSON.stringify(state));
   } catch {
     // Ignore storage quota or private mode errors gracefully
   }
@@ -259,19 +312,28 @@ export const ProgressProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [state, setState] = useState<ProgressState>(() => loadProgressState());
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', state.theme);
+    syncDocumentTheme(state.theme);
     saveProgressState(state);
   }, [state]);
 
   const toggleTheme = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      theme: prev.theme === 'dark' ? 'light' : 'dark',
-    }));
+    runViewTransition(() => {
+      setState((prev) => {
+        const nextTheme: ThemeMode = prev.theme === 'dark' ? 'light' : 'dark';
+        syncDocumentTheme(nextTheme);
+        return {
+          ...prev,
+          theme: nextTheme,
+        };
+      });
+    }, 'theme');
   }, []);
 
   const setTheme = useCallback((theme: ThemeMode) => {
-    setState((prev) => ({ ...prev, theme }));
+    runViewTransition(() => {
+      syncDocumentTheme(theme);
+      setState((prev) => (prev.theme === theme ? prev : { ...prev, theme }));
+    }, 'theme');
   }, []);
 
   const isLessonCompleted = useCallback(

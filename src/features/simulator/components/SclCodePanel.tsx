@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import { Check, Code2, Copy } from 'lucide-react';
 import type { TagValue } from '../../../types/plc';
 
@@ -43,18 +43,20 @@ const SCL_KEYWORDS = new Set([
   'F_TRIG',
 ]);
 
+const SCL_TOKEN_RE = /("[^"]+"|T#[0-9a-zA-Z_]+|:=|=>|<=|>=|\b[A-Za-z_][A-Za-z0-9_]*\b|\b\d+(?:\.\d+)?\b)/g;
+
 function renderSclLine(line: string, lineIdx: number, tags: Record<string, TagValue>) {
   const commentIdx = line.indexOf('//');
   const codePart = commentIdx >= 0 ? line.slice(0, commentIdx) : line;
   const commentPart = commentIdx >= 0 ? line.slice(commentIdx) : '';
 
   const tokens: React.ReactNode[] = [];
-  const regex = /("[^"]+"|T#[0-9a-zA-Z_]+|:=|=>|<=|>=|\b[A-Za-z_][A-Za-z0-9_]*\b|\b\d+(?:\.\d+)?\b)/g;
+  SCL_TOKEN_RE.lastIndex = 0;
   let lastIdx = 0;
   let match: RegExpExecArray | null;
   let tokIdx = 0;
 
-  while ((match = regex.exec(codePart)) !== null) {
+  while ((match = SCL_TOKEN_RE.exec(codePart)) !== null) {
     if (match.index > lastIdx) {
       tokens.push(codePart.slice(lastIdx, match.index));
     }
@@ -120,14 +122,14 @@ function renderSclLine(line: string, lineIdx: number, tags: Record<string, TagVa
   return tokens;
 }
 
-export const SclCodePanel: React.FC<SclCodePanelProps> = ({
+export const SclCodePanel: React.FC<SclCodePanelProps> = memo(function SclCodePanel({
   code,
   tags,
   title = '同步西门子 S7-1200 SCL 等效代码',
   compact = false,
-}) => {
+}) {
   const [copied, setCopied] = useState(false);
-  const lines = code.split('\n');
+  const lines = useMemo(() => code.split('\n'), [code]);
 
   const handleCopy = async () => {
     try {
@@ -167,4 +169,4 @@ export const SclCodePanel: React.FC<SclCodePanelProps> = ({
       </pre>
     </div>
   );
-};
+});

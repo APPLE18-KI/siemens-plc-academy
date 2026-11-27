@@ -261,28 +261,6 @@
   color: #5eead4;
 }
 
-.dt-btn--landscape {
-  background: linear-gradient(135deg, rgba(0, 153, 153, 0.22), rgba(14, 116, 144, 0.2));
-  border-color: rgba(20, 184, 166, 0.55);
-  color: #5eead4;
-}
-
-.dt-btn--landscape:hover:not(:disabled) {
-  background: #009999;
-  border-color: #2dd4bf;
-  color: #ffffff;
-}
-
-[data-theme='light'] .dt-btn--landscape {
-  color: #0f766e;
-  background: rgba(0, 153, 153, 0.14);
-}
-
-[data-theme='light'] .dt-btn--landscape:hover:not(:disabled) {
-  color: #ffffff;
-  background: #008585;
-}
-
 [data-theme='light'] .dt-btn--active {
   color: #0f766e;
   background: rgba(0, 153, 153, 0.14);
@@ -1012,20 +990,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
   gap: 8px;
   padding: 7px 12px;
   background: rgba(9, 15, 28, 0.88);
   border-bottom: 1px solid rgba(148, 163, 184, 0.16);
   position: relative;
   z-index: 3;
-}
-
-.dt-hud-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
 }
 
 .dt-pan-hint {
@@ -1118,26 +1088,6 @@
     justify-content: space-between;
   }
 
-  .dt-btn--landscape {
-    background: linear-gradient(135deg, #009999, #0d9488);
-    border-color: #2dd4bf;
-    color: #ffffff !important;
-    box-shadow: 0 2px 10px rgba(0, 153, 153, 0.4);
-  }
-
-  .dt-stage-hud {
-    padding: 7px 10px;
-  }
-
-  .dt-pan-hint {
-    font-size: 11px;
-  }
-
-  .dt-hud-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
-
   .dt-alarm-banner {
     flex-direction: column;
     align-items: flex-start;
@@ -1176,5 +1126,729 @@
   }
   .dt-hero-metrics .dt-metric-box {
     min-width: 0;
+  }
+}
+
+
+/* ==========================================================================
+   v3.0 Blind Fault Troubleshooting Drill & Signal-Chain Schematic
+   Editorial Grid Skeleton · Crisp Monospace Telemetry · Dual Theme + 360px Fit
+   ========================================================================== */
+.dt-drill-panel {
+  background: var(--dt-bg-panel);
+  border: 1px solid var(--dt-border);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dt-drill-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(240px, 0.75fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.dt-drill-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--dt-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--dt-teal-bright);
+  margin-bottom: 6px;
+}
+
+[data-theme='light'] .dt-drill-eyebrow {
+  color: #007a7a;
+}
+
+.dt-drill-title {
+  margin: 0 0 6px;
+  font-size: clamp(18px, 2.2vw, 22px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--dt-text);
+}
+
+.dt-drill-sub {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--dt-text-muted);
+}
+
+.dt-drill-badge-card {
+  background: var(--dt-bg-card);
+  border: 1px solid var(--dt-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dt-drill-badge-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dt-drill-badge-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+.dt-drill-badge-count {
+  font-family: var(--dt-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dt-teal-bright);
+}
+
+[data-theme='light'] .dt-drill-badge-count {
+  color: #007a7a;
+}
+
+.dt-drill-progress-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--dt-bg-elevated);
+  overflow: hidden;
+}
+
+.dt-drill-progress-fill {
+  height: 100%;
+  background: var(--dt-teal);
+  transition: width 220ms ease;
+}
+
+.dt-drill-badge-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--dt-text-muted);
+}
+
+.dt-drill-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: var(--dt-text-muted);
+  font-size: 11.5px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.dt-drill-link-btn:hover {
+  color: var(--dt-red);
+}
+
+.dt-drill-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--dt-border);
+}
+
+.dt-drill-toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.dt-drill-draw-btn,
+.dt-drill-submit-btn {
+  min-height: 44px;
+  padding: 0 16px;
+  font-size: 13.5px;
+}
+
+.dt-drill-ticket-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dt-drill-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 4px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--dt-border);
+  background: var(--dt-bg-card);
+  color: var(--dt-text-muted);
+  font-family: var(--dt-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+}
+
+.dt-drill-pill:hover {
+  border-color: var(--dt-teal-bright);
+  color: var(--dt-text);
+}
+
+.dt-drill-pill.is-active {
+  border-color: var(--dt-teal-bright);
+  background: var(--dt-teal-dim);
+  color: var(--dt-text);
+}
+
+.dt-drill-pill.is-solved {
+  color: var(--dt-green);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+[data-theme='light'] .dt-drill-pill.is-solved {
+  color: #047857;
+}
+
+.dt-drill-sheet {
+  background: var(--dt-bg-card);
+  border: 1px solid var(--dt-border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dt-drill-ticket-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dt-drill-ticket-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.dt-drill-code {
+  font-family: var(--dt-mono);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: var(--dt-bg-elevated);
+  border: 1px solid var(--dt-border);
+  color: var(--dt-text);
+}
+
+.dt-drill-sev {
+  font-family: var(--dt-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+
+.dt-drill-sev--critical {
+  background: rgba(239, 68, 68, 0.14);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.36);
+}
+
+.dt-drill-sev--high {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.36);
+}
+
+.dt-drill-sev--medium {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.32);
+}
+
+[data-theme='light'] .dt-drill-sev--critical { color: #b91c1c; }
+[data-theme='light'] .dt-drill-sev--high { color: #b45309; }
+[data-theme='light'] .dt-drill-sev--medium { color: #0369a1; }
+
+.dt-drill-meta-tag {
+  font-size: 11.5px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: var(--dt-bg-elevated);
+  color: var(--dt-text-muted);
+}
+
+.dt-drill-solved-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: rgba(16, 185, 129, 0.14);
+  color: #34d399;
+}
+
+[data-theme='light'] .dt-drill-solved-tag { color: #047857; }
+
+.dt-drill-case-title {
+  margin: 0;
+  font-size: 16.5px;
+  font-weight: 700;
+  color: var(--dt-text);
+  line-height: 1.35;
+}
+
+.dt-drill-symptom {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--dt-bg-panel);
+  border: 1px solid var(--dt-border);
+}
+
+.dt-drill-symptom-label {
+  display: inline-block;
+  font-family: var(--dt-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dt-text-muted);
+  margin-bottom: 4px;
+}
+
+.dt-drill-symptom p {
+  margin: 0;
+  font-size: 13.8px;
+  line-height: 1.62;
+  color: var(--dt-text);
+}
+
+/* Signal-Chain Schematic (diagram-design discipline) */
+.dt-drill-chain-wrap {
+  background: var(--dt-bg-panel);
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.dt-drill-chain-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.dt-drill-chain-state {
+  font-size: 11.5px;
+  color: var(--dt-text-muted);
+}
+
+.dt-drill-chain-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dt-drill-chain-svg {
+  display: block;
+  width: 100%;
+  min-width: 680px;
+  height: auto;
+}
+
+.dt-chain-line {
+  stroke: var(--dt-text-muted);
+  stroke-width: 1.5;
+  opacity: 0.65;
+}
+
+.dt-chain-line--fault {
+  stroke: #ef4444;
+  opacity: 1;
+}
+
+.dt-chain-arrow-fill { fill: var(--dt-text-muted); }
+.dt-chain-arrow-fault { fill: #ef4444; }
+.dt-chain-label-mask { fill: var(--dt-bg-panel); }
+
+.dt-chain-edge-txt {
+  font-family: var(--dt-mono);
+  font-size: 10px;
+  font-weight: 600;
+  fill: var(--dt-text-muted);
+}
+
+.dt-chain-edge-txt--fault { fill: #ef4444; }
+
+.dt-chain-box {
+  fill: var(--dt-bg-card);
+  stroke: var(--dt-border);
+  stroke-width: 1.2;
+}
+
+.dt-chain-box--fault {
+  fill: rgba(239, 68, 68, 0.1);
+  stroke: #ef4444;
+  stroke-width: 1.6;
+}
+
+.dt-chain-box--warn {
+  fill: rgba(245, 158, 11, 0.08);
+  stroke: #f59e0b;
+}
+
+.dt-chain-box--ok {
+  stroke: rgba(16, 185, 129, 0.55);
+}
+
+.dt-chain-tag-bg { fill: var(--dt-bg-elevated); }
+.dt-chain-tag-bg--fault { fill: rgba(239, 68, 68, 0.22); }
+.dt-chain-tag-bg--warn { fill: rgba(245, 158, 11, 0.2); }
+.dt-chain-tag-bg--ok { fill: rgba(16, 185, 129, 0.18); }
+
+.dt-chain-tag-txt {
+  font-family: var(--dt-mono);
+  font-size: 9px;
+  font-weight: 700;
+  fill: var(--dt-text-muted);
+}
+
+.dt-chain-tag-txt--fault { fill: #f87171; }
+.dt-chain-tag-txt--warn { fill: #fbbf24; }
+.dt-chain-tag-txt--ok { fill: #34d399; }
+
+[data-theme='light'] .dt-chain-tag-txt--fault { fill: #b91c1c; }
+[data-theme='light'] .dt-chain-tag-txt--warn { fill: #b45309; }
+[data-theme='light'] .dt-chain-tag-txt--ok { fill: #047857; }
+
+.dt-chain-name {
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--dt-text);
+}
+
+.dt-chain-sub {
+  font-family: var(--dt-mono);
+  font-size: 10px;
+  fill: var(--dt-text-muted);
+}
+
+.dt-chain-sub--fault { fill: #f87171; font-weight: 700; }
+[data-theme='light'] .dt-chain-sub--fault { fill: #b91c1c; }
+
+/* Dual Instrument Probes */
+.dt-drill-instruments {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dt-drill-instrument-box {
+  background: var(--dt-bg-panel);
+  border: 1px solid var(--dt-border);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dt-drill-inst-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dt-drill-inst-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--dt-text);
+}
+
+.dt-drill-inst-counter {
+  font-family: var(--dt-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dt-text-muted);
+}
+
+.dt-drill-probe-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dt-drill-probe-btn {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--dt-border);
+  background: var(--dt-bg-card);
+  color: var(--dt-text);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.dt-drill-probe-btn:hover {
+  border-color: var(--dt-teal-bright);
+}
+
+.dt-drill-probe-btn.is-open {
+  border-color: rgba(16, 185, 129, 0.42);
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.dt-drill-probe-btn.is-abnormal {
+  border-color: rgba(239, 68, 68, 0.48);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.dt-drill-probe-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dt-drill-probe-point {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--dt-text);
+}
+
+.dt-drill-probe-point code {
+  font-family: var(--dt-mono);
+  color: var(--dt-teal-bright);
+}
+
+[data-theme='light'] .dt-drill-probe-point code { color: #007a7a; }
+
+.dt-drill-probe-mode {
+  font-family: var(--dt-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--dt-bg-elevated);
+  color: var(--dt-text-muted);
+  flex-shrink: 0;
+}
+
+.dt-drill-probe-cta {
+  font-size: 12px;
+  color: var(--dt-teal-bright);
+  font-weight: 600;
+}
+
+[data-theme='light'] .dt-drill-probe-cta { color: #007a7a; }
+
+.dt-drill-probe-result {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dt-drill-reading {
+  font-family: var(--dt-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dt-text);
+}
+
+.dt-drill-probe-btn.is-abnormal .dt-drill-reading { color: #f87171; }
+[data-theme='light'] .dt-drill-probe-btn.is-abnormal .dt-drill-reading { color: #b91c1c; }
+
+.dt-drill-hint {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dt-text-muted);
+}
+
+/* Diagnosis Options & Review */
+.dt-drill-diagnosis {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dt-drill-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dt-drill-opt {
+  min-height: 48px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--dt-border);
+  background: var(--dt-bg-panel);
+  color: var(--dt-text);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 13px;
+  line-height: 1.5;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.dt-drill-opt:hover { border-color: var(--dt-teal-bright); }
+.dt-drill-opt.is-chosen {
+  border-color: var(--dt-teal-bright);
+  background: var(--dt-teal-dim);
+}
+.dt-drill-opt.is-correct {
+  border-color: var(--dt-green);
+  background: rgba(16, 185, 129, 0.12);
+}
+.dt-drill-opt.is-wrong {
+  border-color: var(--dt-red);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.dt-drill-opt-key {
+  font-family: var(--dt-mono);
+  font-size: 11px;
+  font-weight: 700;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: var(--dt-bg-elevated);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.dt-drill-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.dt-drill-feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.dt-drill-feedback--wrong {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+[data-theme='light'] .dt-drill-feedback--wrong { color: #b91c1c; }
+
+.dt-drill-review {
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.36);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dt-drill-review-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #34d399;
+}
+
+[data-theme='light'] .dt-drill-review-head { color: #047857; }
+
+.dt-drill-review-cause,
+.dt-drill-tip {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.62;
+  color: var(--dt-text);
+}
+
+.dt-drill-sop-title {
+  font-family: var(--dt-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--dt-teal-bright);
+  margin-bottom: 5px;
+}
+
+[data-theme='light'] .dt-drill-sop-title { color: #007a7a; }
+
+.dt-drill-sop ol {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.58;
+  color: var(--dt-text);
+}
+
+@media (max-width: 820px) {
+  .dt-drill-header,
+  .dt-drill-instruments,
+  .dt-drill-options {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .dt-drill-panel {
+    padding: 14px 12px;
+  }
+  .dt-drill-sheet {
+    padding: 12px;
+  }
+  .dt-drill-pill {
+    min-height: 44px;
+    padding: 6px 10px;
+  }
+  .dt-drill-draw-btn,
+  .dt-drill-submit-btn {
+    width: 100%;
+    justify-content: center;
   }
 }

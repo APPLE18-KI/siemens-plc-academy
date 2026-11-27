@@ -1,17 +1,16 @@
 {
   "name": "siemens-plc-academy",
   "private": true,
-  "version": "1.2.0",
-  "description": "西门子 S7-1200/1500 PLC 从零基础到简历级工业项目的互动式学习、在线博途编程与数字孪生平台",
+  "version": "3.0.0",
+  "description": "西门子 S7-1200/1500 PLC 从零基础到简历级工业项目的互动式学习与数字孪生平台",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "build:offline": "node -e \"process.env.VITE_OFFLINE='1'; require('child_process').execSync('npm run build', {stdio:'inherit', env:process.env})\"",
-    "build:android": "npm run build:offline && npx cap sync android",
-    "android:release": "npm run build:android && node -e \"const cp=require('child_process'); cp.execSync(process.platform==='win32'?'gradlew.bat assembleRelease':'./gradlew assembleRelease',{cwd:'android',stdio:'inherit'})\""
+    "build:android": "VITE_OFFLINE=1 npm run build && npx cap sync android",
+    "android:release": "npm run build:android && cd android && ./gradlew assembleRelease"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.2",

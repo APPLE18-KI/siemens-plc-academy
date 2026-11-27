@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Cpu, GitBranch, Layers, Milestone } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Check, Cpu, GitBranch, Layers, Link2, Milestone } from 'lucide-react';
 import type { WorkflowEntry, WorkflowId } from '../../types/content';
 import { ScanCycleWorkflow } from './ScanCycleWorkflow';
 import { GrafcetPackmlWorkflow } from './GrafcetPackmlWorkflow';
@@ -36,28 +37,72 @@ const WORKFLOW_ORDER: Array<{ id: WorkflowId; icon: React.ReactNode }> = [
   { id: 'project-lifecycle', icon: <Milestone size={18} /> },
 ];
 
+const VALID_WORKFLOW_IDS: ReadonlySet<string> = new Set<WorkflowId>([
+  'scan-cycle',
+  'grafcet-packml',
+  'project-lifecycle',
+]);
+
+function parseWorkflowParam(value: string | null): WorkflowId {
+  if (value && VALID_WORKFLOW_IDS.has(value)) {
+    return value as WorkflowId;
+  }
+  return 'scan-cycle';
+}
+
 export const WorkflowsShowcase: React.FC = () => {
-  const [activeId, setActiveId] = useState<WorkflowId>('scan-cycle');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const activeId: WorkflowId = parseWorkflowParam(searchParams.get('wf'));
   const activeEntry = workflowRegistry[activeId];
   const ActiveComponent = activeEntry.Component;
+
+  const handleSelectWorkflow = (id: WorkflowId) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('wf', id);
+    setSearchParams(next, { replace: true });
+  };
+
+  const handleCopyDeepLink = async () => {
+    const nextUrl = new URL(window.location.href);
+    // Support HashRouter links (#/workflows?wf=...)
+    const hashBase = nextUrl.hash.split('?')[0] || '#/workflows';
+    const fullLink = `${nextUrl.origin}${nextUrl.pathname}${hashBase}?wf=${activeId}`;
+    try {
+      await navigator.clipboard.writeText(fullLink);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = fullLink;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setCopiedLink(true);
+    window.setTimeout(() => setCopiedLink(false), 2000);
+  };
 
   return (
     <div className="wf-root">
       <div className="wf-showcase">
         <header className="wf-hero">
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div className="wf-hero-kicker">
-              <Layers size={14} /> Siemens TIA Portal · Engineering &amp; Runtime Workflows
+              <Layers size={14} /> 原理动画 · 看懂 PLC 内部怎么工作
             </div>
             <h1>PLC 底层执行机制与非标自动化工程工作流</h1>
             <p>
-              从微秒级 CPU 扫描周期（PII/OB1/PIQ）、国际 OMAC PackML + GRAFCET 标准状态机，到完整非标自动化项目的
-              URS → EPLAN → 博途模块化开发 → FAT/SAT 工程交付八步法，边交互操作边吃透资深自动化工程师的底层思维。
+              从微秒级 CPU 扫描周期（PII / OB1 / PIQ）、国际 OMAC PackML + GRAFCET 状态机，到非标自动化项目
+              URS → EPLAN → 博途模块化开发 → FAT/SAT 工程交付八步法，边交互操作边理清底层执行逻辑。
             </p>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-            <span className="wf-badge teal">3 大核心交互实验室</span>
-            <span className="wf-badge green">S7-1200/1500 标准工程范式</span>
+          <div className="wf-hero-actions">
+            <span className="wf-badge teal">3 大交互实验室 · ?wf={activeId}</span>
+            <button type="button" className="wf-btn" onClick={handleCopyDeepLink}>
+              {copiedLink ? <Check size={14} color="#10b981" /> : <Link2 size={14} />}
+              {copiedLink ? '已复制当前实验直达链接' : '复制当前实验链接'}
+            </button>
           </div>
         </header>
 
@@ -72,7 +117,7 @@ export const WorkflowsShowcase: React.FC = () => {
                 role="tab"
                 aria-selected={isActive}
                 className={`wf-tab-card ${isActive ? 'active' : ''}`}
-                onClick={() => setActiveId(id)}
+                onClick={() => handleSelectWorkflow(id)}
               >
                 <div className="wf-tab-card-head">
                   <span className="wf-tab-icon">{icon}</span>

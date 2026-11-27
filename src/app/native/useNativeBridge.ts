@@ -60,6 +60,17 @@ export function useNativeBridge(): void {
   pathRef.current = location.pathname;
   const lastBackAtHome = useRef(0);
 
+  /* v2.2：所有可点控件按下时轻触感（按钮、链接、选项、标签）。
+     组件自己的“成功/错误”触感在 click 时触发，比 pointerdown 晚 >50ms，不会被节流吞掉 */
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      const el = (e.target as Element | null)?.closest?.('button:not(:disabled), a[href], [role="button"], summary, label.press');
+      if (el && !el.closest('[data-no-haptic]')) haptic('tap');
+    };
+    document.addEventListener('pointerdown', onDown, { passive: true, capture: true });
+    return () => document.removeEventListener('pointerdown', onDown, { capture: true } as EventListenerOptions);
+  }, []);
+
   useEffect(() => {
     window.__plcHandleBack = () => {
       if (dismissTopOverlay()) return true;

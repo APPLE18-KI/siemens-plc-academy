@@ -1,4 +1,4 @@
-node_modules
+﻿node_modules
 dist
 .vite
 .vendor-skills
@@ -8,3 +8,5 @@ android/keystore.properties
 *.jks
 *.keystore
 *.p12
+.worktrees/
+

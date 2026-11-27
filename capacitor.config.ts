@@ -23,8 +23,8 @@ const config: CapacitorConfig = {
       initialViewportFitValueHint: 'cover',
     },
     SplashScreen: {
-      // 首屏渲染后由 useNativeBridge 主动 hide，避免白屏闪烁
-      launchAutoHide: false,
+      // 首屏渲染后由 useNativeBridge 主动 hide；这里的时长只是兜底上限
+      launchAutoHide: true,
       launchShowDuration: 2500,
       launchFadeOutDuration: 220,
       backgroundColor: '#0a0f14',

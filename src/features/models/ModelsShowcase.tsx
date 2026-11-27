@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -15,6 +15,8 @@ import { S71200WiringTwin } from './S71200WiringTwin';
 import { SortingConveyorTwin } from './SortingConveyorTwin';
 import { TankPressurePidTwin } from './TankPressurePidTwin';
 import { TrafficIntersectionTwin } from './TrafficIntersectionTwin';
+import { FaultDrillPanel } from './components/FaultDrillPanel';
+import { FAULT_DRILLS, loadDrillProgress } from './data/faultDrills';
 import './models.css';
 
 interface SensorSpec {
@@ -217,6 +219,9 @@ export const ModelsShowcase: React.FC = () => {
   const initialId = (searchParams.get('model') as ModelId | null) ?? 's7-1200-wiring';
   const validInitial = MODEL_META_LIST.some((m) => m.id === initialId) ? initialId : 's7-1200-wiring';
   const [activeId, setActiveId] = useState<ModelId>(validInitial);
+  const [drillSolvedCount, setDrillSolvedCount] = useState<number>(
+    () => loadDrillProgress().solvedIds.length
+  );
 
   useEffect(() => {
     const q = searchParams.get('model') as ModelId | null;
@@ -225,10 +230,13 @@ export const ModelsShowcase: React.FC = () => {
     }
   }, [searchParams, activeId]);
 
-  const handleSelectModel = (id: ModelId) => {
-    setActiveId(id);
-    setSearchParams({ model: id }, { replace: true });
-  };
+  const handleSelectModel = useCallback(
+    (id: ModelId) => {
+      setActiveId(id);
+      setSearchParams({ model: id }, { replace: true });
+    },
+    [setSearchParams]
+  );
 
   const activeMeta = MODEL_META_LIST.find((m) => m.id === activeId) ?? MODEL_META_LIST[0];
 
@@ -252,28 +260,30 @@ export const ModelsShowcase: React.FC = () => {
         <div>
           <div className="dt-hero-kicker">
             <Layers size={14} />
-            设备模型 · 看程序如何驱动真实设备
+            设备模型 · 2.5D 数字孪生 + 现场盲测排故实训
           </div>
-          <h1 className="dt-hero-title">4 套可操作的设备模型</h1>
+          <h1 className="dt-hero-title">4 套可操作的工业数字孪生模型</h1>
           <p className="dt-hero-desc">
             光看梯形图，很难想象现场设备怎么动。这里每套模型都按 S7-1200 的控制逻辑运行：
             你可以让 <strong>PLC 自动运行</strong>，也可以<strong>手动强制</strong>某个输出；
-            旁边实时显示输入/输出点（%I、%Q）和模拟量（%IW、%QW）的数值，还能<strong>人为制造故障</strong>来练习排错。
+            实时观测 %I/%Q/%IW/%QW 映像区，并在下方<strong>盲测排故实训台</strong>用万用表与博途监控表完成 12 张工厂故障工单！
           </p>
         </div>
 
         <div className="dt-hero-metrics">
           <div className="dt-metric-box">
             <div className="dt-metric-val">4 套</div>
-            <div className="dt-metric-lbl">设备模型</div>
+            <div className="dt-metric-lbl">设备数字孪生</div>
           </div>
           <div className="dt-metric-box">
-            <div className="dt-metric-val">13 项</div>
-            <div className="dt-metric-lbl">可模拟的现场故障</div>
+            <div className="dt-metric-val">
+              {drillSolvedCount}/{FAULT_DRILLS.length}
+            </div>
+            <div className="dt-metric-lbl">盲测排故勋章</div>
           </div>
           <div className="dt-metric-box">
             <div className="dt-metric-val">%I/%Q</div>
-            <div className="dt-metric-lbl">博途标准地址写法</div>
+            <div className="dt-metric-lbl">博途标准地址</div>
           </div>
         </div>
       </section>
@@ -309,6 +319,13 @@ export const ModelsShowcase: React.FC = () => {
 
       {/* Full-Width Active Digital Twin Interactive Canvas */}
       <section aria-label="数字孪生交互仿真画布">{renderActiveTwin()}</section>
+
+      {/* v3.0 Blind Fault Troubleshooting Drill Workbench */}
+      <FaultDrillPanel
+        activeModelId={activeId}
+        onSelectModel={handleSelectModel}
+        onProgressChange={(solved) => setDrillSolvedCount(solved)}
+      />
 
       {/* Supporting Engineering Knowledge: Sensor/Actuator Selection + PLC Variable Mapping */}
       <section className="dt-knowledge-grid">

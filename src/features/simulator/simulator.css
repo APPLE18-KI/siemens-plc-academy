@@ -1752,60 +1752,311 @@
   white-space: nowrap;
 }
 
-/* ---------- Landscape Quick Field I/O Dock Chips ---------- */
-.plc-sim-lss-io-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #94a3b8;
+
+/* ============================================================================
+   v3.0 Simulator Upgrades: Trace Dual Cursors, Sandbox Export/Import,
+   Instrument Cross-Reference (F11) & Keyboard Shortcut Bar (360px Safe)
+   ============================================================================ */
+
+.plc-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+  border: 0;
 }
 
-.plc-sim-lss-io-btn {
+.plc-sim-network.is-focused {
+  border-color: #14b8a6;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.34);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+/* ── Keyboard Shortcut Bar (Instrument Variant) ── */
+.plc-sim-kbd-bar.variant-instrument {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--sim-border);
+  background: rgba(17, 27, 46, 0.85);
+  color: var(--sim-text-muted);
+  font-size: 12px;
+}
+.plc-sim-kbd-bar.variant-instrument .plc-sim-kbd-chip {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(148, 163, 184, 0.24);
+  color: #e2e8f0;
+}
+.plc-sim-kbd-bar.variant-instrument .plc-sim-kbd-chip:hover {
+  border-color: #14b8a6;
+  color: #5eead4;
+}
+
+/* ── TraceViewer Dual-Cursor Δt & Hover Readout Bar ── */
+.plc-trace-measure-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 7px 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  background: rgba(9, 16, 29, 0.85);
+  font-size: 12px;
+}
+.plc-trace-cursors {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  color: #cbd5e1;
+}
+.plc-cur-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 10px;
-  border-radius: 7px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(15, 23, 42, 0.9);
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.plc-cur-pill.is-a {
+  background: rgba(56, 189, 248, 0.16);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  color: #7dd3fc;
+}
+.plc-cur-pill.is-b {
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fcd34d;
+}
+.plc-cur-delta {
+  font-family: ui-monospace, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  color: #6ee7b7;
+  font-size: 12px;
+}
+.plc-cur-hint {
+  color: #94a3b8;
+  font-size: 11.5px;
+}
+.plc-trace-readout-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 8px;
+}
+.plc-trace-val-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(30, 41, 59, 0.72);
   color: #cbd5e1;
   font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+.plc-trace-val-chip i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.plc-trace-val-chip b {
+  font-family: ui-monospace, Consolas, monospace;
+  color: #f8fafc;
+}
+.plc-sim-trace-body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.plc-sim-trace-svg {
+  cursor: crosshair;
+}
+
+/* ── Sandbox Engineering Productivity Toolbar (.scl / JSON) ── */
+.plc-sb-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(245, 158, 11, 0.24);
+}
+.plc-sb-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: rgba(15, 23, 42, 0.85);
+  color: #e2e8f0;
+  font: inherit;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.14s ease;
 }
-
-.plc-sim-lss-io-btn:hover {
+.plc-sb-tool-btn:hover {
+  border-color: #14b8a6;
+  color: #fff;
+}
+.plc-sb-tool-btn.is-primary {
+  background: rgba(0, 153, 153, 0.26);
+  border-color: #14b8a6;
+  color: #99f6e4;
+}
+.plc-sb-tool-btn.is-primary:hover {
+  background: rgba(0, 153, 153, 0.42);
+  color: #fff;
+}
+.plc-sb-tool-btn.is-open {
   border-color: #38bdf8;
-  color: #ffffff;
+  color: #7dd3fc;
 }
-
-.plc-sim-lss-io-btn.is-on {
-  background: rgba(16, 185, 129, 0.22);
-  border-color: rgba(16, 185, 129, 0.65);
-  color: #ecfdf5;
-}
-
-.plc-sim-lss-io-addr {
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 11px;
-  font-weight: 700;
-  color: #38bdf8;
-}
-
-.plc-sim-lss-io-state {
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 10.5px;
-  font-weight: 800;
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: rgba(100, 116, 139, 0.28);
-  color: #94a3b8;
-}
-
-.plc-sim-lss-io-btn.is-on .plc-sim-lss-io-state {
-  background: rgba(16, 185, 129, 0.35);
+.plc-sb-notice {
+  font-size: 12px;
   color: #6ee7b7;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.plc-sb-json-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(8, 15, 28, 0.92);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+}
+.plc-sb-json-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+.plc-sb-json-actions,
+.plc-sb-json-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.plc-sb-json-textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: #060c17;
+  color: #e2e8f0;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.plc-sb-json-error {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+  font-size: 12px;
+}
+
+/* ── Sandbox Cross-Reference & Static Diagnostics Card (Instrument Theme) ── */
+.plc-xref-sandbox {
+  background: var(--sim-surface);
+  border: 1px solid var(--sim-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.plc-xref-sb-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.plc-xref-sb-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  color: #f1f5f9;
+  font-size: 13.5px;
+}
+.plc-xref-toggle-btn {
+  min-height: 44px;
+  padding: 0 12px !important;
+}
+.plc-xref-sb-drawer {
+  min-width: 0;
+}
+.xref-table-block.theme-instrument .xref-table {
+  color: #e2e8f0;
+}
+.xref-table-block.theme-instrument .xref-area-tag.cat-i,
+.xref-table-block.theme-instrument .xref-area-tag.cat-iw { color: #7dd3fc; }
+.xref-table-block.theme-instrument .xref-area-tag.cat-q,
+.xref-table-block.theme-instrument .xref-area-tag.cat-qw { color: #6ee7b7; }
+.xref-table-block.theme-instrument .xref-area-tag.cat-m { color: #fcd34d; }
+.xref-table-block.theme-instrument .xref-area-tag.cat-t,
+.xref-table-block.theme-instrument .xref-area-tag.cat-c,
+.xref-table-block.theme-instrument .xref-area-tag.cat-db { color: #c4b5fd; }
+.xref-table-block.theme-instrument .xref-ref-chip.kind-r b { color: #7dd3fc; }
+.xref-table-block.theme-instrument .xref-ref-chip.kind-w b { color: #6ee7b7; }
+.plc-xref-diags .xref-diag-item { color: #f1f5f9; }
+.plc-xref-diags .xref-diag-item.sev-warning .xref-diag-icon { color: #fbbf24; }
+.plc-xref-diags .xref-diag-item.sev-info .xref-diag-icon { color: #38bdf8; }
+
+/* ── 360px Narrow Screen & ≥44px Touch Target Safety ── */
+@media (max-width: 640px) {
+  .plc-sim-mini-btn,
+  .plc-sim-tpl-btn,
+  .plc-sim-add-nw-btn,
+  .plc-sim-add-chip,
+  .plc-sim-ctrl-btn {
+    min-height: 44px;
+  }
+  .plc-sim-dock-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .plc-sim-nwe-title-input {
+    min-width: 0;
+    width: 100%;
+  }
+  .plc-xref-sandbox,
+  .plc-sim-sandbox-banner,
+  .plc-sim-builder-card {
+    padding: 10px;
+  }
 }

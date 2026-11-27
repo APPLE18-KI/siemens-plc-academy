@@ -1,4 +1,4 @@
-import React, { useId, useMemo } from 'react';
+import React, { memo, useId, useMemo } from 'react';
 import { AlertTriangle, Zap } from 'lucide-react';
 import type { TagDef, TagValue } from '../../../types/plc';
 import {
@@ -17,6 +17,7 @@ interface LadderCanvasProps {
   evalSnapshot: LadderEvalSnapshot;
   running: boolean;
   compact?: boolean;
+  focusedNetwork?: number | null;
   onToggleInputTag?: (tagName: string) => void;
 }
 
@@ -120,15 +121,16 @@ const COLOR_OFF = '#475569';
 const COLOR_WARN = '#f59e0b';
 const COLOR_CYAN = '#38bdf8';
 
-export const LadderCanvas: React.FC<LadderCanvasProps> = ({
+export const LadderCanvas: React.FC<LadderCanvasProps> = memo(function LadderCanvas({
   program,
   tagDefs,
   tags,
   evalSnapshot,
   running,
   compact = false,
+  focusedNetwork = null,
   onToggleInputTag,
-}) => {
+}) {
   const uid = useId().replace(/:/g, '');
   const glowId = `plc-glow-${uid}`;
 
@@ -906,13 +908,15 @@ export const LadderCanvas: React.FC<LadderCanvasProps> = ({
 
     const isNetOn = evalSnapshot.networkEnergized[net.id] ?? false;
     const warnings = warningByNetwork.get(net.number) ?? [];
+    const isFocused = focusedNetwork === net.number;
 
     return (
       <div
         key={net.id}
+        data-network-number={net.number}
         className={`plc-sim-network ${isNetOn ? 'is-energized' : ''} ${
           warnings.length > 0 ? 'has-warning' : ''
-        }`}
+        } ${isFocused ? 'is-focused' : ''}`}
       >
         <div className="plc-sim-network-head">
           <div className="plc-sim-network-title-row">
@@ -1021,4 +1025,4 @@ export const LadderCanvas: React.FC<LadderCanvasProps> = ({
       <div className="plc-sim-networks-list">{program.networks.map(renderNetwork)}</div>
     </div>
   );
-};
+});

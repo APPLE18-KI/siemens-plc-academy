@@ -8,6 +8,8 @@ import {
   type LadderPlcRuntime,
   type LadderProgram,
   type LadderRuntimeSnapshot,
+  type CpuInfo,
+  type DiagEntry,
   type ScanIntervalOption,
   type ScanPhase,
   type TraceChannelDef,
@@ -16,6 +18,7 @@ import {
 export * from './types';
 export * from './instructions';
 export * from './ladderEvaluator';
+export * from './crossRefAnalyzer';
 export * from './traceBuffer';
 
 export type ScanProgramFn = (
@@ -53,7 +56,6 @@ export function createPlcRuntime(tagDefs: TagDef[], program?: ScanProgramFn): Pl
     scanIntervalMs,
     running,
   });
-
   const notify = () => {
     const snapshot = { ...tags };
     const metrics = getMetrics();
@@ -202,6 +204,20 @@ export function createLadderRuntime(options: CreateLadderRuntimeOptions): Ladder
   let running = true;
   let tracePaused = false;
   let activePhase: ScanPhase = 'IDLE';
+  /** 强制值（键 = 变量名；只对 I/Q 生效，模拟 S7-1200 强制表 I_:P / Q_:P） */
+  let forces: Record<string, TagValue> = {};
+  /** 循环时间统计（ms） */
+  let cycleMin = Infinity;
+  let cycleMax = 0;
+  /** 诊断缓冲区（最新在前，最多 50 条） */
+  let diag: DiagEntry[] = [];
+  let diagSeq = 0;
+  let errorUntil = 0;
+  const pushDiag = (text: string, kind: DiagEntry['kind'] = 'info', detail?: string) => {
+    diagSeq += 1;
+    diag = [{ seq: diagSeq, time: Date.now(), text, kind, detail }, ...diag].slice(0, 50);
+  };
+  pushDiag('上电：CPU 进入 RUN（启动方式：暖启动）', 'mode', '仿真 CPU 已就绪，启动后执行 OB1 循环。');
 
   let evalSnapshot: LadderEvalSnapshot = evaluateLadderProgram(
     currentProgram,
@@ -231,6 +247,16 @@ export function createLadderRuntime(options: CreateLadderRuntimeOptions): Ladder
     running,
   });
 
+  const getCpuInfo = (): CpuInfo => ({
+    cycleMinMs: Number.isFinite(cycleMin) ? cycleMin : 0,
+    cycleMaxMs: cycleMax,
+    maxCycleLimitMs: 150,
+    forces: { ...forces },
+    diag: diag.slice(),
+    errorActive: Date.now() < errorUntil,
+  });
+
+
   const buildSnapshot = (): LadderRuntimeSnapshot => ({
     tags: { ...tags },
     fieldInputs: { ...fieldInputs },
@@ -238,6 +264,7 @@ export function createLadderRuntime(options: CreateLadderRuntimeOptions): Ladder
     piq: { ...piq },
     fieldOutputs: { ...fieldOutputs },
     metrics: getMetrics(),
+    cpu: getCpuInfo(),
     activePhase,
     evalSnapshot,
     traceSamples: traceBuffer.getSamples(),
@@ -257,7 +284,7 @@ export function createLadderRuntime(options: CreateLadderRuntimeOptions): Ladder
     // ─── Stage 1: PII Input Process Image Sampling ───
     activePhase = 'PII_SAMPLE';
     for (const def of inputDefs) {
-      const val = fieldInputs[def.name];
+      const val = def.name in forces ? forces[def.name] : fieldInputs[def.name];
       pii[def.name] = val;
       tags[def.name] = val;
     }
@@ -279,11 +306,13 @@ export function createLadderRuntime(options: CreateLadderRuntimeOptions): Ladder
     for (const def of outputDefs) {
       const outVal = tags[def.name];
       piq[def.name] = outVal;
-      fieldOutputs[def.name] = outVal;
+      fieldOutputs[def.name] = def.name in forces ? forces[def.name] : outVal;
     }
 
     const duration = Math.max(0.06, Number((performance.now() - t0).toFixed(3)));
     lastScanMs = duration;
+    cycleMin = Math.min(cycleMin, duration);
+    cycleMax = Math.max(cycleMax, duration);
     phaseLog.piqFlushed = { ...piq };
     phaseLog.durationMs = duration;
 
@@ -380,6 +409,15 @@ export function createLadderRuntime(options: CreateLadderRuntimeOptions): Ladder
       notifyAll();
     },
     setRunning(next: boolean) {
+      if (next !== running) {
+        pushDiag(
+          next ? '运行模式转换：STOP → RUN（操作员请求）' : '运行模式转换：RUN → STOP（操作员请求）',
+          'mode',
+          next
+            ? '经过启动（STARTUP）后进入 RUN：读输入、执行 OB1、写输出循环开始。'
+            : 'CPU 停止执行用户程序，过程映像不再自动更新，输出进入安全状态（本仿真为 0）。',
+        );
+      }
       running = next;
       activePhase = next ? 'IDLE' : 'STOPPED';
       if (!next) {
@@ -424,6 +462,62 @@ export function createLadderRuntime(options: CreateLadderRuntimeOptions): Ladder
       notifyAll();
     },
     getMetrics,
+    getCpuInfo,
+    setForce(name: string, value: TagValue | undefined) {
+      const had = name in forces;
+      if (value === undefined) {
+        delete forces[name];
+        if (had) pushDiag(`强制已取消：${name}`, 'force');
+      } else {
+        forces[name] = value;
+        pushDiag(`强制已启动：${name} = ${typeof value === 'boolean' ? (value ? 'TRUE' : 'FALSE') : value}`, 'force', '强制值会覆盖程序读到的物理输入或写到物理输出的值，直到停止强制。');
+      }
+      if (!running) notifyAll();
+      else notifyAll();
+    },
+    clearForces() {
+      if (Object.keys(forces).length) pushDiag('已停止全部强制', 'force');
+      forces = {};
+      notifyAll();
+    },
+    warmRestart() {
+      // STARTUP：Q 映像清零、非保持 M 与定时器/计数器回到初值，输入保持现场状态
+      const defaults = buildDefaults();
+      for (const d of tagDefs) {
+        const area = inferTagArea(d);
+        if (area !== 'I') tags[d.name] = defaults[d.name];
+      }
+      piq = pickSubset(tags, outputDefs);
+      internal = createLadderInternalState();
+      notifyAll();
+    },
+    memoryReset() {
+      const defaults = buildDefaults();
+      tags = { ...defaults };
+      for (const d of inputDefs) tags[d.name] = fieldInputs[d.name];
+      pii = pickSubset(tags, inputDefs);
+      piq = pickSubset(tags, outputDefs);
+      fieldOutputs = buildSafeOutputs();
+      internal = createLadderInternalState();
+      cycleCount = 0;
+      cycleMin = Infinity;
+      cycleMax = 0;
+      running = false;
+      activePhase = 'STOPPED';
+      pushDiag('存储器复位（MRES）完成', 'mode', '清除工作存储器中的数据，重新从装载存储器复制程序；诊断缓冲区不会被清除。');
+      notifyAll();
+    },
+    simulateCycleOverrun(ms = 320) {
+      cycleMax = Math.max(cycleMax, ms);
+      lastScanMs = ms;
+      pushDiag(`循环时间超出最大循环时间（${ms} ms > 2 × 150 ms）`, 'error', '没有下载过时间错误中断 OB80：第一次超时被忽略；同一循环内第二次超时（2 倍最大循环时间），CPU 写入诊断条目并转入 STOP。');
+      running = false;
+      activePhase = 'STOPPED';
+      fieldOutputs = buildSafeOutputs();
+      errorUntil = Date.now() + 6000;
+      pushDiag('运行模式转换：RUN → STOP（时间错误）', 'mode');
+      notifyAll();
+    },
     getSnapshot: buildSnapshot,
     subscribe(listener) {
       legacyListeners.add(listener);

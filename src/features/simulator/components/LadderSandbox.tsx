@@ -1,15 +1,17 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
+  Check,
+  Copy,
+  Download,
+  FileCode2,
+  FileJson,
   GitBranch,
   Layers,
-  Play,
   Plus,
-  RotateCcw,
   Sparkles,
-  Square,
-  StepForward,
   Trash2,
+  Upload,
   Wrench,
 } from 'lucide-react';
 import type { TagDef, TagValue } from '../../../types/plc';
@@ -21,41 +23,24 @@ import {
   type TimerType,
   type TraceChannelDef,
 } from '../../../core/plc';
-import { LandscapeSvgStage } from '../../../components/LandscapeSvgStage';
 import type { FieldInputMeta, FieldOutputMeta } from '../presets';
-import { generateSclFromLadder } from '../sclGenerator';
+import { generateSclFromLadder, generateTiaSclFile } from '../sclGenerator';
+import {
+  parseSandboxProjectJson,
+  serializeSandboxProject,
+  type SandboxCoilKind,
+  type SandboxContactDraft,
+  type SandboxContactKind,
+  type SandboxNetworkDraft,
+} from '../sandboxCodec';
 import { CpuStatusBar } from './CpuStatusBar';
+import { CrossRefSandboxPanel } from './CrossRefInspector';
 import { FieldPanel, type InputOperationMode } from './FieldPanel';
 import { LadderCanvas } from './LadderCanvas';
 import { SclCodePanel } from './SclCodePanel';
+import { ShortcutHintBar } from './ShortcutHintBar';
 import { TraceViewer } from './TraceViewer';
-
-type SandboxContactKind = 'NO' | 'NC' | 'P_TRIG' | 'N_TRIG';
-type SandboxCoilKind = 'OTE' | 'SET' | 'RESET';
-
-interface SandboxContactDraft {
-  id: string;
-  kind: SandboxContactKind;
-  tag: string;
-}
-
-interface SandboxNetworkDraft {
-  id: string;
-  title: string;
-  /** Main series contacts (after optional parallel OR block) */
-  topBranch: SandboxContactDraft[];
-  /** Optional parallel OR branch (for seal-in / multi-start) */
-  hasParallelBranch: boolean;
-  parallelBranch: SandboxContactDraft[];
-  /** Remaining series contacts after the branch merge */
-  seriesAfter: SandboxContactDraft[];
-  /** Optional timer block */
-  timerMode: 'NONE' | TimerType;
-  timerPtMs: number;
-  /** Output coil */
-  coilKind: SandboxCoilKind;
-  coilTag: string;
-}
+import { useSimulatorShortcuts } from '../hooks/useSimulatorShortcuts';
 
 const SANDBOX_TAG_DEFS: TagDef[] = [
   { name: 'I_Btn1', address: '%I0.0', type: 'Bool', area: 'I', init: false, comment: '启动按钮 1 (NO)' },
@@ -297,12 +282,38 @@ function compileDraftsToProgram(drafts: SandboxNetworkDraft[]): LadderProgram {
 let uidCounter = 100;
 const nextUid = (prefix: string) => `${prefix}-${++uidCounter}`;
 
+const ALL_CONTACT_TAG_SET = new Set(SANDBOX_TAG_DEFS.map((d) => d.name));
+const COIL_TAG_SET = new Set(
+  SANDBOX_TAG_DEFS.filter((d) => d.area === 'Q' || d.area === 'M').map((d) => d.name),
+);
+
+function downloadTextFile(filename: string, content: string, mime = 'text/plain;charset=utf-8') {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export const LadderSandbox: React.FC = () => {
   const [activeTemplateId, setActiveTemplateId] = useState<string>('seal-in');
   const [drafts, setDrafts] = useState<SandboxNetworkDraft[]>(() =>
-    cloneDrafts(SANDBOX_TEMPLATES[0].drafts)
+    cloneDrafts(SANDBOX_TEMPLATES[0].drafts),
   );
   const [inputMode, setInputMode] = useState<InputOperationMode>('momentary');
+  const [jsonDrawerOpen, setJsonDrawerOpen] = useState(false);
+  const [jsonInput, setJsonInput] = useState('');
+  const [jsonError, setJsonError] = useState<string | null>(null);
+  const [statusNotice, setStatusNotice] = useState<string | null>(null);
+  const [copiedJson, setCopiedJson] = useState(false);
+  const [focusedNetwork, setFocusedNetwork] = useState<number | null>(null);
+
+  const canvasPaneRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const noticeTimer = useRef<number | undefined>(undefined);
+  const focusTimer = useRef<number | undefined>(undefined);
 
   const compiledProgram = useMemo(() => compileDraftsToProgram(drafts), [drafts]);
   const liveScl = useMemo(() => generateSclFromLadder(compiledProgram), [compiledProgram]);
@@ -320,9 +331,24 @@ export const LadderSandbox: React.FC = () => {
     runtime.setProgram(compiledProgram);
   }, [runtime, compiledProgram]);
 
+  useEffect(
+    () => () => {
+      window.clearTimeout(noticeTimer.current);
+      window.clearTimeout(focusTimer.current);
+    },
+    [],
+  );
+
+  const flashNotice = useCallback((msg: string) => {
+    setStatusNotice(msg);
+    window.clearTimeout(noticeTimer.current);
+    noticeTimer.current = window.setTimeout(() => setStatusNotice(null), 2800);
+  }, []);
+
   const loadTemplate = (tpl: SandboxTemplate) => {
     setActiveTemplateId(tpl.id);
     setDrafts(cloneDrafts(tpl.drafts));
+    setJsonError(null);
     runtime.reset();
   };
 
@@ -354,56 +380,137 @@ export const LadderSandbox: React.FC = () => {
     setDrafts((prev) => prev.map((n) => (n.id === id ? updater(n) : n)));
   };
 
-  const handleToggleRun = () => {
-    runtime.setRunning?.(!snapshot.metrics.running);
-  };
+  const handleToggleRun = useCallback(() => {
+    const isRunning = runtime.getMetrics?.().running ?? true;
+    runtime.setRunning?.(!isRunning);
+  }, [runtime]);
 
-  const handleSingleScan = () => {
-    if (snapshot.metrics.running) runtime.setRunning?.(false);
+  const handleSingleScan = useCallback(() => {
+    if (runtime.getMetrics?.().running) runtime.setRunning?.(false);
     runtime.singleScan(intervalMs);
-  };
+  }, [runtime, intervalMs]);
 
-  const landscapeCpuControls = (
-    <>
-      <button
-        type="button"
-        className={`lss-ctrl-btn ${snapshot.metrics.running ? 'is-warn' : 'is-success'}`}
-        onClick={handleToggleRun}
-      >
-        {snapshot.metrics.running ? <Square size={12} /> : <Play size={12} />}
-        <span>{snapshot.metrics.running ? 'STOP 停机' : 'RUN 运行'}</span>
-      </button>
-      <button type="button" className="lss-ctrl-btn" onClick={handleSingleScan}>
-        <StepForward size={12} />
-        <span>单步扫描</span>
-      </button>
-      <button type="button" className="lss-ctrl-btn" onClick={() => runtime.reset()}>
-        <RotateCcw size={12} />
-        <span>复位</span>
-      </button>
-    </>
+  const handleReset = useCallback(() => {
+    runtime.reset();
+    flashNotice('已复位沙盒 I/O、定时器与示波器缓冲。');
+  }, [runtime, flashNotice]);
+
+  const handleClearTrace = useCallback(() => runtime.clearTrace(), [runtime]);
+
+  const handleSetFieldInput = useCallback(
+    (tag: string, val: TagValue) => runtime.setFieldInput(tag, val),
+    [runtime],
   );
 
-  const landscapeFieldFooter = (
-    <>
-      <span className="plc-sim-lss-io-label">沙盒 %I 输入:</span>
-      {SANDBOX_FIELD_INPUTS.map((fi) => {
-        const on = Boolean(snapshot.fieldInputs[fi.tag]);
-        const def = SANDBOX_TAG_DEFS.find((d) => d.name === fi.tag);
-        return (
-          <button
-            key={fi.tag}
-            type="button"
-            className={`plc-sim-lss-io-btn ${on ? 'is-on' : ''}`}
-            onClick={() => runtime.setFieldInput(fi.tag, !on)}
-          >
-            <span className="plc-sim-lss-io-addr">{def?.address ?? fi.tag}</span>
-            <span>{fi.label}</span>
-            <span className="plc-sim-lss-io-state">{on ? '1' : '0'}</span>
-          </button>
-        );
-      })}
-    </>
+  const handleToggleInputFromCanvas = useCallback(
+    (t: string) => runtime.setFieldInput(t, !Boolean(runtime.getFieldInput(t))),
+    [runtime],
+  );
+
+  const handleJumpToNetwork = useCallback(
+    (nw: number) => {
+      setFocusedNetwork(nw);
+      window.clearTimeout(focusTimer.current);
+      focusTimer.current = window.setTimeout(() => setFocusedNetwork(null), 2600);
+      const el = canvasPaneRef.current?.querySelector<HTMLElement>(
+        `[data-network-number="${nw}"]`,
+      );
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      flashNotice(`已滚动定位到 NW ${nw}。`);
+    },
+    [flashNotice],
+  );
+
+  const handleExportSclFile = useCallback(() => {
+    const tplLabel =
+      SANDBOX_TEMPLATES.find((t) => t.id === activeTemplateId)?.label ?? 'Custom_Sandbox';
+    const content = generateTiaSclFile(compiledProgram, SANDBOX_TAG_DEFS, {
+      fbName: 'FB_Custom_Ladder',
+      projectTitle: tplLabel,
+    });
+    downloadTextFile('FB_Custom_Ladder.scl', content, 'text/plain;charset=utf-8');
+    flashNotice('已导出博途外部源文件 FB_Custom_Ladder.scl（含 FUNCTION_BLOCK 与 REGION 头）。');
+  }, [activeTemplateId, compiledProgram, flashNotice]);
+
+  const handleCopyProjectJson = useCallback(async () => {
+    const json = serializeSandboxProject(drafts);
+    try {
+      await navigator.clipboard.writeText(json);
+      setCopiedJson(true);
+      window.setTimeout(() => setCopiedJson(false), 1800);
+      flashNotice('已复制沙盒工程 JSON 到剪贴板，可直接保存或分享给同伴导入。');
+    } catch {
+      setJsonInput(json);
+      setJsonDrawerOpen(true);
+      flashNotice('浏览器未授予剪贴板权限，已在下方展开工程 JSON 供手动复制。');
+    }
+  }, [drafts, flashNotice]);
+
+  const handleDownloadJsonFile = useCallback(() => {
+    const json = serializeSandboxProject(drafts);
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadTextFile(`plc-sandbox-${stamp}.json`, json, 'application/json;charset=utf-8');
+    flashNotice(`已下载沙盒工程文件 plc-sandbox-${stamp}.json。`);
+  }, [drafts, flashNotice]);
+
+  const handleToggleJsonDrawer = useCallback(() => {
+    setJsonDrawerOpen((open) => {
+      const next = !open;
+      if (next) {
+        setJsonInput(serializeSandboxProject(drafts));
+        setJsonError(null);
+      }
+      return next;
+    });
+  }, [drafts]);
+
+  const applyImportedJson = useCallback(
+    (raw: string) => {
+      const result = parseSandboxProjectJson(raw, ALL_CONTACT_TAG_SET, COIL_TAG_SET);
+      if (!result.ok) {
+        setJsonError(result.error);
+        return;
+      }
+      setDrafts(cloneDrafts(result.drafts));
+      setActiveTemplateId('custom-imported');
+      setJsonError(null);
+      setJsonDrawerOpen(false);
+      runtime.reset();
+      flashNotice(`成功导入沙盒工程（${result.drafts.length} 个程序段）并已实时编译。`);
+    },
+    [runtime, flashNotice],
+  );
+
+  const handleImportFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = typeof reader.result === 'string' ? reader.result : '';
+      setJsonInput(text);
+      applyImportedJson(text);
+    };
+    reader.readAsText(file, 'utf-8');
+    e.target.value = '';
+  };
+
+  useSimulatorShortcuts({
+    onToggleRun: handleToggleRun,
+    onSingleScan: handleSingleScan,
+    onResetMres: handleReset,
+  });
+
+  const shortcutItems = useMemo(
+    () => [
+      {
+        keys: 'Alt+R',
+        label: snapshot.metrics.running ? '停止 CPU' : '运行 CPU',
+        onTrigger: handleToggleRun,
+      },
+      { keys: 'Alt+S', label: '单步扫描 OB1', onTrigger: handleSingleScan },
+      { keys: 'Alt+M', label: '复位沙盒 (MRES)', onTrigger: handleReset },
+    ],
+    [snapshot.metrics.running, handleToggleRun, handleSingleScan, handleReset],
   );
 
   const activeTemplate = SANDBOX_TEMPLATES.find((t) => t.id === activeTemplateId);
@@ -416,11 +523,13 @@ export const LadderSandbox: React.FC = () => {
         onToggleRun={handleToggleRun}
         onSingleScan={handleSingleScan}
         onChangeInterval={setScanInterval}
-        onReset={() => runtime.reset()}
+        onReset={handleReset}
         programLabel="OB1_Custom_Sandbox"
       />
 
-      {/* Sandbox Starter Templates & Guidance */}
+      <ShortcutHintBar items={shortcutItems} variant="instrument" />
+
+      {/* Sandbox Starter Templates & Engineering Export/Import Bar */}
       <div className="plc-sim-sandbox-banner">
         <div className="plc-sim-sb-top">
           <div className="plc-sim-sb-title">
@@ -444,7 +553,114 @@ export const LadderSandbox: React.FC = () => {
         {activeTemplate && (
           <div className="plc-sim-sb-hint">{activeTemplate.hint}</div>
         )}
+
+        {/* Engineering Productivity Toolbar: .scl Export + Project JSON Copy/Import */}
+        <div className="plc-sb-tools" role="toolbar" aria-label="沙盒工程导入导出工具">
+          <button
+            type="button"
+            className="plc-sb-tool-btn is-primary"
+            onClick={handleExportSclFile}
+            title="生成带标准 FUNCTION_BLOCK 与 REGION 注释头的博途外部源文件 (.scl)"
+          >
+            <FileCode2 size={14} />
+            <span>导出博途 .scl 源文件</span>
+          </button>
+          <button
+            type="button"
+            className="plc-sb-tool-btn"
+            onClick={handleCopyProjectJson}
+            title="复制当前自定义梯形图工程 JSON，用于保存或分享"
+          >
+            {copiedJson ? <Check size={14} /> : <Copy size={14} />}
+            <span>{copiedJson ? '已复制工程 JSON' : '复制工程 JSON'}</span>
+          </button>
+          <button
+            type="button"
+            className={`plc-sb-tool-btn${jsonDrawerOpen ? ' is-open' : ''}`}
+            aria-expanded={jsonDrawerOpen}
+            onClick={handleToggleJsonDrawer}
+            title="粘贴或上传 JSON 恢复已保存的梯形图工程"
+          >
+            <FileJson size={14} />
+            <span>{jsonDrawerOpen ? '收起 JSON 导入/导出' : '导入 / 管理工程 JSON'}</span>
+          </button>
+          {statusNotice && (
+            <span className="plc-sb-notice" role="status">
+              {statusNotice}
+            </span>
+          )}
+        </div>
+
+        {jsonDrawerOpen && (
+          <div className="plc-sb-json-drawer">
+            <div className="plc-sb-json-head">
+              <span>粘贴沙盒工程 JSON 代码以恢复程序段，或下载 / 上传 <code>.json</code> 文件：</span>
+              <div className="plc-sb-json-actions">
+                <button type="button" className="plc-sim-mini-btn" onClick={handleDownloadJsonFile}>
+                  <Download size={13} /> 下载 .json
+                </button>
+                <button
+                  type="button"
+                  className="plc-sim-mini-btn"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload size={13} /> 从文件导入
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  className="plc-sr-only"
+                  onChange={handleImportFileChange}
+                />
+              </div>
+            </div>
+            <textarea
+              className="plc-sb-json-textarea"
+              rows={6}
+              value={jsonInput}
+              onChange={(e) => {
+                setJsonInput(e.target.value);
+                if (jsonError) setJsonError(null);
+              }}
+              placeholder='{"schema":"siemens-plc-academy.sandbox.v1","drafts":[...]}'
+              aria-label="沙盒工程 JSON 代码"
+            />
+            {jsonError && (
+              <div className="plc-sb-json-error" role="alert">
+                <AlertTriangle size={14} />
+                <span>{jsonError}</span>
+              </div>
+            )}
+            <div className="plc-sb-json-foot">
+              <button
+                type="button"
+                className="plc-sb-tool-btn is-primary"
+                onClick={() => applyImportedJson(jsonInput)}
+              >
+                <Upload size={14} /> 校验并加载该工程
+              </button>
+              <button
+                type="button"
+                className="plc-sb-tool-btn"
+                onClick={() => {
+                  setJsonInput(serializeSandboxProject(drafts));
+                  setJsonError(null);
+                }}
+              >
+                刷新为当前梯形图 JSON
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Live TIA-grade Static Double-Coil & Address Health Diagnostics + Expandable Cross-Ref (F11) */}
+      <CrossRefSandboxPanel
+        program={compiledProgram}
+        tagDefs={SANDBOX_TAG_DEFS}
+        onJumpToNetwork={handleJumpToNetwork}
+      />
 
       {/* Interactive Rung Builder */}
       <div className="plc-sim-builder-card">
@@ -820,7 +1036,7 @@ export const LadderSandbox: React.FC = () => {
 
       {/* Main Live Monitor + Field Panel */}
       <div className="plc-sim-main-split">
-        <div className="plc-sim-ladder-pane">
+        <div className="plc-sim-ladder-pane" ref={canvasPaneRef}>
           <div className="plc-sim-pane-bar">
             <div className="plc-sim-pane-title">
               <Layers size={14} />
@@ -832,26 +1048,15 @@ export const LadderSandbox: React.FC = () => {
               </span>
             )}
           </div>
-          <LandscapeSvgStage
-            title="自定义梯形图沙盒 · 实时能流监控 (LAD)"
-            subtitle={`Cycle #${snapshot.metrics.cycleCount} · ${snapshot.metrics.running ? 'RUN' : 'STOP'} · ${compiledProgram.networks.length} 个网段`}
-            compactHud
-            hint="直接点击蓝色 %I 触点可切换通断 · 横屏可查看全幅多网段能流"
-            scopeClassName="plc-sim-root"
-            fitMode="width"
-            controls={landscapeCpuControls}
-            landscapeFooter={landscapeFieldFooter}
-            landscapeFooterLabel="沙盒输入按钮"
-          >
-            <LadderCanvas
-              program={compiledProgram}
-              tagDefs={SANDBOX_TAG_DEFS}
-              tags={snapshot.tags}
-              evalSnapshot={snapshot.evalSnapshot}
-              running={snapshot.metrics.running}
-              onToggleInputTag={(t) => runtime.setFieldInput(t, !Boolean(runtime.getFieldInput(t)))}
-            />
-          </LandscapeSvgStage>
+          <LadderCanvas
+            program={compiledProgram}
+            tagDefs={SANDBOX_TAG_DEFS}
+            tags={snapshot.tags}
+            evalSnapshot={snapshot.evalSnapshot}
+            running={snapshot.metrics.running}
+            focusedNetwork={focusedNetwork}
+            onToggleInputTag={handleToggleInputFromCanvas}
+          />
         </div>
 
         <aside className="plc-sim-field-pane">
@@ -866,7 +1071,7 @@ export const LadderSandbox: React.FC = () => {
             running={snapshot.metrics.running}
             inputMode={inputMode}
             onInputModeChange={setInputMode}
-            onSetInput={(tag: string, val: TagValue) => runtime.setFieldInput(tag, val)}
+            onSetInput={handleSetFieldInput}
           />
         </aside>
       </div>
@@ -878,10 +1083,7 @@ export const LadderSandbox: React.FC = () => {
           samples={snapshot.traceSamples}
           paused={tracePaused}
           onTogglePause={toggleTracePaused}
-          onClear={() => runtime.clearTrace()}
-          landscapeTitle="自定义梯形图沙盒 · 逻辑分析仪波形 (Trace)"
-          landscapeControls={landscapeCpuControls}
-          landscapeFooter={landscapeFieldFooter}
+          onClear={handleClearTrace}
         />
         <SclCodePanel
           code={liveScl}

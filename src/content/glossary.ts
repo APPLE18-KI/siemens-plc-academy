@@ -293,7 +293,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     term: '强制',
     aliases: ['强制表'],
     category: '工程实践',
-    short: '调试时把某个输入/输出点“锁定”在指定值，不管程序怎么算都不变。会绕过程序里的安全逻辑，用完必须取消（MAINT 灯会提醒）。',
+    short: '调试时把某个输入/输出点“锁定”在指定值，不管程序怎么算都不变。会绕过程序里的安全逻辑，用完必须取消（在强制表里点“停止强制”）。',
     lessonId: 'l06b-troubleshooting-safety',
   },
 ];

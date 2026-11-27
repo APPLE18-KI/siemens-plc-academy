@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Cpu, Play, RotateCcw, Square, StepForward } from 'lucide-react';
 import type { ScanMetrics } from '../../../types/plc';
 import type { ScanIntervalOption } from '../../../core/plc';
@@ -21,7 +21,7 @@ const INTERVAL_OPTIONS: { ms: ScanIntervalOption; label: string; title: string }
   { ms: 500, label: '500ms 慢放', title: '逐拍教学慢放模式 (2Hz)' },
 ];
 
-export const CpuStatusBar: React.FC<CpuStatusBarProps> = ({
+export const CpuStatusBar: React.FC<CpuStatusBarProps> = memo(function CpuStatusBar({
   metrics,
   intervalMs,
   onToggleRun,
@@ -30,7 +30,7 @@ export const CpuStatusBar: React.FC<CpuStatusBarProps> = ({
   onReset,
   compact = false,
   programLabel,
-}) => {
+}) {
   const { running, cycleCount, lastScanMs } = metrics;
 
   return (
@@ -121,4 +121,4 @@ export const CpuStatusBar: React.FC<CpuStatusBarProps> = ({
       </div>
     </div>
   );
-};
+});

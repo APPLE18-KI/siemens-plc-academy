@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { haptic } from '../../../app/native/platform';
 import {
   AlertOctagon,
@@ -36,10 +36,12 @@ interface FieldPanelProps {
   compact?: boolean;
 }
 
-export const FieldPanel: React.FC<FieldPanelProps> = ({
+const EMPTY_ANALOG: AnalogInputMeta[] = [];
+
+export const FieldPanel: React.FC<FieldPanelProps> = memo(function FieldPanel({
   tagDefs,
   fieldInputMetas,
-  analogInputMetas = [],
+  analogInputMetas = EMPTY_ANALOG,
   fieldOutputMetas,
   fieldInputs,
   pii,
@@ -52,8 +54,8 @@ export const FieldPanel: React.FC<FieldPanelProps> = ({
   closedLoopTank = false,
   onToggleClosedLoopTank,
   compact = false,
-}) => {
-  const defByName = new Map(tagDefs.map((d) => [d.name, d]));
+}) {
+  const defByName = useMemo(() => new Map(tagDefs.map((d) => [d.name, d])), [tagDefs]);
 
   const renderOutputIcon = (role: FieldOutputMeta['role'], active: boolean) => {
     switch (role) {
@@ -78,10 +80,14 @@ export const FieldPanel: React.FC<FieldPanelProps> = ({
     }
   };
 
-  const memoryWatchTags = tagDefs.filter((d) => {
-    const a = d.address.toUpperCase();
-    return a.startsWith('%M') || a.startsWith('DB');
-  });
+  const memoryWatchTags = useMemo(
+    () =>
+      tagDefs.filter((d) => {
+        const a = d.address.toUpperCase();
+        return a.startsWith('%M') || a.startsWith('DB');
+      }),
+    [tagDefs],
+  );
 
   return (
     <div className={`plc-sim-field-panel ${compact ? 'is-compact' : ''}`}>
@@ -371,4 +377,4 @@ export const FieldPanel: React.FC<FieldPanelProps> = ({
       )}
     </div>
   );
-};
+});

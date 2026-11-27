@@ -4,20 +4,26 @@ import {
   ArrowRight,
   BookOpen,
   Boxes,
+  Briefcase,
   CheckCircle2,
   Clock,
+  Compass,
   Cpu,
   FolderKanban,
-  GitBranch,
   Play,
+  Search,
+  Sliders,
   Star,
-  TerminalSquare,
+  Wrench,
+  type LucideIcon,
 } from 'lucide-react';
-import { chapters, examples, lessons, modelRegistry, simPresets, workflowRegistry } from '../../registry';
-import { formatDuration, totalLessonMinutes } from '../../content/curriculum';
-import { useProgress } from '../store/progressStore';
-import { Term } from '../../components/Term';
+import { chapters, formatDuration, lessons, totalLessonMinutes } from '../../content/curriculum';
 import { FaqSection } from '../../components/FaqSection';
+import { Term } from '../../components/Term';
+import { HomeStudyStrip } from '../../features/study/HomeStudyStrip';
+import { preloadRoute } from '../layout/routePreload';
+import { triggerCommandPaletteOpen } from '../layout/shortcuts';
+import { useProgress } from '../store/progressStore';
 
 interface PipelineNode {
   id: string;
@@ -27,6 +33,25 @@ interface PipelineNode {
   desc: string;
   route: string;
   cta: string;
+}
+
+interface CustomTrack {
+  id: 'beginner' | 'pro-upgrade' | 'interview';
+  index: string;
+  tabLabel: string;
+  shortTag: string;
+  duration: string;
+  headline: string;
+  whoFor: string;
+  outcome: string;
+  lessonIds: string[];
+  workbenches: Array<{
+    label: string;
+    detail: string;
+    to: string;
+    tag: string;
+  }>;
+  Icon: LucideIcon;
 }
 
 const PIPELINE_NODES: PipelineNode[] = [
@@ -44,7 +69,7 @@ const PIPELINE_NODES: PipelineNode[] = [
     step: '第 2 步',
     name: '写程序、看效果',
     summary: '在网页上运行梯形图',
-    desc: '在浏览器里直接运行梯形图：按下按钮，能看到哪条线通电、哪个输出亮起，还能单步慢放，一步步看清 PLC 是怎么执行的。',
+    desc: '在浏览器里直接运行梯形图：按下按钮，能看到哪条线通电、哪个输出亮起，还能单步慢放、查交叉引用与双线圈。',
     route: '/sim',
     cta: '打开仿真实验室',
   },
@@ -53,7 +78,7 @@ const PIPELINE_NODES: PipelineNode[] = [
     step: '第 3 步',
     name: '控制一台设备',
     summary: '传送带、水箱、红绿灯模型',
-    desc: '用程序去控制会动的设备模型：分拣传送带、恒压供水水箱、十字路口红绿灯，还可以人为制造故障，练习排查。',
+    desc: '用程序去控制会动的设备模型：分拣传送带、恒压供水水箱、十字路口红绿灯，还可以抽取盲测故障工单练习排查。',
     route: '/models',
     cta: '查看设备模型',
   },
@@ -62,9 +87,107 @@ const PIPELINE_NODES: PipelineNode[] = [
     step: '第 4 步',
     name: '完成一个项目',
     summary: '综合练习 + 可导入博途的源码',
-    desc: '把前面学的串起来，完成一个分拣 + 温控的小型工作站综合练习，附带可以导入 TIA Portal 的 .scl 源文件和项目说明。',
+    desc: '把前面学的串起来，完成分拣 + 热压温控工作站综合项目，含 PROFINET 1号报文实验台、可下载 .scl 源码与面试模拟。',
     route: '/capstone',
     cta: '了解毕业项目',
+  },
+];
+
+const CUSTOM_TRACKS: CustomTrack[] = [
+  {
+    id: 'beginner',
+    index: 'TRACK 01',
+    tabLabel: '零基础电工 / 转行入门',
+    shortTag: '零基础起步',
+    duration: '建议 10–14 天 · 每日 45 分钟',
+    headline: '先打通“接线 → 梯形图通电 → 启保停与定时”基本功',
+    whoFor: '平时只接过继电器、空开，或完全没碰过 TIA Portal，想在不买硬件的情况下快速看懂梯形图并写出电机控制程序。',
+    outcome: '学完能独立判断 NPN/PNP 与 1M 公共端接线、写出带急停和互锁的启保停/星三角程序，并在网页仿真与接线台里调通。',
+    lessonIds: [
+      'l00-before-you-start',
+      'l01-what-is-plc',
+      'l02-wiring-npn-pnp',
+      'l05-seal-in-jog',
+      'l07-iec-timers',
+    ],
+    workbenches: [
+      {
+        tag: '仿真直达',
+        label: '三相电机起保停自锁 + 点动仿真',
+        detail: '边按现场按钮边看绿色能流、停止优先与自锁支路',
+        to: '/sim?preset=seal-in-motor',
+      },
+      {
+        tag: '接线实训',
+        label: 'S7-1200 CPU 1214C 接线与 1M 极性模型',
+        detail: '动手切换 PNP/NPN 传感器与 1M 公共端，直观验证光耦导通',
+        to: '/models?model=s7-1200-wiring',
+      },
+    ],
+    Icon: Wrench,
+  },
+  {
+    id: 'pro-upgrade',
+    index: 'TRACK 02',
+    tabLabel: '在职电气技术员补齐 SCL / PID',
+    shortTag: '进阶补强',
+    duration: '建议 5–7 天 · 聚焦模块化与闭环',
+    headline: '从“堆梯形图”升级为 FB/UDT 模块化、SCL 状态机与 PID 闭环',
+    whoFor: '已经会画常规启停、定时计数，但在大项目里变量散乱、模拟量 4–20mA 换算发怵、SCL 状态机和 PID 调参缺少系统章法。',
+    outcome: '掌握一套设备写一个 FB + UDT 复用的工程范式，熟练完成 NORM_X/SCALE_X 断线保护、SCL CASE 状态机与 PID_Compact 恒压温控。',
+    lessonIds: [
+      'l10-fc-fb-instance-db',
+      'l11-udt-global-db',
+      'l12-scl-state-machine',
+      'l13-analog-norm-scale',
+      'l14-pid-compact-process',
+    ],
+    workbenches: [
+      {
+        tag: '模拟量实训',
+        label: '4–20mA (0..27648) NORM_X / SCALE_X 仿真',
+        detail: '拖动模拟量通道 %IW64，验证工程量缩放与迟滞补水保护',
+        to: '/sim?preset=analog-scale-pid',
+      },
+      {
+        tag: '闭环孪生',
+        label: '双泵恒压供水与热工 PID 闭环模型',
+        detail: '注入变送器断线故障，在三曲线趋势图里调试 PID 响应',
+        to: '/models?model=tank-pressure-pid',
+      },
+    ],
+    Icon: Sliders,
+  },
+  {
+    id: 'interview',
+    index: 'TRACK 03',
+    tabLabel: '自动化应届 / 社招面试冲刺',
+    shortTag: '求职冲刺',
+    duration: '建议 3–5 天 · 高频追问与简历定稿',
+    headline: '吃透扫描周期双线圈、PROFINET 1号报文与简历项目深挖题',
+    whoFor: '正在准备 PLC 电气自动化 / 非标控制岗位面试，需要快速把简历项目讲出工程细节、防住面试官在急停、报文、排错上的连环追问。',
+    outcome: '能清晰复述 PII/PIQ 与双线圈原理、STW1 047E→047F 上升沿使能逻辑，完成 15 道高频面试采分点自测并拿到可复用的 STAR 简历描述。',
+    lessonIds: [
+      'l03-scan-cycle-pii-piq',
+      'l06b-troubleshooting-safety',
+      'l12-scl-state-machine',
+      'l15-profinet-project-delivery',
+    ],
+    workbenches: [
+      {
+        tag: '面试冲刺',
+        label: '毕业大项目 · STAR 简历与 15 道面试自测',
+        detail: '隐藏答案先自述、勾选采分点复盘，导出纯文本/Markdown 简历',
+        to: '/capstone?tab=resume',
+      },
+      {
+        tag: '报文实验',
+        label: 'PROFINET 标准 1 号报文 (047E→047F) 实验台',
+        detail: '逐位点击 STW1 控制字与 16#4000 转速给定，彻底搞懂驱动通讯',
+        to: '/capstone?tab=arch',
+      },
+    ],
+    Icon: Briefcase,
   },
 ];
 
@@ -106,24 +229,49 @@ const FALLBACK_STAGES = [
   },
 ];
 
+const SIM_PRESET_COUNT = 6;
+const DIGITAL_TWIN_COUNT = 4;
+const EXAMPLE_CASE_COUNT = 6;
+const WORKFLOW_ANIM_COUNT = 3;
+
 export const HomePage: React.FC = () => {
   const { state, getStats } = useProgress();
   const [activePipeIdx, setActivePipeIdx] = useState(0);
+  const [activeTrackId, setActiveTrackId] = useState<CustomTrack['id']>('beginner');
 
   const safeChapters = Array.isArray(chapters) && chapters.length > 0 ? chapters : FALLBACK_STAGES;
   const safeLessons = useMemo(
     () => (Array.isArray(lessons) ? [...lessons].sort((a, b) => a.order - b.order) : []),
     []
   );
-  const safeExamples = Array.isArray(examples) ? examples : [];
-  const simCount = simPresets ? Object.keys(simPresets).length : 6;
-  const modelCount = modelRegistry ? Object.keys(modelRegistry).length : 4;
-  const workflowCount = workflowRegistry ? Object.keys(workflowRegistry).length : 3;
-  const totalHours = Math.round(totalLessonMinutes(safeLessons) / 60);
+  const lessonById = useMemo(() => {
+    const map = new Map<string, (typeof safeLessons)[number]>();
+    safeLessons.forEach((l) => map.set(l.id, l));
+    return map;
+  }, [safeLessons]);
 
+  const totalHours = Math.round(totalLessonMinutes(safeLessons) / 60);
   const stats = getStats(safeLessons.length);
   const activePipe = PIPELINE_NODES[activePipeIdx];
   const firstLesson = safeLessons[0];
+
+  const activeTrack =
+    CUSTOM_TRACKS.find((t) => t.id === activeTrackId) ?? CUSTOM_TRACKS[0];
+
+  const activeTrackLessons = useMemo(
+    () =>
+      activeTrack.lessonIds
+        .map((id) => lessonById.get(id))
+        .filter((item): item is (typeof safeLessons)[number] => Boolean(item)),
+    [activeTrack.lessonIds, lessonById]
+  );
+
+  const trackCompletedCount = activeTrackLessons.filter((l) =>
+    state.completedLessonIds.includes(l.id)
+  ).length;
+  const trackNextLesson =
+    activeTrackLessons.find((l) => !state.completedLessonIds.includes(l.id)) ??
+    activeTrackLessons[0];
 
   const continueTarget = useMemo(() => {
     if (!state.lastVisitedLessonId) return null;
@@ -135,8 +283,8 @@ export const HomePage: React.FC = () => {
   const pillars = [
     {
       title: '分步课程',
-      tag: '课程',
-      desc: `${safeLessons.length} 讲，从“PLC 是什么”讲到完整项目。每讲都有动手练习、小测验和答案解析。`,
+      tag: '01 · 课程',
+      desc: `${safeLessons.length} 讲，从“PLC 是什么”讲到完整项目。每讲都有动手练习、讲课模式、随堂笔记与测验解析。`,
       to: '/learn',
       cta: '查看课程目录',
       metric: `已完成 ${stats.completedLessons}/${safeLessons.length}`,
@@ -144,8 +292,8 @@ export const HomePage: React.FC = () => {
     },
     {
       title: '仿真实验室',
-      tag: '仿真',
-      desc: `${simCount} 个现成的梯形图练习，外加一个可以自己搭程序的沙盒。按按钮、看通电、单步慢放。`,
+      tag: '02 · 仿真',
+      desc: `${SIM_PRESET_COUNT} 个经典梯形图预设 + 自由沙盒。支持博途监控视图、交叉引用 F11、双线圈体检与示波器导出。`,
       to: '/sim',
       cta: '打开仿真器',
       metric: '无需硬件',
@@ -153,8 +301,8 @@ export const HomePage: React.FC = () => {
     },
     {
       title: '设备模型',
-      tag: '模型',
-      desc: `${modelCount} 套会动的设备：传送带分拣、恒压供水、十字路口红绿灯等，可以模拟故障来练习排查。`,
+      tag: '03 · 孪生',
+      desc: `${DIGITAL_TWIN_COUNT} 套会动的 2.5D 设备：硬件接线台、视觉分拣带、恒压 PID 水箱、十字路口，含 12 道盲测故障排故。`,
       to: '/models',
       cta: '查看模型',
       metric: '可注入故障',
@@ -162,8 +310,8 @@ export const HomePage: React.FC = () => {
     },
     {
       title: '工程实例',
-      tag: '实例',
-      desc: `${safeExamples.length || 6} 个常见控制案例，每个都有 I/O 表、梯形图与 SCL 代码，以及调试时容易踩的坑。`,
+      tag: '04 · 实例',
+      desc: `${EXAMPLE_CASE_COUNT} 个常见工业案例，配备标准 I/O 表 .csv 与博途 .scl 源码下载、FAT 五步上电点检表。`,
       to: '/examples',
       cta: '浏览实例',
       metric: `已看 ${stats.examplesStudied} 个`,
@@ -179,7 +327,7 @@ export const HomePage: React.FC = () => {
           <div>
             <div className="telemetry-eyebrow">
               <span className="telemetry-dot" />
-              西门子 S7-1200 · 零基础入门
+              西门子 S7-1200 · 互动实训与数字孪生 v3.0
             </div>
 
             <h1 className="hero-title">
@@ -189,74 +337,99 @@ export const HomePage: React.FC = () => {
             </h1>
 
             <p className="hero-desc">
-              不需要买硬件，打开浏览器就能练。跟着 {safeLessons.length} 讲课程一步步学，学完后你能：
+              不需要买硬件，打开浏览器就能练。跟着 {safeLessons.length} 讲互动课程一步步学，学完后你能：
             </p>
             <ul className="hero-outcomes">
               <li>
                 <CheckCircle2 size={16} />
-                看懂按钮、传感器、指示灯是怎么接到<Term name="PLC">PLC</Term>上的
+                <span>
+                  看懂按钮、传感器、指示灯是怎么接到<Term name="PLC">PLC</Term>上的
+                </span>
               </li>
               <li>
                 <CheckCircle2 size={16} />
-                在<Term name="TIA Portal">博途</Term>里写出电机启停、延时、计数等常见程序
+                <span>
+                  在<Term name="TIA Portal">博途</Term>里写出电机启停、延时、模拟量与 PID 闭环程序
+                </span>
               </li>
               <li>
                 <CheckCircle2 size={16} />
-                先在电脑上仿真调通，再放心地上真实设备
+                <span>先在仿真器和 2.5D 设备模型里调通排错，再放心地上真实设备</span>
               </li>
             </ul>
 
             <div className="hero-cta-row">
               <Link
                 to={firstLesson ? `/learn/${firstLesson.id}` : '/learn'}
+                onMouseEnter={() => preloadRoute('/learn/l00-before-you-start')}
+                onFocus={() => preloadRoute('/learn/l00-before-you-start')}
                 className="btn btn-primary btn-lg hero-cta-main"
               >
                 <Play size={16} fill="currentColor" />
                 新手从这里开始
               </Link>
-              <Link
-                to="/ide"
-                className="btn btn-lg"
-                style={{
-                  borderColor: 'var(--siemens-teal-border)',
-                  background: 'var(--siemens-teal-soft)',
-                }}
-              >
-                <TerminalSquare size={16} />
-                博途在线编程台
-              </Link>
               {continueTarget && (
-                <Link to={`/learn/${continueTarget.id}`} className="btn btn-lg">
+                <Link
+                  to={`/learn/${continueTarget.id}`}
+                  onMouseEnter={() => preloadRoute(`/learn/${continueTarget.id}`)}
+                  onFocus={() => preloadRoute(`/learn/${continueTarget.id}`)}
+                  className="btn btn-lg"
+                >
                   继续第 {continueTarget.order} 讲
                   <ArrowRight size={15} />
                 </Link>
               )}
             </div>
             <div className="hero-secondary-links">
-              <Link to="/ide">亲手写 SCL 控产线</Link>
+              <Link
+                to="/sim"
+                onMouseEnter={() => preloadRoute('/sim')}
+                onFocus={() => preloadRoute('/sim')}
+              >
+                先玩一下仿真器
+              </Link>
               <span aria-hidden="true">·</span>
-              <Link to="/sim">先玩梯形图仿真器</Link>
+              <Link
+                to="/learn"
+                onMouseEnter={() => preloadRoute('/learn')}
+                onFocus={() => preloadRoute('/learn')}
+              >
+                查看全部课程
+              </Link>
               <span aria-hidden="true">·</span>
-              <Link to="/learn">查看全部课程</Link>
+              <Link
+                to="/glossary"
+                onMouseEnter={() => preloadRoute('/glossary')}
+                onFocus={() => preloadRoute('/glossary')}
+              >
+                术语表
+              </Link>
               <span aria-hidden="true">·</span>
-              <Link to="/glossary">术语表</Link>
+              <button
+                type="button"
+                className="hero-cmdk-link"
+                onClick={() => triggerCommandPaletteOpen()}
+              >
+                <Search size={13} aria-hidden="true" />
+                全站速查 (Ctrl+K)
+              </button>
             </div>
 
             <div className="hero-metrics-bar">
               <div className="hero-metric">
                 <span className="hero-metric-val">{safeLessons.length}</span>
-                <span className="hero-metric-lbl">讲课程</span>
+                <span className="hero-metric-lbl">讲互动课程</span>
               </div>
               <div className="hero-metric">
                 <span className="hero-metric-val">约 {totalHours}</span>
                 <span className="hero-metric-lbl">小时学完</span>
               </div>
               <div className="hero-metric">
-                <span className="hero-metric-val">{simCount}</span>
-                <span className="hero-metric-lbl">个仿真练习</span>
+                <span className="hero-metric-val">{SIM_PRESET_COUNT}</span>
+                <span className="hero-metric-lbl">个仿真预设</span>
               </div>
               <div className="hero-metric">
-                <span className="hero-metric-val" style={{ color: 'var(--power-green)' }}>
+                <span className="hero-metric-val" style={{ color: 'var(--green-text, var(--power-green))' }}>
                   {stats.lessonPct}%
                 </span>
                 <span className="hero-metric-lbl">你的课程进度</span>
@@ -267,10 +440,10 @@ export const HomePage: React.FC = () => {
           {/* 学习路线示意 */}
           <div className="hero-rack-card">
             <div className="hero-rack-bar">
-              <span>学习路线 · 4 步</span>
+              <span>LEARNING PIPELINE // 4 STEPS</span>
               <span className="hero-rack-status">
                 <span className="hero-rack-led" />
-                运行中
+                RUN
               </span>
             </div>
 
@@ -322,26 +495,57 @@ export const HomePage: React.FC = () => {
                   />
                   <rect x="0" y="0" width="116" height="24" rx="10" fill="#007d7d" />
                   <rect x="0" y="14" width="116" height="10" fill="#007d7d" />
-                  <text x="10" y="16" fill="#ffffff" fontSize="11" fontWeight="700" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                  <text
+                    x="10"
+                    y="16"
+                    fill="#ffffff"
+                    fontSize="11"
+                    fontWeight="700"
+                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                  >
                     SIEMENS S7-1200
                   </text>
 
                   {/* Status LEDs */}
                   <circle cx="18" cy="40" r="3.5" fill="#10b981" />
-                  <text x="27" y="43" fill="#9fb4c8" fontSize="10.4" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                  <text
+                    x="27"
+                    y="43"
+                    fill="#9fb4c8"
+                    fontSize="10.4"
+                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                  >
                     RUN/STOP
                   </text>
                   <circle cx="18" cy="54" r="3.5" fill="#334155" />
-                  <text x="27" y="57" fill="#94a3b8" fontSize="10.4" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                  <text
+                    x="27"
+                    y="57"
+                    fill="#94a3b8"
+                    fontSize="10.4"
+                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                  >
                     ERROR
                   </text>
                   <circle cx="18" cy="68" r="3.5" fill="#f59e0b" opacity="0.85" />
-                  <text x="27" y="71" fill="#9fb4c8" fontSize="10.4" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                  <text
+                    x="27"
+                    y="71"
+                    fill="#9fb4c8"
+                    fontSize="10.4"
+                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                  >
                     MAINT
                   </text>
 
                   {/* DI / DQ LED Strip */}
-                  <text x="12" y="92" fill="#6d839a" fontSize="9.8" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                  <text
+                    x="12"
+                    y="92"
+                    fill="#6d839a"
+                    fontSize="9.8"
+                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                  >
                     DI %I0.0–0.7
                   </text>
                   {[0, 1, 2, 3, 4, 5, 6, 7].map((ch) => (
@@ -355,7 +559,13 @@ export const HomePage: React.FC = () => {
                       fill={ch === 0 || ch === 2 || ch === 5 ? '#38bdf8' : '#223142'}
                     />
                   ))}
-                  <text x="12" y="117" fill="#6d839a" fontSize="9.8" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                  <text
+                    x="12"
+                    y="117"
+                    fill="#6d839a"
+                    fontSize="9.8"
+                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                  >
                     DQ %Q0.0–0.5
                   </text>
                   {[0, 1, 2, 3, 4, 5].map((ch) => (
@@ -389,26 +599,65 @@ export const HomePage: React.FC = () => {
                     stroke={activePipeIdx === 1 ? '#14d4d4' : '#2b3e52'}
                     strokeWidth={activePipeIdx === 1 ? '2' : '1.2'}
                   />
-                  <text x="12" y="22" fill="#2dd4bf" fontSize="11" fontWeight="700" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                  <text
+                    x="12"
+                    y="22"
+                    fill="#2dd4bf"
+                    fontSize="11"
+                    fontWeight="700"
+                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                  >
                     梯形图仿真
                   </text>
                   {/* Mini Energized Ladder Rung */}
                   <line x1="14" y1="42" x2="14" y2="90" stroke="#00b8b8" strokeWidth="2.5" />
                   <line x1="14" y1="54" x2="34" y2="54" stroke="#10b981" strokeWidth="2" />
-                  <text x="34" y="57" fill="#10b981" fontSize="11" fontWeight="700" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                  <text
+                    x="34"
+                    y="57"
+                    fill="#10b981"
+                    fontSize="11"
+                    fontWeight="700"
+                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                  >
                     | |
                   </text>
                   <line x1="53" y1="54" x2="74" y2="54" stroke="#10b981" strokeWidth="2" />
-                  <text x="74" y="57" fill="#f59e0b" fontSize="11" fontWeight="700" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                  <text
+                    x="74"
+                    y="57"
+                    fill="#f59e0b"
+                    fontSize="11"
+                    fontWeight="700"
+                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                  >
                     ( )
                   </text>
                   <line x1="92" y1="54" x2="100" y2="54" stroke="#00b8b8" strokeWidth="2" />
                   {/* Seal-in branch */}
-                  <path d="M 24 54 L 24 76 L 34 76 M 53 76 L 62 76 L 62 54" fill="none" stroke="#10b981" strokeWidth="1.8" />
-                  <text x="34" y="79" fill="#10b981" fontSize="11" fontWeight="700" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                  <path
+                    d="M 24 54 L 24 76 L 34 76 M 53 76 L 62 76 L 62 54"
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth="1.8"
+                  />
+                  <text
+                    x="34"
+                    y="79"
+                    fill="#10b981"
+                    fontSize="11"
+                    fontWeight="700"
+                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                  >
                     | |
                   </text>
-                  <text x="12" y="106" fill="#8ca3ba" fontSize="10.4" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                  <text
+                    x="12"
+                    y="106"
+                    fill="#8ca3ba"
+                    fontSize="10.4"
+                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                  >
                     看见“通电”
                   </text>
                 </g>
@@ -427,7 +676,14 @@ export const HomePage: React.FC = () => {
                     stroke={activePipeIdx === 2 ? '#14d4d4' : '#2b3e52'}
                     strokeWidth={activePipeIdx === 2 ? '2' : '1.2'}
                   />
-                  <text x="12" y="22" fill="#38bdf8" fontSize="11" fontWeight="700" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                  <text
+                    x="12"
+                    y="22"
+                    fill="#38bdf8"
+                    fontSize="11"
+                    fontWeight="700"
+                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                  >
                     设备模型
                   </text>
                   {/* Conveyor + Workpiece Icon */}
@@ -437,7 +693,13 @@ export const HomePage: React.FC = () => {
                   <circle cx="88" cy="77" r="4" fill="#38bdf8" />
                   <rect x="44" y="47" width="24" height="20" rx="3" fill="#009999" stroke="#2dd4bf" />
                   <line x1="56" y1="32" x2="56" y2="46" stroke="#10b981" strokeWidth="1.6" strokeDasharray="3 2" />
-                  <text x="12" y="106" fill="#8ca3ba" fontSize="10.4" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                  <text
+                    x="12"
+                    y="106"
+                    fill="#8ca3ba"
+                    fontSize="10.4"
+                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                  >
                     4 套设备模型
                   </text>
                 </g>
@@ -456,7 +718,14 @@ export const HomePage: React.FC = () => {
                     stroke={activePipeIdx === 3 ? '#f59e0b' : '#4a3d22'}
                     strokeWidth={activePipeIdx === 3 ? '2' : '1.2'}
                   />
-                  <text x="11" y="22" fill="#f59e0b" fontSize="11" fontWeight="700" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                  <text
+                    x="11"
+                    y="22"
+                    fill="#f59e0b"
+                    fontSize="11"
+                    fontWeight="700"
+                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                  >
                     毕业项目 ★
                   </text>
                   {/* Mini SCADA Trend */}
@@ -472,7 +741,13 @@ export const HomePage: React.FC = () => {
                   <text x="11" y="94" fill="#e5d5b3" fontSize="10.4" fontWeight="600">
                     锂电视觉热压站
                   </text>
-                  <text x="11" y="108" fill="#a89b7e" fontSize="10.4" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                  <text
+                    x="11"
+                    y="108"
+                    fill="#a89b7e"
+                    fontSize="10.4"
+                    fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                  >
                     含博途源码
                   </text>
                 </g>
@@ -486,7 +761,13 @@ export const HomePage: React.FC = () => {
                   strokeDasharray="4 4"
                   opacity="0.7"
                 />
-                <text x="184" y="213" fill="#6f879e" fontSize="11" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                <text
+                  x="184"
+                  y="213"
+                  fill="#6f879e"
+                  fontSize="11"
+                  fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                >
                   学习路线：认识硬件 → 仿真调试 → 控制设备 → 完成项目
                 </text>
               </svg>
@@ -513,10 +794,199 @@ export const HomePage: React.FC = () => {
                 <div className="hero-pipe-summary">{activePipe.summary}</div>
                 <div>{activePipe.desc}</div>
               </div>
-              <Link to={activePipe.route} className="btn btn-sm hero-pipe-cta">
+              <Link
+                to={activePipe.route}
+                onMouseEnter={() => preloadRoute(activePipe.route)}
+                onFocus={() => preloadRoute(activePipe.route)}
+                className="btn btn-sm hero-pipe-cta"
+              >
                 {activePipe.cta}
                 <ArrowRight size={13} />
               </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <HomeStudyStrip />
+
+      {/* ==================== v3.0 起点自测与定制学习路线 ==================== */}
+      <section className="home-section track-planner-section" aria-labelledby="track-planner-heading">
+        <div className="spa-container">
+          <div className="section-header">
+            <div>
+              <div className="telemetry-eyebrow">
+                <Compass size={14} />
+                起点自测 · 定制学习路线
+              </div>
+              <h2 id="track-planner-heading" className="section-title">
+                按你的当前基础，直接进入最合适的课程序列
+              </h2>
+              <p className="section-sub">
+                不必从头盲刷：选一个最贴近你现状的身份，立即拿到精选课程顺序与对应实训台直达入口。
+              </p>
+            </div>
+          </div>
+
+          <div className="track-planner-shell">
+            <div className="track-switcher" role="tablist" aria-label="选择你的学习起点">
+              {CUSTOM_TRACKS.map((track) => {
+                const Icon = track.Icon;
+                const isSelected = track.id === activeTrack.id;
+                return (
+                  <button
+                    key={track.id}
+                    type="button"
+                    role="tab"
+                    id={`track-tab-${track.id}`}
+                    aria-selected={isSelected}
+                    aria-controls={`track-panel-${track.id}`}
+                    className={`track-tab${isSelected ? ' is-active' : ''}`}
+                    onClick={() => setActiveTrackId(track.id)}
+                  >
+                    <span className="track-tab-top">
+                      <span className="track-tab-index">{track.index}</span>
+                      <span className="track-tab-icon" aria-hidden="true">
+                        <Icon size={16} />
+                      </span>
+                    </span>
+                    <span className="track-tab-title">{track.tabLabel}</span>
+                    <span className="track-tab-meta">{track.duration}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div
+              id={`track-panel-${activeTrack.id}`}
+              role="tabpanel"
+              aria-labelledby={`track-tab-${activeTrack.id}`}
+              className="track-panel"
+            >
+              <div className="track-panel-overview">
+                <div className="track-panel-head">
+                  <div>
+                    <span className="badge badge-teal badge-mono">{activeTrack.shortTag}</span>
+                    <h3 className="track-panel-title">{activeTrack.headline}</h3>
+                  </div>
+                  <div className="track-progress-chip">
+                    <span>本路线进度</span>
+                    <strong>
+                      {trackCompletedCount} / {activeTrackLessons.length} 讲
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="track-brief-grid">
+                  <div className="track-brief-cell">
+                    <span className="track-brief-label">适合谁</span>
+                    <p>{activeTrack.whoFor}</p>
+                  </div>
+                  <div className="track-brief-cell">
+                    <span className="track-brief-label">达成目标</span>
+                    <p>{activeTrack.outcome}</p>
+                  </div>
+                </div>
+
+                <div className="track-cta-bar">
+                  {trackNextLesson && (
+                    <Link
+                      to={`/learn/${trackNextLesson.id}`}
+                      onMouseEnter={() => preloadRoute(`/learn/${trackNextLesson.id}`)}
+                      onFocus={() => preloadRoute(`/learn/${trackNextLesson.id}`)}
+                      className="btn btn-primary"
+                    >
+                      <Play size={15} fill="currentColor" />
+                      {trackCompletedCount > 0 && trackCompletedCount < activeTrackLessons.length
+                        ? `继续本路线：第 ${trackNextLesson.order} 讲`
+                        : `从第 ${trackNextLesson.order} 讲开始本路线`}
+                    </Link>
+                  )}
+                  <Link
+                    to={activeTrack.workbenches[0].to}
+                    onMouseEnter={() => preloadRoute(activeTrack.workbenches[0].to)}
+                    onFocus={() => preloadRoute(activeTrack.workbenches[0].to)}
+                    className="btn"
+                  >
+                    直达主推实训台
+                    <ArrowRight size={14} />
+                  </Link>
+                </div>
+              </div>
+
+              <div className="track-panel-columns">
+                <div className="track-lessons-col">
+                  <div className="track-col-heading">
+                    <span>推荐学习顺序</span>
+                    <span className="track-col-mono">
+                      CURATED SEQUENCE · {activeTrackLessons.length} LESSONS
+                    </span>
+                  </div>
+                  <ol className="track-lesson-list">
+                    {activeTrackLessons.map((lesson, idx) => {
+                      const done = state.completedLessonIds.includes(lesson.id);
+                      return (
+                        <li key={lesson.id}>
+                          <Link
+                            to={`/learn/${lesson.id}`}
+                            onMouseEnter={() => preloadRoute(`/learn/${lesson.id}`)}
+                            onFocus={() => preloadRoute(`/learn/${lesson.id}`)}
+                            className={`track-lesson-item${done ? ' is-done' : ''}`}
+                          >
+                            <span className="track-lesson-step">
+                              {String(idx + 1).padStart(2, '0')}
+                            </span>
+                            <span className="track-lesson-info">
+                              <span className="track-lesson-name">
+                                第 {lesson.order} 讲 · {lesson.title}
+                              </span>
+                              <span className="track-lesson-recap">
+                                {lesson.recap || lesson.subtitle}
+                              </span>
+                            </span>
+                            <span className="track-lesson-end">
+                              {done ? (
+                                <CheckCircle2
+                                  size={16}
+                                  color="var(--green-text, var(--power-green))"
+                                  aria-label="已掌握"
+                                />
+                              ) : (
+                                <ArrowRight size={14} aria-hidden="true" />
+                              )}
+                            </span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+
+                <div className="track-workbenches-col">
+                  <div className="track-col-heading">
+                    <span>直达配套实训台</span>
+                    <span className="track-col-mono">HANDS-ON LABS</span>
+                  </div>
+                  <div className="track-wb-list">
+                    {activeTrack.workbenches.map((wb) => (
+                      <Link
+                        key={wb.to}
+                        to={wb.to}
+                        onMouseEnter={() => preloadRoute(wb.to)}
+                        onFocus={() => preloadRoute(wb.to)}
+                        className="track-wb-card"
+                      >
+                        <div className="track-wb-top">
+                          <span className="badge badge-mono">{wb.tag}</span>
+                          <ArrowRight size={14} aria-hidden="true" />
+                        </div>
+                        <div className="track-wb-title">{wb.label}</div>
+                        <p className="track-wb-detail">{wb.detail}</p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -532,7 +1002,9 @@ export const HomePage: React.FC = () => {
                 网站里有什么
               </div>
               <h2 className="section-title">课程、仿真、设备模型和实例，都在一个地方</h2>
-              <p className="section-sub">它们用的是同一套变量和仿真引擎，课程里学到的，马上能在仿真器和模型里试。</p>
+              <p className="section-sub">
+                它们用的是同一套变量和仿真引擎，课程里学到的，马上能在仿真器和模型里试。
+              </p>
             </div>
           </div>
 
@@ -540,7 +1012,13 @@ export const HomePage: React.FC = () => {
             {pillars.map((p) => {
               const Icon = p.Icon;
               return (
-                <Link key={p.to} to={p.to} className="pillar-card">
+                <Link
+                  key={p.to}
+                  to={p.to}
+                  onMouseEnter={() => preloadRoute(p.to)}
+                  onFocus={() => preloadRoute(p.to)}
+                  className="pillar-card"
+                >
                   <div className="pillar-top">
                     <span className="pillar-icon">
                       <Icon size={20} />
@@ -553,7 +1031,7 @@ export const HomePage: React.FC = () => {
                     <span>{p.cta}</span>
                     <span className="pillar-metric">
                       {p.metric}
-                      <ArrowRight size={14} color="var(--siemens-teal-bright)" />
+                      <ArrowRight size={14} color="var(--teal-text, var(--siemens-teal-bright))" />
                     </span>
                   </div>
                 </Link>
@@ -561,8 +1039,16 @@ export const HomePage: React.FC = () => {
             })}
           </div>
           <p className="section-footnote">
-            还有 {workflowCount} 个原理动画（扫描周期、状态机、项目流程），在课程里会直接用到，也可以在
-            <Link to="/workflows"> 工作流 </Link>页单独查看。
+            还有 {WORKFLOW_ANIM_COUNT} 个原理动画（扫描周期、状态机、项目流程），在课程里会直接用到，也可以在
+            <Link
+              to="/workflows"
+              onMouseEnter={() => preloadRoute('/workflows')}
+              onFocus={() => preloadRoute('/workflows')}
+            >
+              {' '}
+              工作流{' '}
+            </Link>
+            页单独查看。
           </p>
         </div>
       </section>
@@ -594,9 +1080,17 @@ export const HomePage: React.FC = () => {
                 : `/learn?chapter=${encodeURIComponent(ch.id)}`;
 
               return (
-                <Link key={ch.id} to={firstTarget} className="roadmap-card">
+                <Link
+                  key={ch.id}
+                  to={firstTarget}
+                  onMouseEnter={() => preloadRoute(firstTarget)}
+                  onFocus={() => preloadRoute(firstTarget)}
+                  className="roadmap-card"
+                >
                   <div className="roadmap-stage-row">
-                    <span className="roadmap-num">阶段 {ch.order} · {ch.badge}</span>
+                    <span className="roadmap-num">
+                      阶段 {ch.order} · {ch.badge}
+                    </span>
                     {chTotal > 0 && doneInCh === chTotal && (
                       <CheckCircle2 size={16} color="var(--power-green)" />
                     )}
@@ -626,17 +1120,23 @@ export const HomePage: React.FC = () => {
         <div className="spa-container">
           <div className="capstone-spotlight">
             <div>
-              <div className="telemetry-eyebrow" style={{ color: '#fbbf24' }}>
+              <div className="telemetry-eyebrow" style={{ color: 'var(--alarm-amber)' }}>
                 <Star size={14} />
                 毕业项目 · 建议学完第 4 阶段再挑战
               </div>
               <h2>综合练习：锂电模组分拣、热压温控与入库工作站</h2>
               <p>
-                把前面学的内容串成一个完整项目：需求说明、I/O 分配表、多模式状态机、PID 温度控制和监控画面。附带可以导入
-                TIA Portal 的 .scl 源文件，以及项目经历的写法参考和常见面试问题解析，适合放进作品集。
+                把前面学的内容串成一个完整项目：需求说明、PROFINET 1号报文实验台、I/O 分配表、多模式状态机、PID
+                温度控制和监控画面。附带可一键下载并导入 TIA Portal 的 .scl 源文件，以及 STAR 简历模板与 15
+                道面试官模拟追问。
               </p>
               <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                <Link to="/capstone" className="btn btn-lg">
+                <Link
+                  to="/capstone"
+                  onMouseEnter={() => preloadRoute('/capstone')}
+                  onFocus={() => preloadRoute('/capstone')}
+                  className="btn btn-lg"
+                >
                   <Star size={16} />
                   了解毕业项目
                   <ArrowRight size={15} />
@@ -650,19 +1150,19 @@ export const HomePage: React.FC = () => {
             <div className="capstone-deliverables">
               <div className="capstone-deliv-item">
                 <strong>可导入博途的 .scl 源文件</strong>
-                <span>包含自定义数据类型、设备功能块、状态机与温控程序</span>
+                <span>包含自定义数据类型、设备功能块、状态机与温控程序，支持一键下载</span>
               </div>
               <div className="capstone-deliv-item">
-                <strong>模拟监控画面</strong>
-                <span>在网页上试启停、急停复位，查看温度曲线和报警记录</span>
+                <strong>模拟监控画面与报文台</strong>
+                <span>在网页上试启停、急停复位、报警确认，实操 047E→047F 控制字</span>
               </div>
               <div className="capstone-deliv-item">
                 <strong>项目经历写法参考</strong>
-                <span>按应届、转行、在职等不同背景给出描述示例</span>
+                <span>按应届、转行、在职等不同背景给出纯文本与 Markdown 双格式描述</span>
               </div>
               <div className="capstone-deliv-item">
-                <strong>15 道常见面试问题解析</strong>
-                <span>通讯故障、PID 振荡、双线圈、急停回路等</span>
+                <strong>15 道面试官模拟抽题自测</strong>
+                <span>通讯故障、PID 振荡、双线圈、急停回路，先自述采分点再看解析</span>
               </div>
             </div>
           </div>

@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { haptic } from '../../app/native/platform';
-import { LandscapeSvgStage } from '../../components/LandscapeSvgStage';
 
 /* TON / TOF / TP 时序图演示：按住 IN 按钮，实时画出 IN、Q 波形与 ET 计时。
  * 行为按 IEC 61131-3 定时器定义：
@@ -178,72 +177,12 @@ export const TimerDiagram: React.FC = () => {
         </div>
       </div>
 
-      <LandscapeSvgStage
-        title={`IEC 定时器 ${type} 实时时序图 (IN / Q 波形)`}
-        subtitle={`PT = T#${pt / 1000}s · ET = ${(view.et / 1000).toFixed(2)}s · Q = ${view.q ? 1 : 0}`}
-        scopeClassName="demo-root"
-        fitMode="contain"
-        compactHud
-        inlineMinWidth={480}
-        hint="最近 10 秒 IN / Q 时序波形 · 横屏可边按住 IN 边看高清方波"
-        landscapeFooterLabel="IN 输入控制"
-        controls={
-          <>
-            {(['TON', 'TOF', 'TP'] as TType[]).map((t) => (
-              <button
-                key={t}
-                type="button"
-                className={`lss-ctrl-btn ${t === type ? 'is-primary' : ''}`}
-                onClick={() => setType(t)}
-              >
-                {t}
-              </button>
-            ))}
-            {[2000, 3000, 5000].map((ms) => (
-              <button
-                key={ms}
-                type="button"
-                className={`lss-ctrl-btn ${pt === ms ? 'is-success' : ''}`}
-                onClick={() => setPt(ms)}
-              >
-                T#{ms / 1000}s
-              </button>
-            ))}
-          </>
-        }
-        landscapeFooter={
-          <>
-            <button
-              type="button"
-              className={`timer-in-btn${inp ? ' down' : ''}`}
-              aria-pressed={inp}
-              onPointerDown={(e) => {
-                e.preventDefault();
-                (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-                press(true);
-              }}
-              onPointerUp={() => press(false)}
-              onPointerCancel={() => press(false)}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              {inp ? '按住中… IN = 1' : '按住我 · IN'}
-            </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 12, color: '#94a3b8', fontFamily: 'var(--font-mono)' }}>
-                ET: <strong style={{ color: '#f8fafc' }}>{(view.et / 1000).toFixed(2)}s</strong> / {pt / 1000}s
-              </span>
-              <span className={`timer-q${view.q ? ' on' : ''}`}>Q = {view.q ? 1 : 0}</span>
-            </div>
-          </>
-        }
-      >
-        <svg className="timer-chart" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="最近 10 秒的 IN 与 Q 波形">
-          <text x="4" y="22" className="lbl">IN</text>
-          <text x="4" y="82" className="lbl">Q</text>
-          <path d={path('inp', 10)} className="wave in" />
-          <path d={path('q', 70)} className="wave q" />
-        </svg>
-      </LandscapeSvgStage>
+      <svg className="timer-chart" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="最近 10 秒的 IN 与 Q 波形">
+        <text x="4" y="22" className="lbl">IN</text>
+        <text x="4" y="82" className="lbl">Q</text>
+        <path d={path('inp', 10)} className="wave in" />
+        <path d={path('q', 70)} className="wave q" />
+      </svg>
       <div className="demo-hint">图上是最近 10 秒的波形：上面是 IN，下面是 Q。试着“按 1 秒就松开”和“按住 4 秒”，对比三种定时器的不同。</div>
     </div>
   );

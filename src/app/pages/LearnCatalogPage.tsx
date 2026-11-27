@@ -4,6 +4,7 @@ import {
   ArrowRight,
   BookOpen,
   Boxes,
+  BriefcaseBusiness,
   CheckCircle2,
   Clock,
   Cpu,
@@ -11,14 +12,33 @@ import {
   Play,
   RotateCcw,
   Search,
+  X,
 } from 'lucide-react';
 import { chapters, lessons } from '../../registry';
 import type { Lesson, LessonLevel } from '../../types/content';
 import { useProgress } from '../store/progressStore';
 import { formatDuration, LEVEL_STARS } from '../../content/curriculum';
 import { DifficultyStars } from '../../components/DifficultyStars';
+import '../../features/study/study-v3.css';
 
 const LEVELS: Array<'全部' | LessonLevel> = ['全部', '入门', '基础', '进阶', '实战'];
+type IntentFilter = 'all' | 'todo' | 'sim' | 'interview' | 'done';
+type DurationFilter = 'all' | 'short' | 'mid' | 'long';
+
+function hasSimExperiment(lesson: Lesson): boolean {
+  return lesson.blocks.some((b) => b.kind === 'sim' || b.kind === 'model');
+}
+
+function hasInterviewPoint(lesson: Lesson): boolean {
+  return Boolean(lesson.interviewTip && lesson.interviewTip.trim().length > 0);
+}
+
+function matchesDuration(minutes: number, filter: DurationFilter): boolean {
+  if (filter === 'short') return minutes <= 35;
+  if (filter === 'mid') return minutes >= 40 && minutes <= 45;
+  if (filter === 'long') return minutes >= 50;
+  return true;
+}
 
 function levelBadgeClass(level: LessonLevel): string {
   switch (level) {
@@ -58,7 +78,8 @@ export const LearnCatalogPage: React.FC = () => {
     () => searchParams.get('chapter') || 'all'
   );
   const [levelFilter, setLevelFilter] = useState<'全部' | LessonLevel>('全部');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'todo' | 'done'>('all');
+  const [intentFilter, setIntentFilter] = useState<IntentFilter>('all');
+  const [durationFilter, setDurationFilter] = useState<DurationFilter>('all');
 
   const safeChapters = useMemo(
     () => (Array.isArray(chapters) ? [...chapters].sort((a, b) => a.order - b.order) : []),
@@ -75,20 +96,36 @@ export const LearnCatalogPage: React.FC = () => {
     [safeLessons]
   );
 
+  const intentCounts = useMemo(
+    () => ({
+      all: safeLessons.length,
+      todo: safeLessons.filter((l) => !isLessonCompleted(l.id)).length,
+      sim: safeLessons.filter(hasSimExperiment).length,
+      interview: safeLessons.filter(hasInterviewPoint).length,
+      done: safeLessons.filter((l) => isLessonCompleted(l.id)).length,
+    }),
+    [safeLessons, isLessonCompleted]
+  );
+
   const filteredLessons = useMemo(() => {
     const q = query.trim().toLowerCase();
     return safeLessons.filter((lesson) => {
       if (chapterFilter !== 'all' && lesson.chapterId !== chapterFilter) return false;
       if (levelFilter !== '全部' && lesson.level !== levelFilter) return false;
+      if (!matchesDuration(lesson.minutes, durationFilter)) return false;
       const done = isLessonCompleted(lesson.id);
-      if (statusFilter === 'done' && !done) return false;
-      if (statusFilter === 'todo' && done) return false;
+      if (intentFilter === 'done' && !done) return false;
+      if (intentFilter === 'todo' && done) return false;
+      if (intentFilter === 'sim' && !hasSimExperiment(lesson)) return false;
+      if (intentFilter === 'interview' && !hasInterviewPoint(lesson)) return false;
       if (q) {
         const haystack = [
           lesson.title,
           lesson.subtitle,
           ...(lesson.tags || []),
           ...(lesson.objectives || []),
+          lesson.recap || '',
+          lesson.interviewTip || '',
         ]
           .join(' ')
           .toLowerCase();
@@ -96,7 +133,19 @@ export const LearnCatalogPage: React.FC = () => {
       }
       return true;
     });
-  }, [safeLessons, chapterFilter, levelFilter, statusFilter, query, isLessonCompleted]);
+  }, [safeLessons, chapterFilter, levelFilter, intentFilter, durationFilter, query, isLessonCompleted]);
+
+  const filteredMinutes = useMemo(
+    () => filteredLessons.reduce((acc, l) => acc + (l.minutes || 0), 0),
+    [filteredLessons]
+  );
+
+  const hasActiveFilter =
+    Boolean(query.trim()) ||
+    chapterFilter !== 'all' ||
+    levelFilter !== '全部' ||
+    intentFilter !== 'all' ||
+    durationFilter !== 'all';
 
   const groupedByChapter = useMemo(() => {
     if (safeChapters.length === 0) {
@@ -153,7 +202,8 @@ export const LearnCatalogPage: React.FC = () => {
     setQuery('');
     setChapterFilter('all');
     setLevelFilter('全部');
-    setStatusFilter('all');
+    setIntentFilter('all');
+    setDurationFilter('all');
   };
 
   return (
@@ -224,16 +274,71 @@ export const LearnCatalogPage: React.FC = () => {
         {/* Filter Toolbar */}
         <div className="filter-toolbar">
           <div className="filter-row">
-            <div className="search-input-wrap">
+            <div className="search-input-wrap v3-catalog-search-wrap">
               <Search size={15} className="search-input-icon" />
               <input
                 type="search"
                 className="search-input"
-                placeholder="搜索课程，如 定时器、自锁、HMI、PID…"
+                placeholder="搜索课程、指令或考点，如 定时器、自锁、HMI、PID…"
                 aria-label="搜索课程"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
+              {query && (
+                <button
+                  type="button"
+                  className="qa-clear press"
+                  aria-label="清除搜索关键词"
+                  onClick={() => setQuery('')}
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
+
+            <div className="filter-pills" role="group" aria-label="按学习诉求筛选">
+              {(
+                [
+                  { key: 'all', label: `全部 (${intentCounts.all})` },
+                  { key: 'todo', label: `未完成 (${intentCounts.todo})` },
+                  { key: 'sim', label: `含仿真实验 (${intentCounts.sim})` },
+                  { key: 'interview', label: `含面试考点 (${intentCounts.interview})` },
+                  { key: 'done', label: `已完成 (${intentCounts.done})` },
+                ] as { key: IntentFilter; label: string }[]
+              ).map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={`filter-pill${intentFilter === item.key ? ' active' : ''}`}
+                  aria-pressed={intentFilter === item.key}
+                  onClick={() => setIntentFilter(item.key)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="filter-row">
+            <div className="filter-pills" role="group" aria-label="按单讲耗时筛选">
+              {(
+                [
+                  { key: 'all', label: '全部时长' },
+                  { key: 'short', label: '≤ 35 分钟' },
+                  { key: 'mid', label: '40–45 分钟' },
+                  { key: 'long', label: '50 分钟深入' },
+                ] as { key: DurationFilter; label: string }[]
+              ).map((d) => (
+                <button
+                  key={d.key}
+                  type="button"
+                  className={`filter-pill${durationFilter === d.key ? ' active' : ''}`}
+                  aria-pressed={durationFilter === d.key}
+                  onClick={() => setDurationFilter(d.key)}
+                >
+                  {d.label}
+                </button>
+              ))}
             </div>
 
             <div className="filter-pills" role="group" aria-label="按难度筛选">
@@ -242,26 +347,10 @@ export const LearnCatalogPage: React.FC = () => {
                   key={lv}
                   type="button"
                   className={`filter-pill${levelFilter === lv ? ' active' : ''}`}
+                  aria-pressed={levelFilter === lv}
                   onClick={() => setLevelFilter(lv)}
                 >
                   {lv === '全部' ? '全部难度' : lv}
-                </button>
-              ))}
-            </div>
-
-            <div className="filter-pills" role="group" aria-label="按完成状态筛选">
-              {[
-                { key: 'all', label: '全部状态' },
-                { key: 'todo', label: '未完成' },
-                { key: 'done', label: '已完成' },
-              ].map((st) => (
-                <button
-                  key={st.key}
-                  type="button"
-                  className={`filter-pill${statusFilter === st.key ? ' active' : ''}`}
-                  onClick={() => setStatusFilter(st.key as 'all' | 'todo' | 'done')}
-                >
-                  {st.label}
                 </button>
               ))}
             </div>
@@ -272,6 +361,7 @@ export const LearnCatalogPage: React.FC = () => {
               <button
                 type="button"
                 className={`filter-pill${chapterFilter === 'all' ? ' active' : ''}`}
+                aria-pressed={chapterFilter === 'all'}
                 onClick={() => setChapterFilter('all')}
               >
                 全部阶段 ({safeLessons.length})
@@ -281,6 +371,7 @@ export const LearnCatalogPage: React.FC = () => {
                   key={ch.id}
                   type="button"
                   className={`filter-pill${chapterFilter === ch.id ? ' active' : ''}`}
+                  aria-pressed={chapterFilter === ch.id}
                   onClick={() => setChapterFilter(ch.id)}
                 >
                   {ch.title.replace(/^第 (\d+) 章：.*$/, '第 $1 章')} · {ch.badge}
@@ -289,6 +380,19 @@ export const LearnCatalogPage: React.FC = () => {
             </div>
           )}
         </div>
+
+        {hasActiveFilter && (
+          <div className="v3-catalog-summary" role="status" aria-live="polite">
+            <span>
+              匹配 <strong>{filteredLessons.length}</strong> / {safeLessons.length} 讲，合计约{' '}
+              {formatDuration(filteredMinutes)}
+            </span>
+            <button type="button" className="btn btn-sm press" onClick={resetFilters}>
+              <RotateCcw size={13} aria-hidden />
+              重置筛选
+            </button>
+          </div>
+        )}
 
         {/* Empty / Fallback States */}
         {safeLessons.length === 0 ? (
@@ -404,6 +508,12 @@ export const LearnCatalogPage: React.FC = () => {
                               >
                                 <GitBranch size={13} color="var(--alarm-amber)" />
                                 演示
+                              </span>
+                            )}
+                            {hasInterviewPoint(lesson) && (
+                              <span title="含高频面试问答提示" className="v3-interview-chip">
+                                <BriefcaseBusiness size={13} aria-hidden />
+                                面试
                               </span>
                             )}
                             {quizBest && (

@@ -1,0 +1,450 @@
+/* ==========================================================================
+   Siemens PLC Academy v3.0 — Examples Hall & Detail Engineering Delivery Pack
+   Scoped cleanly under .ex3-* with dual dark/light theme & 360px mobile fit.
+   ========================================================================== */
+
+/* ---------- Examples Hall: Multi-View Switcher & Telemetry Strip ---------- */
+.ex3-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ex3-filter-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-muted);
+  letter-spacing: 0.04em;
+  margin-right: 4px;
+}
+
+.ex3-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-surface-2);
+}
+
+.ex3-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 11px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.ex3-view-btn.is-active {
+  background: var(--siemens-teal);
+  color: #ffffff;
+}
+
+.ex3-spec-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-surface-2);
+}
+
+.ex3-io-pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--siemens-teal-soft);
+  color: var(--siemens-teal-bright);
+  border: 1px solid var(--siemens-teal-border);
+}
+
+[data-theme='light'] .ex3-io-pill {
+  color: var(--siemens-teal);
+}
+
+.ex3-instr-chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--bg-surface);
+  color: var(--ink-secondary);
+  border: 1px solid var(--border-hairline);
+}
+
+/* Comparison Matrix View */
+.ex3-matrix-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-surface);
+}
+
+.ex3-matrix-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.ex3-matrix-table th {
+  text-align: left;
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-muted);
+  border-bottom: 1px solid var(--border-hairline);
+  background: var(--bg-surface-2);
+  white-space: nowrap;
+}
+
+.ex3-matrix-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-hairline);
+  color: var(--ink-primary);
+  vertical-align: top;
+}
+
+.ex3-matrix-table tr:last-child td {
+  border-bottom: none;
+}
+
+.ex3-matrix-link {
+  font-weight: 700;
+  color: var(--ink-primary);
+  text-decoration: none;
+}
+
+.ex3-matrix-link:hover {
+  color: var(--siemens-teal-bright);
+}
+
+/* ---------- Example Detail: Engineering Delivery Pack Bar ---------- */
+.ex3-delivery-bar {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-surface-2);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ex3-delivery-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ex3-delivery-kicker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--siemens-teal-bright);
+  letter-spacing: 0.04em;
+}
+
+[data-theme='light'] .ex3-delivery-kicker {
+  color: var(--siemens-teal);
+}
+
+.ex3-delivery-hint {
+  font-size: 12.5px;
+  color: var(--ink-secondary);
+}
+
+.ex3-delivery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ex3-dl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  color: var(--ink-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease, transform 120ms ease;
+}
+
+.ex3-dl-btn:hover {
+  border-color: var(--siemens-teal-bright);
+}
+
+.ex3-dl-btn:active {
+  transform: translateY(1px);
+}
+
+.ex3-dl-btn--primary {
+  background: var(--siemens-teal);
+  border-color: var(--siemens-teal);
+  color: #ffffff;
+}
+
+.ex3-dl-btn--primary:hover {
+  background: var(--siemens-teal-hover);
+  border-color: var(--siemens-teal-hover);
+}
+
+.ex3-dl-toast {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--power-green-soft);
+  border: 1px solid var(--power-green-border);
+  color: var(--power-green);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* ---------- Example Detail: 5-Step FAT Commissioning Checklist ---------- */
+.ex3-fat-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ex3-fat-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ex3-fat-count {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--siemens-teal-soft);
+  color: var(--siemens-teal-bright);
+  border: 1px solid var(--siemens-teal-border);
+}
+
+[data-theme='light'] .ex3-fat-count {
+  color: var(--siemens-teal);
+}
+
+.ex3-fat-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-surface-2);
+  color: var(--ink-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ex3-fat-reset:hover {
+  border-color: var(--border-strong);
+  color: var(--ink-primary);
+}
+
+.ex3-fat-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-surface-3);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.ex3-fat-bar-fill {
+  height: 100%;
+  background: var(--power-green);
+  transition: width 220ms ease;
+}
+
+.ex3-fat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ex3-fat-item {
+  width: 100%;
+  min-height: 52px;
+  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-surface-2);
+  color: var(--ink-primary);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.ex3-fat-item:hover {
+  border-color: var(--siemens-teal-border);
+}
+
+.ex3-fat-item.is-done {
+  border-color: var(--power-green-border);
+  background: var(--power-green-soft);
+}
+
+.ex3-fat-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--bg-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: transparent;
+}
+
+.ex3-fat-item.is-done .ex3-fat-check {
+  border-color: var(--power-green);
+  background: var(--power-green);
+  color: #ffffff;
+}
+
+.ex3-fat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ex3-fat-row-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.ex3-fat-code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--siemens-teal-bright);
+}
+
+[data-theme='light'] .ex3-fat-code {
+  color: var(--siemens-teal);
+}
+
+.ex3-fat-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink-primary);
+}
+
+.ex3-fat-safety-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--alarm-amber-soft);
+  color: var(--alarm-amber);
+  border: 1px solid var(--alarm-amber-border);
+}
+
+.ex3-fat-desc {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-secondary);
+}
+
+.ex3-fat-warn {
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--alarm-amber-border);
+  background: var(--alarm-amber-soft);
+  color: var(--ink-primary);
+  font-size: 12.5px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.ex3-fat-pass {
+  margin-top: 10px;
+  padding: 10px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--power-green-border);
+  background: var(--power-green-soft);
+  color: var(--power-green);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .ex3-delivery-bar {
+    padding: 12px;
+  }
+  .ex3-delivery-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ex3-dl-btn {
+    width: 100%;
+  }
+  .ex3-view-toggle {
+    width: 100%;
+  }
+  .ex3-view-btn {
+    flex: 1 1 0;
+    min-height: 44px;
+    justify-content: center;
+  }
+  .ex3-fat-reset {
+    min-height: 44px;
+  }
+}

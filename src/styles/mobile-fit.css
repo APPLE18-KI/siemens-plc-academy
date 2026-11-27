@@ -1,0 +1,252 @@
+/* ==========================================================================
+   v2.1 手机适配：窄屏（320–412px）与系统大字号（WebView 文字缩放 115%–130%）下不溢出、不裁字
+   规则都加 html 前缀，保证覆盖各功能模块自己的样式（它们在打包顺序里排在后面）
+   ========================================================================== */
+
+/* 1. 吸顶导航高度：手机上导航是 56px，--nav-offset 跟着改，吸顶条不再和导航错位/重叠 */
+@media (max-width: 768px) {
+  :root { --nav-height: 56px; }
+}
+
+/* 2. 网格/弹性布局的子元素默认 min-width:auto，会被里面的宽 SVG、长代码、不换行文字撑破。
+      容器类元素统一 min-width:0，让内容在自己的格子里换行或滚动 */
+html :where(div, section, article, aside, main, header, footer, nav, form, fieldset, li, figure, details, summary, label, dl, dd, ul, ol, p, h1, h2, h3, h4, h5, h6, blockquote) {
+  min-width: 0;
+}
+html body {
+  overflow-wrap: break-word;
+}
+html :where(h1, h2, h3, h4, h5, h6, p, li, dd, td, th, label, summary, blockquote, figcaption) {
+  overflow-wrap: anywhere;
+}
+/* 表格保持第 5 轮的“不劈短词”，靠横向滚动 */
+html :where(td, th) { overflow-wrap: break-word; }
+html img, html video, html canvas { max-width: 100%; }
+
+/* 3. 胶囊标签：超出一行宽度时允许换行（不会再拉出屏幕） */
+html .badge,
+html .wf-chip,
+html .wf-badge,
+html .cap-badge,
+html [class*='-chip']:not(.cite-chip),
+html [class*='-pill'] {
+  max-width: 100%;
+}
+@media (max-width: 640px) {
+  html .badge,
+  html .wf-chip,
+  html .wf-badge,
+  html .cap-badge {
+    white-space: normal;
+    border-radius: 14px;
+    text-align: left;
+    height: auto;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* 4. 横向滚动容器的提示（data-hscroll 由 hscrollHints.ts 自动标记） */
+html [data-hscroll] {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 30px), rgba(0, 0, 0, 0.18));
+  mask-image: linear-gradient(to right, #000 calc(100% - 30px), rgba(0, 0, 0, 0.18));
+  scrollbar-width: thin;
+  scrollbar-color: var(--siemens-teal-border, rgba(0, 153, 153, 0.5)) transparent;
+}
+html [data-hscroll][data-hscroll-end] {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+html [data-hscroll='1']::before {
+  content: '← 左右滑动查看完整内容 →';
+  position: sticky;
+  left: 0;
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 0 6px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(0, 153, 153, 0.14);
+  color: var(--siemens-teal-bright, #14d4d4);
+  font: 500 11px/1.5 var(--font-sans, system-ui, sans-serif);
+  white-space: nowrap;
+  pointer-events: none;
+}
+[data-theme='light'] [data-hscroll='1']::before { color: #007a7a; }
+html [data-hscroll]::-webkit-scrollbar { height: 6px; }
+html [data-hscroll]::-webkit-scrollbar-thumb { background: rgba(0, 153, 153, 0.45); border-radius: 3px; }
+
+/* 5. 手机上的标签/切换按钮行：换行排布，不再横向藏起来 */
+@media (max-width: 768px) {
+  html .plc-sim-preset-tabs,
+  html .ps-tabs,
+  html .ps-viewswitch,
+  html .cap-tabs,
+  html .filter-pills,
+  html .rv-tabs {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    white-space: normal;
+  }
+  html .plc-sim-preset-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    overflow: visible !important;
+    padding-bottom: 0;
+  }
+  html .plc-sim-preset-tab { flex-shrink: 1; justify-content: flex-start; text-align: left; white-space: normal; min-height: 44px; }
+  html .plc-sim-preset-tab.is-sandbox-tab { grid-column: 1 / -1; }
+  html .filter-pills { flex-wrap: wrap !important; overflow: visible !important; }
+  html .filter-pills > * { flex: 0 1 auto; max-width: 100%; white-space: normal; }
+}
+
+/* 6. 原理动画：去掉层层嵌套的边框和留白，卡片用满屏宽 */
+@media (max-width: 640px) {
+  html .wf-showcase { padding: 4px 0 32px; }
+  html .wf-hero { padding: 14px; }
+  html .wf-card { padding: 12px; border-radius: 12px; }
+  html .wf-card.embedded { padding: 0; border: 0; background: transparent; box-shadow: none; }
+  html .wf-subpanel { padding: 10px; border-radius: 10px; }
+  html .wf-subpanel-title { flex-wrap: wrap; }
+  html .wf-mem-box { padding: 10px; }
+  html .wf-io-row { gap: 8px; }
+  html .wf-toolbar, html .wf-toolbar-group { flex-wrap: wrap; }
+  html .wf-toolbar-group > * { flex: 1 1 auto; }
+  html .wf-stage-strip { grid-template-columns: 1fr; gap: 6px; }
+  html .wf-scan-grid,
+  html .wf-split-grid,
+  html .wf-lifecycle-layout,
+  html .wf-packml-layout,
+  html .wf-mem-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  html .embedded-stage-body { padding: 10px 8px; }
+  html .embedded-stage-head { padding: 12px; }
+}
+
+/* 扫描周期流程：手机上换成竖排（SVG 横图在 ≤560px 隐藏） */
+html .wf-flow-vertical { display: none; }
+@media (max-width: 560px) {
+  html .wf-flow-svg { display: none; }
+  html .wf-flow-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0 0 12px;
+    padding: 0;
+    list-style: none;
+  }
+  html .wf-flow-vertical li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border: 1.5px solid var(--wf-border);
+    border-radius: 10px;
+    background: var(--wf-panel);
+  }
+  html .wf-flow-vertical li.active { border-color: var(--wf-teal-bright); background: rgba(0, 153, 153, 0.16); }
+  html .wf-flow-vertical li.danger { border-color: var(--wf-red); }
+  html .wf-flow-vertical .wf-flow-label { font-weight: 700; font-size: 13.5px; color: var(--wf-text); flex: 1; min-width: 0; }
+  html .wf-flow-vertical .wf-flow-sub { font-size: 12px; color: var(--wf-text-muted); text-align: right; }
+  html .wf-flow-vertical li.active .wf-flow-sub { color: var(--wf-teal-bright); }
+  html .wf-flow-arrow { text-align: center; color: var(--wf-text-muted); font-size: 13px; line-height: 20px; }
+  html .wf-flow-loop { font-size: 12px; color: var(--wf-text-muted); text-align: center; padding-top: 4px; }
+}
+
+/* 7. 页面左右留白统一 ≤16px（窄屏 12px） */
+@media (max-width: 400px) {
+  html .spa-container { padding-left: 12px; padding-right: 12px; }
+  html .feature-page-shell { padding-left: 10px; padding-right: 10px; }
+}
+
+/* 8. 400px 以下：多列卡片网格改为单列 */
+@media (max-width: 400px) {
+  html .grid-2, html .grid-3, html .grid-4,
+  html [class*='-grid']:not(.wf-mem-grid):not(.ps-grid):not(.fold-switch):not([class*='led']):not([class*='bit']):not([class*='key']):not([class*='calendar']):not([class*='heat']):not([class*='days']) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* 9. 零散修复（第 9 轮检查发现） */
+html .md-inline-code { white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+html .cap-qa-header { flex-wrap: wrap; }
+html .cap-qa-header > * { min-width: 0; }
+@media (max-width: 768px) {
+  html .progress-popover {
+    position: fixed;
+    top: calc(var(--nav-offset) + 8px);
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-height: calc(100dvh - var(--nav-offset) - 90px);
+    overflow-y: auto;
+  }
+}
+/* 讲课模式顶栏课名：最多两行，不再一行省略 */
+html .lv-head-name {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.3;
+}
+/* 沙盒元件胶囊：窄屏下拉框可收缩 */
+html .plc-sim-elem-pill { max-width: 100%; flex-wrap: wrap; }
+html .plc-sim-elem-pill select { min-width: 0; max-width: 100%; flex: 1 1 120px; }
+@media (max-width: 768px) {
+  html .cap-tabs { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible !important; padding-bottom: 0; }
+  html .cap-tabs > * { min-width: 0; white-space: normal; }
+  html .ps-viewswitch { display: flex; width: 100%; }
+  html .ps-viewswitch button { flex: 1 1 140px; white-space: normal; line-height: 1.3; padding: 6px 10px; }
+  html .ps-tabs button { padding: 0 10px; }
+}
+html .cap-mono { overflow-wrap: anywhere; word-break: break-word; }
+html .plc-sim-io-sym, html .dt-io-label { overflow-wrap: anywhere; }
+/* 顶部导航在手机上用不透明底色：滚动时正文不再从导航下面透出来 */
+@media (max-width: 768px) {
+  html .app-header { background: var(--bg-canvas); backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+/* 变量名、模型 I/O 标签：放不下时换行显示全名，不再用省略号截断 */
+html .plc-sim-io-sym,
+html .dt-io-label,
+html .plc-sim-nw-title,
+html .ps-lamp-label {
+  white-space: normal;
+  text-overflow: clip;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+
+/* 第 10 轮：130% 文字缩放下的顶部导航与弹性行文字 */
+html .app-header-inner > .brand-link { min-width: 0; flex: 1 1 auto; }
+html .brand-link > :not(.brand-mark) { min-width: 0; }
+html .brand-title { white-space: normal; line-height: 1.15; overflow-wrap: anywhere; display: block; }
+html .brand-mark { flex-shrink: 0; }
+@media (max-width: 380px) {
+  html .app-header-inner { gap: 6px; padding: 0 10px; }
+  html .brand-link { gap: 8px; }
+  html .progress-ring-trigger { padding-left: 4px; padding-right: 8px; gap: 4px; }
+}
+html :where([class*='-title'], [class*='-head'], [class*='-header'], [class*='-row'], [class*='-meta'], [class*='-item'])
+  > span:not([class*='badge']):not([class*='chip']):not([class*='led']):not([class*='icon']):not([class*='dot']):not([class*='num']):not([class*='idx']):not([class*='index']) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+html .term-trigger { overflow-wrap: normal; word-break: keep-all; }
+/* 手机上的 Markdown 宽表格：每列至少 6em、最多 15em，内容多就整体横向滑动，不把某一列挤成一两个字宽 */
+@media (max-width: 640px) {
+  html .md-table th, html .md-table td { min-width: 5.5em; padding: 9px 10px; }
+  html .md-table td:last-child, html .md-table th:last-child { min-width: 12em; }
+  html .md-table th { white-space: normal; }
+}
+html select, html input:not([type='checkbox']):not([type='radio']) { max-width: 100%; min-width: 0; }
+/* 设备模型页：去掉外层多余留白，指标数字不再折成两行 */
+@media (max-width: 640px) {
+  html .dt-showcase { padding: 4px 0 32px; }
+  html .dt-hero { padding: 16px 14px; }
+  html .dt-hero-metrics { gap: 8px; }
+  html .dt-metric-box { padding: 8px 10px; }
+  html .dt-metric-val { font-size: 15px; white-space: nowrap; }
+  html .cap-hero, html .cap-container > header { padding-left: 14px; padding-right: 14px; }
+}
+html .cap-file-item > span, html .mock-title-text { white-space: normal; text-overflow: clip; overflow-wrap: anywhere; }

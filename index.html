@@ -1,14 +1,29 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0a0f14" />
-    <meta name="description" content="面向零基础的西门子 S7-1200 PLC 学习网站：分步课程、网页仿真、设备模型与术语表。个人学习项目，非西门子官方。" />
-    <title>西门子 PLC 实训工坊 · S7-1200 零基础入门</title>
+    <meta name="description" content="西门子 S7-1200 PLC 工程师实训工坊 v3.0：21 讲互动课程、博途 + PLCSIM 网页仿真、2.5D 设备数字孪生、PROFINET 报文与简历级毕业大项目。个人学习项目，非西门子官方。" />
+    <title>西门子 PLC 实训工坊 v3.0 · S7-1200 互动实训与数字孪生平台</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <!-- 首屏防闪烁主题同步脚本（rendering-hydration-no-flicker） -->
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem('siemens-plc-academy-progress-v1');
+          if (!raw) return;
+          var parsed = JSON.parse(raw);
+          if (parsed && parsed.theme === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', '#eef0f4');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <!-- 网络字体为可选增强：离线或打包环境中加载失败时自动回退到系统字体 -->
     <link rel="preconnect" href="https://fonts.googleapis.com" data-online-only />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin data-online-only />

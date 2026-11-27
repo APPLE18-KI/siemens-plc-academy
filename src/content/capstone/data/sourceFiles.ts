@@ -740,11 +740,11 @@ END_ORGANIZATION_BLOCK`,
     diskPath: 'capstone/tia-portal-project/docs/RESUME_AND_INTERVIEW_GUIDE.md',
     lang: 'md',
     importOrder: '求职面试手册',
-    summary: '离线版 STAR 简历模板与 15 道面试高频灵魂追问满分话术，可直接随项目打包放进求职作品集。',
-    content: `# 简历项目包装文案与 15 道面试高频灵魂拷问通关指南
+    summary: '离线版 STAR 简历项目写法与 15 道工程高频追问参考要点，可随项目打包整理进作品集。',
+    content: `# 简历项目写法与 15 道面试高频追问整理
 
-- STAR 法则简历三段式模板（PLC 工程师 / 非标控制 / 智能制造管培生）
-- 15 道面试官高频追问完整话术（已在网页端 Tab 5 交互式呈现，并已同步写入本地磁盘文件）
-- 磁盘完整路径：capstone/tia-portal-project/docs/RESUME_AND_INTERVIEW_GUIDE.md`,
+- STAR 简历项目经历参考（适配 PLC 电气工程师 / 非标设备控制 / 智能制造管培生，支持 Markdown 与纯文本导出）
+- 15 道工程高频追问采分点与参考回答（已在网页端第 5 部分提供模拟面试抽题自测模式）
+- 仓库对应文档路径：capstone/tia-portal-project/docs/RESUME_AND_INTERVIEW_GUIDE.md`,
   },
 ];

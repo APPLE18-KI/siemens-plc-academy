@@ -2,9 +2,11 @@ import React from 'react';
 import { Check, CheckCircle2, Wrench } from 'lucide-react';
 import { useProgress } from '../../app/store/progressStore';
 import { haptic } from '../../app/native/platform';
+import { ThinkHints } from '../../features/qa/ThinkHints';
 
 interface PracticeTaskBlockProps {
   taskKey: string;
+  lessonId?: string;
   title: string;
   scenario: string;
   steps: string[];
@@ -13,6 +15,7 @@ interface PracticeTaskBlockProps {
 
 export const PracticeTaskBlock: React.FC<PracticeTaskBlockProps> = ({
   taskKey,
+  lessonId,
   title,
   scenario,
   steps,
@@ -88,7 +91,7 @@ export const PracticeTaskBlock: React.FC<PracticeTaskBlockProps> = ({
                       style={{
                         fontFamily: 'var(--font-mono)',
                         fontSize: 12,
-                        color: 'var(--siemens-teal-bright)',
+                        color: 'var(--teal-text, var(--siemens-teal-bright))',
                         marginRight: 8,
                       }}
                     >
@@ -101,6 +104,8 @@ export const PracticeTaskBlock: React.FC<PracticeTaskBlockProps> = ({
             })}
           </div>
         </div>
+
+        {lessonId && <ThinkHints lessonId={lessonId} />}
 
         {checkPoints.length > 0 && (
           <div>

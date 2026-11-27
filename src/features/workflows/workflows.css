@@ -974,11 +974,6 @@
   .wf-root svg[viewBox="0 0 640 132"] {
     min-width: 580px;
   }
-
-  .lss-overlay.wf-root svg[viewBox="0 0 680 228"],
-  .lss-overlay.wf-root svg[viewBox="0 0 640 132"] {
-    min-width: 0;
-  }
 }
 
 .wf-svg-wrap,
@@ -992,5 +987,56 @@
   .wf-lifecycle-layout,
   .wf-scan-grid {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* v3.0 URL Deep-Link Controls, Tabular Telemetry & 360px >=44px Touch Targets */
+.wf-hero-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.wf-btn:active:not(:disabled),
+.wf-seg-btn:active,
+.wf-tab-card:active,
+.wf-life-step:active {
+  transform: translateY(1px);
+}
+
+.wf-badge,
+.wf-chip,
+.wf-scl-ln,
+.wf-life-step-num {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 768px) {
+  .wf-root {
+    overflow-x: clip;
+  }
+
+  .wf-hero-actions {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .wf-hero-actions .wf-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .wf-btn,
+  .wf-seg-btn,
+  .wf-tab-card,
+  .wf-life-step,
+  .wf-checklist-item {
+    min-height: 44px;
+  }
+
+  .wf-seg {
+    flex-wrap: wrap;
+    max-width: 100%;
   }
 }

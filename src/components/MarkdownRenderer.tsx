@@ -1,6 +1,7 @@
 import React from 'react';
 import { CodeViewer } from './CodeViewer';
 import { Term } from './Term';
+import { CiteChip } from './fold';
 
 interface MarkdownRendererProps {
   content: string;
@@ -18,7 +19,7 @@ export function renderInline(text: string, keyPrefix = 'inl'): React.ReactNode[]
   const nodes: React.ReactNode[] = [];
   // Combined tokenizer ordered by specificity
   const tokenRegex =
-    /(`[^`]+`|\[\[[^\]]+\]\]|\*\*[^*]+?\*\*|__[^_]+?__|~~[^~]+?~~|\*[^*\n]+?\*|\[[^\]]+\]\([^)]+\))/g;
+    /(`[^`]+`|\[\^[\w-]+\]|==!?[^=\s][^=]*?==|\[\[[^\]]+\]\]|\*\*[^*]+?\*\*|__[^_]+?__|~~[^~]+?~~|\*[^*\n]+?\*|\[[^\]]+\]\([^)]+\))/g;
 
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -32,7 +33,16 @@ export function renderInline(text: string, keyPrefix = 'inl'): React.ReactNode[]
     const raw = match[0];
     const key = `${keyPrefix}-${idx++}`;
 
-    if (raw.startsWith('[[') && raw.endsWith(']]')) {
+    if (raw.startsWith('[^') && raw.endsWith(']')) {
+      nodes.push(<CiteChip key={key} id={raw.slice(2, -1)} />);
+    } else if (raw.startsWith('==') && raw.endsWith('==')) {
+      const stmt = raw.startsWith('==!');
+      nodes.push(
+        <mark key={key} className={stmt ? 'k-stmt' : 'k-sent'}>
+          {renderInline(raw.slice(stmt ? 3 : 2, -2), `${key}-k`)}
+        </mark>
+      );
+    } else if (raw.startsWith('[[') && raw.endsWith(']]')) {
       // [[词条]] 或 [[词条|显示文字]]
       const inner = raw.slice(2, -2);
       const [name, display] = inner.split('|');

@@ -213,7 +213,25 @@ export interface TraceSample {
   values: Record<string, number | boolean>;
 }
 
+export interface DiagEntry {
+  seq: number;
+  time: number;
+  text: string;
+  kind: 'info' | 'mode' | 'force' | 'error';
+  detail?: string;
+}
+
+export interface CpuInfo {
+  cycleMinMs: number;
+  cycleMaxMs: number;
+  maxCycleLimitMs: number;
+  forces: Record<string, TagValue>;
+  diag: DiagEntry[];
+  errorActive: boolean;
+}
+
 export interface LadderRuntimeSnapshot {
+  cpu: CpuInfo;
   tags: Record<string, TagValue>;
   fieldInputs: Record<string, TagValue>;
   pii: Record<string, TagValue>;
@@ -237,6 +255,12 @@ export interface LadderPlcRuntime extends PlcRuntime {
   isTracePaused(): boolean;
   clearTrace(): void;
   getSnapshot(): LadderRuntimeSnapshot;
+  getCpuInfo(): CpuInfo;
+  setForce(name: string, value: TagValue | undefined): void;
+  clearForces(): void;
+  warmRestart(): void;
+  memoryReset(): void;
+  simulateCycleOverrun(ms?: number): void;
   subscribeSnapshot(listener: (snapshot: LadderRuntimeSnapshot) => void): () => void;
 }
 

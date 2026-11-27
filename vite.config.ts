@@ -50,12 +50,6 @@ export default defineConfig({
           if (id.includes('node_modules')) {
             return 'vendor';
           }
-          if (id.includes('/src/core/scl/') || id.includes('\\src\\core\\scl\\') || id.includes('/src/features/tia-ide/') || id.includes('\\src\\features\\tia-ide\\')) {
-            return 'tia-ide';
-          }
-          if (id.includes('/src/features/demos/') || id.includes('\\src\\features\\demos\\')) {
-            return 'demos';
-          }
           if (id.includes('/src/content/lessons/') || id.includes('\\src\\content\\lessons\\')) {
             return 'curriculum';
           }

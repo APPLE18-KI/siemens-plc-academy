@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useBackDismiss } from '../../../app/native/overlay';
 import {
-  LandscapePortalOverlay,
-  useLandscapeStage,
-} from '../../../components/LandscapeSvgStage';
-import {
   Activity,
   AlertTriangle,
   CheckCircle2,
@@ -15,7 +11,6 @@ import {
   Play,
   RotateCcw,
   Sliders,
-  Smartphone,
   Wrench,
   ZoomIn,
   ZoomOut,
@@ -101,15 +96,9 @@ export const TwinShell: React.FC<TwinShellProps> = ({
 }) => {
   const [zoomIdx, setZoomIdx] = useState<number>(0);
   const [fullscreen, setFullscreen] = useState<boolean>(false);
-  const landscape = useLandscapeStage();
-  // 安卓返回键：先退出桌面全屏（横屏模式由 useLandscapeStage 内部自动注册返回栈）
+  // 安卓返回键：先退出全屏
   useBackDismiss(fullscreen, () => setFullscreen(false));
   const zoomPct = ZOOM_LEVELS[zoomIdx];
-
-  const handleOpenLandscape = () => {
-    if (fullscreen) setFullscreen(false);
-    landscape.enter();
-  };
 
   useEffect(() => {
     if (!fullscreen) return;
@@ -173,16 +162,6 @@ export const TwinShell: React.FC<TwinShellProps> = ({
 
           <button
             type="button"
-            className="dt-btn dt-btn--landscape"
-            onClick={handleOpenLandscape}
-            title="一键进入手机横屏全屏模式（支持 90° 智能旋转与现场操作栏）"
-          >
-            <Smartphone size={13} />
-            横屏观看
-          </button>
-
-          <button
-            type="button"
             className={`dt-btn ${fullscreen ? 'dt-btn--primary' : ''}`}
             onClick={() => setFullscreen((f) => !f)}
             title={fullscreen ? '退出全屏视图 (Esc)' : '全屏高清展开数字孪生'}
@@ -224,72 +203,52 @@ export const TwinShell: React.FC<TwinShellProps> = ({
         </div>
       )}
 
-      {/* High-Precision SCADA SVG Canvas with HD Zoom, Landscape Mode & Smooth Touch Pan */}
+      {/* High-Precision SCADA SVG Canvas with HD Zoom & Smooth Touch Pan */}
       <div className="dt-stage-wrap">
         <div className="dt-stage-hud">
           <span className="dt-pan-hint">⇄ 可左右滑动 · 点击画面元件直接交互</span>
-          <div className="dt-hud-actions">
+          <div className="dt-zoom-bar" role="group" aria-label="图纸清晰度缩放">
             <button
               type="button"
-              className="lss-trigger-btn dt-hud-landscape-btn"
-              onClick={handleOpenLandscape}
-              title="一键横屏全屏观看高清动画（自动 90° 旋转铺满）"
+              className="dt-zoom-btn"
+              onClick={() => setZoomIdx((i) => Math.max(0, i - 1))}
+              disabled={zoomIdx === 0}
+              title="缩小画布"
             >
-              <Smartphone size={13} />
-              <span>横屏观看</span>
+              <ZoomOut size={13} />
             </button>
-            <div className="dt-zoom-bar" role="group" aria-label="图纸清晰度缩放">
-              <button
-                type="button"
-                className="dt-zoom-btn"
-                onClick={() => setZoomIdx((i) => Math.max(0, i - 1))}
-                disabled={zoomIdx === 0}
-                title="缩小画布"
-              >
-                <ZoomOut size={13} />
-              </button>
-              <button
-                type="button"
-                className="dt-zoom-readout"
-                onClick={() => setZoomIdx((i) => (i + 1) % ZOOM_LEVELS.length)}
-                title="点击切换 100% / 130% / 165% 高清特写"
-              >
-                {zoomPct}% 高清
-              </button>
-              <button
-                type="button"
-                className="dt-zoom-btn"
-                onClick={() => setZoomIdx((i) => Math.min(ZOOM_LEVELS.length - 1, i + 1))}
-                disabled={zoomIdx === ZOOM_LEVELS.length - 1}
-                title="放大查看端子与字号细节"
-              >
-                <ZoomIn size={13} />
-              </button>
-            </div>
+            <button
+              type="button"
+              className="dt-zoom-readout"
+              onClick={() => setZoomIdx((i) => (i + 1) % ZOOM_LEVELS.length)}
+              title="点击切换 100% / 130% / 165% 高清特写"
+            >
+              {zoomPct}% 高清
+            </button>
+            <button
+              type="button"
+              className="dt-zoom-btn"
+              onClick={() => setZoomIdx((i) => Math.min(ZOOM_LEVELS.length - 1, i + 1))}
+              disabled={zoomIdx === ZOOM_LEVELS.length - 1}
+              title="放大查看端子与字号细节"
+            >
+              <ZoomIn size={13} />
+            </button>
           </div>
         </div>
 
-        {landscape.isOpen ? (
-          <div className="lss-inline-placeholder" style={{ margin: 12 }}>
-            <span>正在横屏全屏模式操控「{title}」</span>
-            <button type="button" className="lss-trigger-btn" onClick={landscape.exit}>
-              恢复窗口视图
-            </button>
+        <div className="dt-stage-scroll">
+          <div
+            className="dt-stage-canvas"
+            style={{
+              width: `${zoomPct}%`,
+              minWidth: `${Math.round(820 * (zoomPct / 100))}px`,
+            }}
+          >
+            <div className="dt-stage-grid" />
+            {children}
           </div>
-        ) : (
-          <div className="dt-stage-scroll">
-            <div
-              className="dt-stage-canvas"
-              style={{
-                width: `${zoomPct}%`,
-                minWidth: `${Math.round(820 * (zoomPct / 100))}px`,
-              }}
-            >
-              <div className="dt-stage-grid" />
-              {children}
-            </div>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Interactive Field Operation Toolbar */}
@@ -421,86 +380,13 @@ export const TwinShell: React.FC<TwinShellProps> = ({
     </div>
   );
 
-  const landscapeOverlay = (
-    <LandscapePortalOverlay
-      controller={landscape}
-      title={title}
-      subtitle={statusText}
-      scopeClassName="dt-root"
-      fitMode="contain"
-      footer={actionBar}
-      footerLabel="现场操作"
-      defaultFooterOpen={true}
-      banner={
-        banner
-          ? {
-              tone: banner.tone,
-              text: banner.text,
-              action:
-                banner.actionLabel && banner.onAction ? (
-                  <button
-                    type="button"
-                    className={`lss-ctrl-btn ${banner.tone === 'danger' ? 'is-danger-solid' : 'is-primary'}`}
-                    onClick={banner.onAction}
-                  >
-                    {banner.actionLabel}
-                  </button>
-                ) : undefined,
-            }
-          : undefined
-      }
-      controls={
-        <>
-          <span className={`dt-status-pill dt-status-pill--${status}`}>
-            <span className={`dt-led dt-led--${status}`} />
-            {statusText}
-          </span>
-          <button
-            type="button"
-            className={`lss-ctrl-btn ${mode === 'auto' ? 'is-primary' : ''}`}
-            onClick={() => onModeChange(mode === 'auto' ? 'manual' : 'auto')}
-            title="切换 PLC 自动 / 手动强制调试模式"
-          >
-            {mode === 'auto' ? <Cpu size={12} /> : <Wrench size={12} />}
-            <span>{mode === 'auto' ? 'PLC 自动' : '手动强制'}</span>
-          </button>
-          {onTogglePause && (
-            <button
-              type="button"
-              className={`lss-ctrl-btn ${paused ? 'is-warn' : ''}`}
-              onClick={onTogglePause}
-            >
-              {paused ? <Play size={12} /> : <Pause size={12} />}
-              <span>{paused ? '继续' : '暂停'}</span>
-            </button>
-          )}
-          <button type="button" className="lss-ctrl-btn" onClick={onReset}>
-            <RotateCcw size={12} />
-            <span>复位</span>
-          </button>
-        </>
-      }
-    >
-      <div className="dt-stage-grid" />
-      {children}
-    </LandscapePortalOverlay>
-  );
-
   if (fullscreen) {
     return (
-      <>
-        <div className="dt-fullscreen-backdrop" role="dialog" aria-modal="true" aria-label={title}>
-          {shellContent}
-        </div>
-        {landscapeOverlay}
-      </>
+      <div className="dt-fullscreen-backdrop" role="dialog" aria-modal="true" aria-label={title}>
+        {shellContent}
+      </div>
     );
   }
 
-  return (
-    <>
-      {shellContent}
-      {landscapeOverlay}
-    </>
-  );
+  return shellContent;
 };

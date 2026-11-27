@@ -1,7 +1,50 @@
 import React, { useMemo, useState } from 'react';
 import { Cpu, Network, Package, Search, Server, TableProperties } from 'lucide-react';
-import { LandscapeSvgStage } from '../../../components/LandscapeSvgStage';
 import { HARDWARE_BOM, PROFINET_NODES, STATION_IO_TABLE } from '../data/projectData';
+import { Telegram1Workbench } from '../components/Telegram1Workbench';
+
+/**
+ * Orthogonal rounded-elbow PROFINET cable routes from SCALANCE XB008 (center 360,150, box 292..428 x 126..174)
+ * to each device node, following diagram-design §6 (orthogonal only, fanned attach points >=12px apart, no transit behind boxes).
+ */
+const TOPO_ORTHO_PATHS: Record<string, { d: string; portX: number; portY: number; dashed?: boolean }> = {
+  plc: {
+    d: 'M 360 126 L 360 86',
+    portX: 360,
+    portY: 106,
+  },
+  hmi: {
+    d: 'M 292 150 L 244 150 Q 236 150 236 158 L 236 186 Q 236 194 228 194 L 180 194',
+    portX: 236,
+    portY: 172,
+    dashed: true,
+  },
+  et200sp: {
+    d: 'M 428 140 L 488 140 Q 496 140 496 132 L 496 82 Q 496 74 504 74 L 565 74',
+    portX: 496,
+    portY: 108,
+  },
+  vision: {
+    d: 'M 428 160 L 496 160 Q 504 160 504 168 L 504 186 Q 504 194 512 194 L 580 194',
+    portX: 504,
+    portY: 176,
+  },
+  g120: {
+    d: 'M 332 174 L 332 204 Q 332 212 324 212 L 247 212 Q 239 212 239 220 L 239 248',
+    portX: 286,
+    portY: 212,
+  },
+  v90x: {
+    d: 'M 360 174 L 360 218 Q 360 224 366 224 L 373 224 Q 379 224 379 230 L 379 248',
+    portX: 369,
+    portY: 224,
+  },
+  v90z: {
+    d: 'M 388 174 L 388 204 Q 388 212 396 212 L 511 212 Q 519 212 519 220 L 519 248',
+    portX: 454,
+    portY: 212,
+  },
+};
 
 export const ArchitectureTab: React.FC = () => {
   const [selectedNodeId, setSelectedNodeId] = useState<string>('plc');
@@ -44,71 +87,61 @@ export const ArchitectureTab: React.FC = () => {
         </div>
 
         <div className="cap-topo-grid">
-          <LandscapeSvgStage
-            title="PROFINET IO (RT) 工业实时星型网络拓扑"
-            subtitle={`192.168.0.0/24 · SCALANCE XB008 · 选中: ${selectedNode.label} (${selectedNode.ip})`}
-            scopeClassName="cap-root"
-            fitMode="contain"
-            inlineMinWidth={580}
-            inlinePadding
-            hint="⇄ 点击任意设备节点查看订货号与报文 · 推荐横屏大图查看"
-            landscapeFooterLabel="节点详情"
-            controls={
-              <span className="cap-badge teal">
-                <Server size={11} /> {selectedNode.label} · {selectedNode.ip} · {selectedNode.orderNumber}
-              </span>
-            }
-            landscapeFooter={
-              <>
-                <span className="cap-badge teal">{selectedNode.ip}</span>
-                <strong style={{ fontSize: 12, color: '#f8fafc', whiteSpace: 'nowrap' }}>
-                  {selectedNode.model}
-                </strong>
-                <span style={{ fontSize: 11.5, color: '#14d4d4', whiteSpace: 'nowrap' }}>
-                  {selectedNode.role}
-                </span>
-                <span className="cap-mono" style={{ fontSize: 11, color: '#38bdf8', whiteSpace: 'nowrap' }}>
-                  地址: {selectedNode.ioRange}
-                </span>
-                <span style={{ fontSize: 11, color: '#94a3b8', whiteSpace: 'nowrap' }}>
-                  报文: {selectedNode.telegram}
-                </span>
-              </>
-            }
-          >
-            <svg viewBox="0 0 720 330" width="100%" style={{ display: 'block', minWidth: 560 }}>
+          <div className="cap-svg-stage">
+            <svg
+              role="img"
+              aria-labelledby="profinet-topo-title profinet-topo-desc"
+              viewBox="0 0 720 330"
+              width="100%"
+              style={{ display: 'block', minWidth: 560 }}
+            >
+              <title id="profinet-topo-title">SIMATIC S7-1215C PROFINET IO 星型实时网络拓扑</title>
+              <desc id="profinet-topo-desc">
+                展示 S7-1215C 主站经由 SCALANCE XB008 工业交换机连接 TP700 HMI、G120 变频器、V90 X/Z 伺服、智能视觉相机和 ET200SP 远程 IO 的星型组网结构。
+              </desc>
               {/* Subnet backdrop */}
               <rect
-                x="10"
-                y="10"
-                width="700"
-                height="310"
-                rx="14"
+                x="12"
+                y="12"
+                width="696"
+                height="306"
+                rx="8"
                 fill="rgba(0,153,153,0.04)"
-                stroke="rgba(0,153,153,0.22)"
+                stroke="rgba(0,153,153,0.24)"
                 strokeDasharray="6 4"
               />
-              <text x="24" y="30" fill="#94a3b8" fontSize="11" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+              <text
+                x="24"
+                y="32"
+                fill="#94a3b8"
+                fontSize="11"
+                fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+              >
                 PROFINET IO System · 100Mbps Full-Duplex · Send Clock 2.0ms
               </text>
 
-              {/* Star Ethernet cables from SCALANCE XB008 */}
+              {/* Orthogonal Ethernet routes from SCALANCE XB008 (drawn before boxes) */}
               {PROFINET_NODES.map((node) => {
-                const nx = node.x + 64;
-                const ny = node.y + 30;
+                const route = TOPO_ORTHO_PATHS[node.id];
                 const isSel = node.id === selectedNode.id;
+                if (!route) return null;
                 return (
                   <g key={`link-${node.id}`}>
-                    <line
-                      x1={switchCenter.x}
-                      y1={switchCenter.y}
-                      x2={nx}
-                      y2={ny}
-                      stroke={isSel ? node.accent : '#334155'}
-                      strokeWidth={isSel ? 3 : 1.8}
-                      strokeDasharray={node.id === 'hmi' ? '5 3' : undefined}
+                    <path
+                      d={route.d}
+                      fill="none"
+                      stroke={isSel ? node.accent : '#3b4d63'}
+                      strokeWidth={isSel ? 2.6 : 1.6}
+                      strokeDasharray={route.dashed ? '5 4' : undefined}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     />
-                    <circle cx={(switchCenter.x + nx) / 2} cy={(switchCenter.y + ny) / 2} r={3.5} fill={node.accent} />
+                    <circle
+                      cx={route.portX}
+                      cy={route.portY}
+                      r={isSel ? 4 : 3}
+                      fill={isSel ? node.accent : '#64748b'}
+                    />
                   </g>
                 );
               })}
@@ -120,15 +153,22 @@ export const ArchitectureTab: React.FC = () => {
                   y={switchCenter.y - 24}
                   width={136}
                   height={48}
-                  rx={10}
+                  rx={6}
                   fill="#0f172a"
                   stroke="#009999"
                   strokeWidth={2}
                 />
-                <text x={switchCenter.x} y={switchCenter.y - 3} textAnchor="middle" fill="#14b8a6" fontSize="11.5" fontWeight="700">
+                <text x={switchCenter.x} y={switchCenter.y - 3} textAnchor="middle" fill="#14d4d4" fontSize="11.5" fontWeight="700">
                   SCALANCE XB008
                 </text>
-                <text x={switchCenter.x} y={switchCenter.y + 13} textAnchor="middle" fill="#94a3b8" fontSize="11.2" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                <text
+                  x={switchCenter.x}
+                  y={switchCenter.y + 13}
+                  textAnchor="middle"
+                  fill="#94a3b8"
+                  fontSize="11"
+                  fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                >
                   8-Port PN Switch
                 </text>
               </g>
@@ -147,26 +187,39 @@ export const ArchitectureTab: React.FC = () => {
                       y={node.y}
                       width={128}
                       height={60}
-                      rx={10}
-                      fill={isSel ? 'rgba(0,153,153,0.25)' : '#111827'}
+                      rx={6}
+                      fill={isSel ? 'rgba(0,153,153,0.22)' : '#111821'}
                       stroke={isSel ? node.accent : '#334155'}
-                      strokeWidth={isSel ? 2.6 : 1.3}
+                      strokeWidth={isSel ? 2.2 : 1.2}
                     />
-                    <circle cx={node.x + 14} cy={node.y + 16} r={4.5} fill={node.accent} />
-                    <text x={node.x + 25} y={node.y + 20} fill="#f8fafc" fontSize="11.5" fontWeight="700">
+                    <rect x={node.x + 8} y={node.y + 11} width={6} height={10} rx={2} fill={node.accent} />
+                    <text x={node.x + 20} y={node.y + 20} fill="#f8fafc" fontSize="11.5" fontWeight="700">
                       {node.label}
                     </text>
-                    <text x={node.x + 12} y={node.y + 38} fill={node.accent} fontSize="10.5" fontWeight="700" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                    <text
+                      x={node.x + 10}
+                      y={node.y + 38}
+                      fill={node.accent}
+                      fontSize="10.5"
+                      fontWeight="700"
+                      fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                    >
                       {node.ip}
                     </text>
-                    <text x={node.x + 12} y={node.y + 52} fill="#94a3b8" fontSize="11" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                    <text
+                      x={node.x + 10}
+                      y={node.y + 52}
+                      fill="#94a3b8"
+                      fontSize="10.5"
+                      fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif"
+                    >
                       {node.pnName}
                     </text>
                   </g>
                 );
               })}
             </svg>
-          </LandscapeSvgStage>
+          </div>
 
           {/* Selected Node Inspector */}
           <div className="cap-node-detail">
@@ -224,7 +277,10 @@ export const ArchitectureTab: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. Hardware BOM Table */}
+      {/* 2. Interactive PROFINET Standard Telegram 1 Bit-Level Workbench */}
+      <Telegram1Workbench />
+
+      {/* 3. Hardware BOM Table */}
       <section className="cap-panel">
         <div className="cap-panel-head">
           <h2 className="cap-panel-title">

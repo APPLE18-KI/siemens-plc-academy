@@ -113,7 +113,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ passedIds, onPassC
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
                   <span className="cap-mono" style={{ fontSize: 11, color: '#14b8a6', fontWeight: 700 }}>
-                    STAGE 0{ch.level} · {ch.difficulty}
+                    第 {ch.level} 关 · {ch.difficulty}
                   </span>
                   {done ? (
                     <CheckCircle2 size={15} color="#10b981" />

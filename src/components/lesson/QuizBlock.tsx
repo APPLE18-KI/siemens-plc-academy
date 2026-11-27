@@ -3,6 +3,7 @@ import { Award, CheckCircle2, ClipboardCheck, RotateCcw, XCircle } from 'lucide-
 import type { QuizQuestion } from '../../types/content';
 import { useProgress } from '../../app/store/progressStore';
 import { haptic } from '../../app/native/platform';
+import { recordQuizAttempt } from '../../features/study/studyStore';
 
 interface QuizBlockProps {
   lessonId: string;
@@ -45,6 +46,7 @@ export const QuizBlock: React.FC<QuizBlockProps> = ({ lessonId, title, items }) 
     setSubmitted(true);
     haptic(correctCount === items.length ? 'success' : 'error');
     recordQuizScore(lessonId, correctCount, items.length);
+    recordQuizAttempt(lessonId, items, selected);
   };
 
   const handleRetry = () => {

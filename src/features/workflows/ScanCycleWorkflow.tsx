@@ -11,7 +11,6 @@ import {
   StepForward,
   Zap,
 } from 'lucide-react';
-import { LandscapeSvgStage } from '../../components/LandscapeSvgStage';
 import './workflows.css';
 
 type ScanSubStage =
@@ -56,35 +55,35 @@ const TOP_FIVE_STAGES: Array<{
 }> = [
   {
     id: 's1',
-    num: 'STAGE 01',
+    num: '第 1 步',
     title: '现场物理端子变化',
     desc: '传感器与按钮电平到达 DI 模块光耦',
     matches: ['field-change'],
   },
   {
     id: 's2',
-    num: 'STAGE 02',
+    num: '第 2 步',
     title: 'PII 映像区批量锁存',
     desc: 'CPU 一次性把物理 DI 冻结写入 PII',
     matches: ['pii-latch'],
   },
   {
     id: 's3',
-    num: 'STAGE 03',
+    num: '第 3 步',
     title: 'OB1 顺序求值 N1→N2',
     desc: '自上而下读写 PII/PIQ，不碰物理端子',
     matches: ['ob1-net1', 'ob1-net2'],
   },
   {
     id: 's4',
-    num: 'STAGE 04',
+    num: '第 4 步',
     title: '系统通信与 DB 更新',
     desc: 'PROFINET / HMI 读写与背景 DB 诊断',
     matches: ['sys-comms'],
   },
   {
     id: 's5',
-    num: 'STAGE 05',
+    num: '第 5 步',
     title: 'PIQ 统一写回硬件',
     desc: '本周期最终 PIQ 一次性驱动 DO 继电器',
     matches: ['piq-write'],
@@ -129,8 +128,8 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
     {
       id: 1,
       cycle: 1,
-      stage: 'INIT',
-      text: '已载入 S7-1215C 扫描周期实验台。当前为【双线圈事故模式】：手动启动 %I0.0=1、自动请求 %I0.1=0、安全联锁 %I0.2=1。点击“单步步进”观察 %Q0.0 如何被 Network 2 静默覆盖！',
+      stage: '载入',
+      text: '已载入 S7-1215C 扫描周期实验台。当前为【双线圈事故模式】：手动启动 %I0.0=1、自动请求 %I0.1=0、安全联锁 %I0.2=1。点击“走一步”观察 %Q0.0 如何被 程序段 2 静默覆盖！',
       tone: 'warn',
     },
   ]);
@@ -183,7 +182,7 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
         setOverwrittenInScan(false);
         appendLog(
           nextCycle,
-          '③ OB1 Net1',
+          '③ OB1 程序段1',
           `【单线圈合并】PIQ[%Q0.0] := (${pii.startPb ? 1 : 0} OR ${pii.autoReq ? 1 : 0}) AND ${pii.safetyOk ? 1 : 0} → ${res ? 'TRUE' : 'FALSE'}`,
           res ? 'success' : 'info'
         );
@@ -194,7 +193,7 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
         setOverwrittenInScan(false);
         appendLog(
           nextCycle,
-          '③ OB1 Net1',
+          '③ OB1 程序段1',
           `【手动段写入】PIQ[%Q0.0] := %I0.0(${pii.startPb ? 1 : 0}) AND %I0.2(${pii.safetyOk ? 1 : 0}) → ${res ? 'TRUE (暂存映像区!)' : 'FALSE'}`,
           res ? 'success' : 'info'
         );
@@ -207,7 +206,7 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
         setPiqQ01(piqQ00);
         appendLog(
           nextCycle,
-          '③ OB1 Net2',
+          '③ OB1 程序段2',
           `【独立指示灯】PIQ[%Q0.1] := PIQ[%Q0.0] → ${piqQ00 ? 'TRUE' : 'FALSE'}（未触碰 %Q0.0）`,
           'info'
         );
@@ -220,14 +219,14 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
         if (wasTrue) {
           appendLog(
             nextCycle,
-            '③ OB1 Net2',
-            `💥 双线圈覆盖事故！Network 2 用 %I0.1(0) 再次向 %Q0.0 赋值，直接将 Network 1 刚刚置 TRUE 的 PIQ[%Q0.0] 抹写为 FALSE！`,
+            '③ OB1 程序段2',
+            `💥 双线圈覆盖事故！程序段 2 用 %I0.1(0) 再次向 %Q0.0 赋值，直接将 程序段 1 刚刚置 TRUE 的 PIQ[%Q0.0] 抹写为 FALSE！`,
             'danger'
           );
         } else {
           appendLog(
             nextCycle,
-            '③ OB1 Net2',
+            '③ OB1 程序段2',
             `【自动段重写】PIQ[%Q0.0] := %I0.1(${pii.autoReq ? 1 : 0}) AND %I0.2(${pii.safetyOk ? 1 : 0}) → ${res2 ? 'TRUE' : 'FALSE'}`,
             res2 ? 'success' : 'warn'
           );
@@ -253,7 +252,7 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
         appendLog(
           nextCycle,
           '⑤ PIQ 写硬件',
-          `⚠️ 物理继电器 %Q0.0 保持断开(0)！尽管 Net1 曾置 1，但硬件只看周期末尾的最终 PIQ 值！`,
+          `⚠️ 物理继电器 %Q0.0 保持断开(0)！尽管程序段 1 曾置 1，但硬件只看周期末尾的最终 PIQ 值！`,
           'danger'
         );
       } else {
@@ -293,7 +292,7 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
       currentSubStage === 'sys-comms'
     ) {
       setMidScanDrift(
-        `⚡ 你在扫描周期中途切换了物理端子 ${addr} (${label} → ${nextVal ? '1' : '0'})！注意观察：中间的 PII 映像区仍锁定着 Stage ② 的旧快照，本周期 OB1 不会感知本次突变，直到下个周期 Stage ② 重新锁存！`
+        `⚡ 你在扫描周期中途切换了物理端子 ${addr} (${label} → ${nextVal ? '1' : '0'})！注意观察：中间的 PII 映像区仍锁定着 第 2 步的旧快照，本周期 OB1 不会感知本次突变，直到下个周期第 2 步重新读入！`
       );
       appendLog(
         cycle,
@@ -321,7 +320,7 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
     appendLog(
       cycle,
       '🎯 事故复现',
-      `已停在 OB1 Network 1：手动按钮 %I0.0=1 使 PIQ[%Q0.0] 刚刚置为 TRUE。现在再点 1 次“单步步进”看 Network 2 如何覆盖它！`,
+      `已停在 OB1 程序段 1：手动按钮 %I0.0=1 使 PIQ[%Q0.0] 刚刚置为 TRUE。现在再点 1 次“走一步”看 程序段 2 如何覆盖它！`,
       'warn'
     );
   };
@@ -341,8 +340,8 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
       {
         id: Date.now(),
         cycle: 1,
-        stage: 'RESET',
-        text: '仿真周期已复位至 Cycle #1 Stage 01。',
+        stage: '复位',
+        text: '仿真周期已复位至 第 1 个周期第 1 步。',
         tone: 'info',
       },
     ]);
@@ -357,7 +356,7 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
       '模式切换',
       newMode === 'normal'
         ? '已切换至【标准单线圈模式】：手动与自动分支合并驱动唯一线圈 %Q0.0，彻底杜绝覆盖。'
-        : '已切换至【双线圈事故模式】：Network 1 与 Network 2 对同一地址 %Q0.0 重复赋值。',
+        : '已切换至【双线圈事故模式】：程序段 1 与 程序段 2 对同一地址 %Q0.0 重复赋值。',
       newMode === 'normal' ? 'success' : 'warn'
     );
   };
@@ -366,6 +365,21 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
     fieldIn.startPb !== pii.startPb ||
     fieldIn.autoReq !== pii.autoReq ||
     fieldIn.safetyOk !== pii.safetyOk;
+
+  const flowNodes = [
+                  { x: 14, w: 98, label: '① 物理 DI', sub: '%I0.0~%I0.2', active: currentSubStage === 'field-change', color: '#38bdf8' },
+                  { x: 144, w: 94, label: '② PII 锁存', sub: '输入映像区', active: currentSubStage === 'pii-latch', color: '#14b8a6' },
+                  {
+                    x: 270,
+                    w: 98,
+                    label: currentSubStage === 'ob1-net2' ? '③ OB1 程序段2' : '③ OB1 程序段1',
+                    sub: mode === 'double-coil' ? '双线圈覆盖!' : '顺序求值',
+                    active: currentSubStage === 'ob1-net1' || currentSubStage === 'ob1-net2',
+                    color: overwrittenInScan ? '#ef4444' : '#10b981',
+                  },
+                  { x: 400, w: 94, label: '④ 系统通信', sub: 'HMI/DB 刷新', active: currentSubStage === 'sys-comms', color: '#f59e0b' },
+                  { x: 526, w: 100, label: '⑤ PIQ→DO', sub: physQ00 ? '%Q0.0=吸合' : '%Q0.0=断开', active: currentSubStage === 'piq-write', color: physQ00 ? '#10b981' : '#94a3b8' },
+                ];
 
   return (
     <div className="wf-root">
@@ -390,13 +404,13 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
               </button>
             </div>
             <span className="wf-badge teal">
-              <Cpu size={13} /> Cycle #{cycle} · OB1 周期 ~2.4ms
+              <Cpu size={13} /> 第 {cycle} 个周期 · 每周期约 2.4ms
             </span>
           </div>
 
           <div className="wf-toolbar-group">
             <button type="button" className="wf-btn wf-btn-primary" onClick={handleStep}>
-              <StepForward size={15} /> 单阶段步进 Step
+              <StepForward size={15} /> 走一步
             </button>
             <button
               type="button"
@@ -410,7 +424,7 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
               type="button"
               className="wf-btn wf-btn-danger"
               onClick={triggerDoubleCoilDemo}
-              title="一键停在 OB1 Network 1，点击下一步亲眼目睹双线圈覆盖"
+              title="一键停在 OB1 程序段 1，点击下一步亲眼目睹双线圈覆盖"
             >
               <Zap size={15} /> 一键复现双线圈事故
             </button>
@@ -440,10 +454,10 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
           <div className="wf-alert danger">
             <ShieldAlert size={18} style={{ flexShrink: 0, marginTop: 2 }} />
             <div>
-              <strong>捕获到经典“双线圈覆盖事故 (Last-Write-Wins)”！</strong>
-              Network 1 明明算出 <code>%Q0.0 := TRUE</code>，但因为 OB1 只改内存映像区
-              <code>PIQ</code>，Network 2 紧接着把 <code>%Q0.0</code> 改回了 <code>FALSE</code>
-              ；到了 Stage 05 统一写回硬件端子时，物理接触器 <code>%Q0.0</code> 纹丝不动！
+              <strong>捕获到经典“双线圈覆盖事故（后写的覆盖先写的）”！</strong>
+              程序段 1 明明算出 <code>%Q0.0 := TRUE</code>，但因为 OB1 只改内存映像区
+              <code>PIQ</code>，程序段 2 紧接着把 <code>%Q0.0</code> 改回了 <code>FALSE</code>
+              ；到了第 5 步统一写回硬件端子时，物理接触器 <code>%Q0.0</code> 纹丝不动！
               <strong>工程铁律：同一输出线圈在程序中只能出现一次，多条件请用并联分支或中间标志位汇总！</strong>
             </div>
           </div>
@@ -491,162 +505,83 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
             </div>
 
             {/* Interactive SVG Loop Ring */}
-            <div style={{ marginBottom: 12 }}>
-              <LandscapeSvgStage
-                title="S7-1200 PLC 五阶段循环扫描周期闭环数据流"
-                subtitle={`Cycle #${cycle} · ${mode === 'double-coil' ? '双线圈覆盖事故模式' : '标准单线圈模式'}`}
-                scopeClassName="wf-root"
-                fitMode="contain"
-                inlineMinWidth={540}
-                inlinePadding
-                hint="⇄ 点击阶段节点可跳转 · 推荐横屏全幅观察 PII/OB1/PIQ 闭环"
-                landscapeFooterLabel="DI 端子与映像区"
-                controls={
-                  <>
-                    <button type="button" className="lss-ctrl-btn is-primary" onClick={handleStep}>
-                      <StepForward size={12} />
-                      <span>单步推进</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={`lss-ctrl-btn ${autoPlay ? 'is-warn' : ''}`}
-                      onClick={() => setAutoPlay((p) => !p)}
-                    >
-                      {autoPlay ? <Pause size={12} /> : <Play size={12} />}
-                      <span>{autoPlay ? '暂停播放' : '自动播放'}</span>
-                    </button>
-                    <button type="button" className="lss-ctrl-btn is-danger" onClick={triggerDoubleCoilDemo}>
-                      <Zap size={12} />
-                      <span>复现双线圈</span>
-                    </button>
-                    <button type="button" className="lss-ctrl-btn" onClick={resetLab}>
-                      <RotateCcw size={12} />
-                      <span>重置</span>
-                    </button>
-                  </>
-                }
-                landscapeFooter={
-                  <>
-                    <button
-                      type="button"
-                      className={`lss-ctrl-btn ${fieldIn.startPb ? 'is-success' : ''}`}
-                      onClick={() => toggleFieldInput('startPb', '%I0.0', 'Start_PB')}
-                    >
-                      %I0.0 启动: {fieldIn.startPb ? '1' : '0'}
-                    </button>
-                    <button
-                      type="button"
-                      className={`lss-ctrl-btn ${fieldIn.autoReq ? 'is-success' : ''}`}
-                      onClick={() => toggleFieldInput('autoReq', '%I0.1', 'Auto_Req')}
-                    >
-                      %I0.1 自动: {fieldIn.autoReq ? '1' : '0'}
-                    </button>
-                    <button
-                      type="button"
-                      className={`lss-ctrl-btn ${fieldIn.safetyOk ? 'is-success' : ''}`}
-                      onClick={() => toggleFieldInput('safetyOk', '%I0.2', 'Safety_OK')}
-                    >
-                      %I0.2 安全门: {fieldIn.safetyOk ? '1' : '0'}
-                    </button>
-                    <span className={`wf-badge ${overwrittenInScan ? 'red' : piqQ00 ? 'green' : 'teal'}`}>
-                      PIQ %Q0.0: {overwrittenInScan ? '被覆写 0!' : piqQ00 ? '1' : '0'}
-                    </span>
-                    <span className={`wf-badge ${physQ00 ? 'green' : 'amber'}`}>
-                      物理 DO %Q0.0: {physQ00 ? '吸合' : '断开'}
-                    </span>
-                  </>
-                }
-              >
-                <svg viewBox="0 0 640 132" width="100%" style={{ display: 'block', minWidth: 480 }}>
-                  <defs>
-                    <marker id="wfArr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-                      <path d="M 0 1 L 10 5 L 0 9 z" fill="#14b8a6" />
-                    </marker>
-                    <marker id="wfArrGray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-                      <path d="M 0 1 L 10 5 L 0 9 z" fill="#475569" />
-                    </marker>
-                  </defs>
+            <ol className="wf-flow-vertical" aria-label="扫描周期 5 个步骤">
+              {flowNodes.map((n, idx) => (
+                <React.Fragment key={idx}>
+                  <li className={`${n.active ? 'active' : ''} ${n.active && overwrittenInScan && idx === 2 ? 'danger' : ''}`}>
+                    <span className="wf-flow-label">{n.label}</span>
+                    <span className="wf-flow-sub">{n.sub}</span>
+                  </li>
+                  {idx < flowNodes.length - 1 && <div className="wf-flow-arrow" aria-hidden="true">↓</div>}
+                </React.Fragment>
+              ))}
+              <div className={`wf-flow-loop ${currentSubStage === 'field-change' ? 'active' : ''}`}>↺ 回到第 1 步：下一个扫描周期（每 1~5ms 循环一次）</div>
+            </ol>
+            <div className="wf-svg-wrap wf-flow-svg" style={{ marginBottom: 12 }}>
+              <svg viewBox="0 0 640 132" width="100%" style={{ display: 'block', minWidth: 480 }}>
+                <defs>
+                  <marker id="wfArr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M 0 1 L 10 5 L 0 9 z" fill="#14b8a6" />
+                  </marker>
+                  <marker id="wfArrGray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M 0 1 L 10 5 L 0 9 z" fill="#475569" />
+                  </marker>
+                </defs>
 
-                  {/* Connectors */}
-                  {[
-                    { x1: 112, x2: 142, active: currentSubStage === 'pii-latch' },
-                    { x1: 238, x2: 268, active: currentSubStage === 'ob1-net1' || currentSubStage === 'ob1-net2' },
-                    { x1: 368, x2: 398, active: currentSubStage === 'sys-comms' },
-                    { x1: 494, x2: 524, active: currentSubStage === 'piq-write' },
-                  ].map((c, idx) => (
-                    <line
-                      key={idx}
-                      x1={c.x1}
-                      y1={54}
-                      x2={c.x2}
-                      y2={54}
-                      stroke={c.active ? '#14b8a6' : '#475569'}
-                      strokeWidth={c.active ? 3 : 2}
-                      markerEnd={c.active ? 'url(#wfArr)' : 'url(#wfArrGray)'}
-                    />
-                  ))}
-
-                  {/* Return feedback loop arrow */}
-                  <path
-                    d="M 578 86 L 578 116 L 62 116 L 62 88"
-                    fill="none"
-                    stroke={currentSubStage === 'field-change' ? '#14b8a6' : '#334155'}
-                    strokeWidth={currentSubStage === 'field-change' ? 2.5 : 1.5}
-                    strokeDasharray="6 4"
-                    markerEnd={currentSubStage === 'field-change' ? 'url(#wfArr)' : 'url(#wfArrGray)'}
+                {/* Connectors */}
+                {[
+                  { x1: 112, x2: 142, active: currentSubStage === 'pii-latch' },
+                  { x1: 238, x2: 268, active: currentSubStage === 'ob1-net1' || currentSubStage === 'ob1-net2' },
+                  { x1: 368, x2: 398, active: currentSubStage === 'sys-comms' },
+                  { x1: 494, x2: 524, active: currentSubStage === 'piq-write' },
+                ].map((c, idx) => (
+                  <line
+                    key={idx}
+                    x1={c.x1}
+                    y1={54}
+                    x2={c.x2}
+                    y2={54}
+                    stroke={c.active ? '#14b8a6' : '#475569'}
+                    strokeWidth={c.active ? 3 : 2}
+                    markerEnd={c.active ? 'url(#wfArr)' : 'url(#wfArrGray)'}
                   />
-                  <text x="320" y="110" textAnchor="middle" fill="#94a3b8" fontSize="11" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
-                    下一扫描周期开始 (Cyclic Scan Loop · 每 1~5ms 周而复始)
-                  </text>
+                ))}
 
-                  {/* 5 SVG Nodes */}
-                  {[
-                    { x: 14, w: 98, stage: 'field-change' as ScanSubStage, label: '① 物理 DI', sub: '%I0.0~%I0.2', active: currentSubStage === 'field-change', color: '#38bdf8' },
-                    { x: 144, w: 94, stage: 'pii-latch' as ScanSubStage, label: '② PII 锁存', sub: '输入映像区', active: currentSubStage === 'pii-latch', color: '#14b8a6' },
-                    {
-                      x: 270,
-                      w: 98,
-                      stage: 'ob1-net1' as ScanSubStage,
-                      label: currentSubStage === 'ob1-net2' ? '③ OB1 Net2' : '③ OB1 Net1',
-                      sub: mode === 'double-coil' ? '双线圈覆盖!' : '顺序求值',
-                      active: currentSubStage === 'ob1-net1' || currentSubStage === 'ob1-net2',
-                      color: overwrittenInScan ? '#ef4444' : '#10b981',
-                    },
-                    { x: 400, w: 94, stage: 'sys-comms' as ScanSubStage, label: '④ 系统通信', sub: 'HMI/DB 刷新', active: currentSubStage === 'sys-comms', color: '#f59e0b' },
-                    { x: 526, w: 100, stage: 'piq-write' as ScanSubStage, label: '⑤ PIQ→DO', sub: physQ00 ? '%Q0.0=吸合' : '%Q0.0=断开', active: currentSubStage === 'piq-write', color: physQ00 ? '#10b981' : '#94a3b8' },
-                  ].map((n, idx) => (
-                    <g
-                      key={idx}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => {
-                        const targetIdx = STAGE_SEQUENCE.indexOf(n.stage);
-                        if (targetIdx >= 0) {
-                          setAutoPlay(false);
-                          setStageIdx(targetIdx);
-                          executeSubStage(targetIdx, cycle, mode);
-                        }
-                      }}
-                    >
-                      <rect
-                        x={n.x}
-                        y={22}
-                        width={n.w}
-                        height={62}
-                        rx={10}
-                        fill={n.active ? 'rgba(0,153,153,0.22)' : '#111827'}
-                        stroke={n.active ? n.color : '#334155'}
-                        strokeWidth={n.active ? 2.5 : 1.2}
-                      />
-                      <text x={n.x + n.w / 2} y={48} textAnchor="middle" fill="#f8fafc" fontSize="12" fontWeight="700">
-                        {n.label}
-                      </text>
-                      <text x={n.x + n.w / 2} y={68} textAnchor="middle" fill={n.active ? n.color : '#94a3b8'} fontSize="10.5" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
-                        {n.sub}
-                      </text>
-                    </g>
-                  ))}
-                </svg>
-              </LandscapeSvgStage>
+                {/* Return feedback loop arrow */}
+                <path
+                  d="M 578 86 L 578 116 L 62 116 L 62 88"
+                  fill="none"
+                  stroke={currentSubStage === 'field-change' ? '#14b8a6' : '#334155'}
+                  strokeWidth={currentSubStage === 'field-change' ? 2.5 : 1.5}
+                  strokeDasharray="6 4"
+                  markerEnd={currentSubStage === 'field-change' ? 'url(#wfArr)' : 'url(#wfArrGray)'}
+                />
+                <text x="320" y="110" textAnchor="middle" fill="#94a3b8" fontSize="11" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                  回到第 1 步：下一个扫描周期（每 1~5ms 循环一次）
+                </text>
+
+                {/* 5 SVG Nodes */}
+                {flowNodes.map((n, idx) => (
+                  <g key={idx}>
+                    <rect
+                      x={n.x}
+                      y={22}
+                      width={n.w}
+                      height={62}
+                      rx={10}
+                      fill={n.active ? 'rgba(0,153,153,0.22)' : '#111827'}
+                      stroke={n.active ? n.color : '#334155'}
+                      strokeWidth={n.active ? 2.5 : 1.2}
+                    />
+                    <text x={n.x + n.w / 2} y={48} textAnchor="middle" fill="#f8fafc" fontSize="12" fontWeight="700">
+                      {n.label}
+                    </text>
+                    <text x={n.x + n.w / 2} y={68} textAnchor="middle" fill={n.active ? n.color : '#94a3b8'} fontSize="10.5" fontFamily="'JetBrains Mono', 'Cascadia Code', Consolas, 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif">
+                      {n.sub}
+                    </text>
+                  </g>
+                ))}
+              </svg>
             </div>
 
             {/* 3-Column Memory Comparison */}
@@ -739,7 +674,7 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
               <div className={`wf-mem-box ${currentSubStage === 'piq-write' ? 'highlight' : ''}`}>
                 <div className="wf-mem-title">
                   <span>物理 DO 继电器输出</span>
-                  <span>仅 Stage ⑤ 刷新</span>
+                  <span>只在第 5 步刷新</span>
                 </div>
                 <div className="wf-io-row">
                   <div>
@@ -771,7 +706,7 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
             </div>
           </div>
 
-          {/* Right: OB1 Network 1 & Network 2 Evaluation + Trace Log */}
+          {/* Right: OB1 程序段 1 & 程序段 2 Evaluation + Trace Log */}
           <div className="wf-subpanel">
             <div className="wf-subpanel-title">
               <span>OB1 主程序自上而下顺序求值（TIA Portal）</span>
@@ -780,11 +715,11 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
               </span>
             </div>
 
-            {/* Network 1 */}
+            {/* 程序段 1 */}
             <div className={`wf-network-card ${currentSubStage === 'ob1-net1' ? 'evaluating' : ''}`}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <strong style={{ fontSize: 12.5 }}>
-                  Network 1：{mode === 'normal' ? '手/自动条件并联驱动唯一线圈 %Q0.0' : '手动启停控制段（第一次给 %Q0.0 赋值）'}
+                  程序段 1：{mode === 'normal' ? '手/自动条件并联驱动唯一线圈 %Q0.0' : '手动启停控制段（第一次给 %Q0.0 赋值）'}
                 </strong>
                 {currentSubStage === 'ob1-net1' && <span className="wf-badge teal">▶ 正在执行</span>}
               </div>
@@ -795,7 +730,7 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
               </div>
             </div>
 
-            {/* Network 2 */}
+            {/* 程序段 2 */}
             <div
               className={`wf-network-card ${
                 currentSubStage === 'ob1-net2'
@@ -807,7 +742,7 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <strong style={{ fontSize: 12.5 }}>
-                  Network 2：{mode === 'normal' ? '运行状态指示灯输出（读写不同地址）' : '自动控制段（再次给同一地址 %Q0.0 赋值！）'}
+                  程序段 2：{mode === 'normal' ? '运行状态指示灯输出（读写不同地址）' : '自动控制段（再次给同一地址 %Q0.0 赋值！）'}
                 </strong>
                 {currentSubStage === 'ob1-net2' && (
                   <span className={`wf-badge ${overwrittenInScan ? 'red' : 'teal'}`}>
@@ -818,7 +753,7 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
               <div className="wf-rung-line">
                 {mode === 'normal'
                   ? `// 读取前面算好的 PIQ[%Q0.0] 驱动指示灯 %Q0.1\n"Run_Lamp"(%Q0.1) := "Motor_KM1"(%Q0.0);`
-                  : `// 致命 Bug：再次写入 %Q0.0，前面 Network 1 的结果被彻底覆盖！\n"Motor_KM1"(%Q0.0) := "Auto_Req"[${pii.autoReq ? 1 : 0}] AND "Safety_OK"[${pii.safetyOk ? 1 : 0}];\n// → PIQ[%Q0.0] 最终被强制改写为 ${pii.autoReq && pii.safetyOk ? 'TRUE' : 'FALSE'}!`}
+                  : `// 致命 Bug：再次写入 %Q0.0，前面 程序段 1 的结果被彻底覆盖！\n"Motor_KM1"(%Q0.0) := "Auto_Req"[${pii.autoReq ? 1 : 0}] AND "Safety_OK"[${pii.safetyOk ? 1 : 0}];\n// → PIQ[%Q0.0] 最终被强制改写为 ${pii.autoReq && pii.safetyOk ? 'TRUE' : 'FALSE'}!`}
               </div>
             </div>
 
@@ -826,14 +761,14 @@ export const ScanCycleWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded =
             <div style={{ marginTop: 12 }}>
               <div className="wf-subpanel-title" style={{ marginBottom: 8 }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <Activity size={14} /> 扫描周期追踪日志 (Trace)
+                  <Activity size={14} /> 扫描过程记录
                 </span>
               </div>
               <div className="wf-log-list">
                 {logs.map((entry) => (
                   <div key={entry.id} className={`wf-log-item ${entry.tone}`}>
                     <strong>
-                      [C#{entry.cycle} {entry.stage}]
+                      [第{entry.cycle}周期 {entry.stage}]
                     </strong>{' '}
                     {entry.text}
                   </div>

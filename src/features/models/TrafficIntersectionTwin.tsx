@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Footprints, Moon, ShieldAlert, Siren, Sun } from 'lucide-react';
-import type { PlcRuntime, ScanMetrics, TagValue } from '../../types/plc';
+import type { PlcRuntime } from '../../types/plc';
 import {
   TwinShell,
   type FaultSwitchItem,
@@ -39,10 +39,7 @@ interface Vehicle {
 const CX = 520;
 const CY = 280;
 
-export const TrafficIntersectionTwin: React.FC<TrafficIntersectionProps> = ({
-  runtime,
-  embedded = false,
-}) => {
+export const TrafficIntersectionTwin: React.FC<TrafficIntersectionProps> = ({ embedded = false }) => {
   const [controlMode, setControlMode] = useState<TwinControlMode>('auto');
   const [paused, setPaused] = useState(false);
 
@@ -82,22 +79,6 @@ export const TrafficIntersectionTwin: React.FC<TrafficIntersectionProps> = ({
     { id: 4, dir: 'N', pos: 470, speed: 0, maxSpeed: 125, color: '#34d399' },
   ]);
 
-  // External PLC runtime coupling state & refs (PLC -> Plant & Plant -> PLC)
-  const [extLamps, setExtLamps] = useState({
-    ewR: false,
-    ewY: false,
-    ewG: true,
-    nsR: true,
-    nsY: false,
-    nsG: false,
-    pedWalk: false,
-  });
-  const [syncEpoch, setSyncEpoch] = useState(0);
-  const lastSentInputsRef = useRef<Record<string, TagValue>>({});
-  const syncEpochRef = useRef(0);
-  const prevCycleRef = useRef(0);
-  const isExtAuto = Boolean(runtime) && controlMode === 'auto';
-
   const simRef = useRef({
     phase: 'EW_GREEN' as PhaseKey,
     phaseRemainingMs: 10000,
@@ -106,7 +87,6 @@ export const TrafficIntersectionTwin: React.FC<TrafficIntersectionProps> = ({
     spawnAccumMs: 0,
     nextVehId: 5,
     pedRequest: false,
-    extPedProgress: 0,
     vehicles: [
       { id: 1, dir: 'E' as const, pos: 180, speed: 120, maxSpeed: 135, color: '#38bdf8' },
       { id: 2, dir: 'W' as const, pos: 840, speed: 110, maxSpeed: 130, color: '#f59e0b' },
@@ -118,85 +98,6 @@ export const TrafficIntersectionTwin: React.FC<TrafficIntersectionProps> = ({
   useEffect(() => {
     simRef.current.pedRequest = pedRequest;
   }, [pedRequest]);
-
-  // 1. Subscribe to external PlcRuntime outputs (PLC -> Plant)
-  useEffect(() => {
-    if (!runtime) {
-      lastSentInputsRef.current = {};
-      return;
-    }
-
-    lastSentInputsRef.current = {};
-    prevCycleRef.current = runtime.getMetrics?.().cycleCount ?? 0;
-
-    const applySnapshot = (tags: Record<string, TagValue>, metrics?: ScanMetrics) => {
-      const next = {
-        ewR: Boolean(tags['EW_Red']),
-        ewY: Boolean(tags['EW_Yellow']),
-        ewG: Boolean(tags['EW_Green']),
-        nsR: Boolean(tags['NS_Red']),
-        nsY: Boolean(tags['NS_Yellow']),
-        nsG: Boolean(tags['NS_Green']),
-        pedWalk: Boolean(tags['Ped_Walk']),
-      };
-
-      if (metrics) {
-        if (metrics.cycleCount < prevCycleRef.current) {
-          setSyncEpoch((e) => e + 1);
-        }
-        prevCycleRef.current = metrics.cycleCount;
-      }
-
-      setExtLamps((prev) =>
-        prev.ewR === next.ewR &&
-        prev.ewY === next.ewY &&
-        prev.ewG === next.ewG &&
-        prev.nsR === next.nsR &&
-        prev.nsY === next.nsY &&
-        prev.nsG === next.nsG &&
-        prev.pedWalk === next.pedWalk
-          ? prev
-          : next
-      );
-    };
-
-    applySnapshot(runtime.tags, runtime.getMetrics?.());
-    return runtime.subscribe(applySnapshot);
-  }, [runtime]);
-
-  // 2. Sync intersection switches & requests to external PlcRuntime (Plant -> PLC)
-  useEffect(() => {
-    if (!runtime || controlMode !== 'auto') {
-      lastSentInputsRef.current = {};
-      return;
-    }
-    if (syncEpochRef.current !== syncEpoch) {
-      syncEpochRef.current = syncEpoch;
-      lastSentInputsRef.current = {};
-    }
-
-    const inputPairs: Array<[string, boolean]> = [
-      ['Night_Mode', opMode === 'night'],
-      ['Ped_Request', pedRequest],
-      ['Emerg_Green', opMode === 'emergency'],
-    ];
-
-    for (const [name, nextVal] of inputPairs) {
-      if (lastSentInputsRef.current[name] !== nextVal) {
-        lastSentInputsRef.current[name] = nextVal;
-        if (runtime.getTag(name) !== nextVal) {
-          runtime.setTag(name, nextVal);
-        }
-      }
-    }
-  }, [runtime, controlMode, syncEpoch, opMode, pedRequest]);
-
-  // Auto-reset pedestrian request once external PLC grants Ped_Walk
-  useEffect(() => {
-    if (isExtAuto && extLamps.pedWalk && pedRequest) {
-      setPedRequest(false);
-    }
-  }, [isExtAuto, extLamps.pedWalk, pedRequest]);
 
   // Spawn emergency fire truck when entering Emergency Green Wave
   const triggerEmergencyMode = () => {
@@ -232,19 +133,6 @@ export const TrafficIntersectionTwin: React.FC<TrafficIntersectionProps> = ({
         nsY: manualQ.nsY,
         nsG: manualQ.nsG || faultGreenConflict,
         pedWalk: false,
-      };
-    }
-
-    if (runtime) {
-      // External TIA Portal PLC runtime drives all lamp outputs directly (hardware conflict detector still protects!)
-      return {
-        ewR: extLamps.ewR,
-        ewY: extLamps.ewY,
-        ewG: extLamps.ewG || faultGreenConflict,
-        nsR: extLamps.nsR,
-        nsY: extLamps.nsY,
-        nsG: extLamps.nsG || faultGreenConflict,
-        pedWalk: extLamps.pedWalk,
       };
     }
 
@@ -323,15 +211,15 @@ export const TrafficIntersectionTwin: React.FC<TrafficIntersectionProps> = ({
       nsG = true;
     }
     return { ewR, ewY, ewG, nsR, nsY, nsG, pedWalk };
-  }, [controlMode, manualQ, runtime, extLamps, opMode, phase, blinkOn, faultGreenConflict]);
+  }, [controlMode, manualQ, opMode, phase, blinkOn, faultGreenConflict]);
 
   // Independent Hardware Green-Conflict Interlock Detector: (EW_G AND NS_G) -> Fail-Safe All-Yellow Blink!
   const hasActiveConflict = rawOutputs.ewG && rawOutputs.nsG;
   useEffect(() => {
-    if (hasActiveConflict && !conflictTripped) {
+    if (hasActiveConflict) {
       setConflictTripped(true);
     }
-  }, [hasActiveConflict, conflictTripped]);
+  }, [hasActiveConflict]);
 
   const effectiveLamps = useMemo(() => {
     if (conflictTripped) {
@@ -372,8 +260,8 @@ export const TrafficIntersectionTwin: React.FC<TrafficIntersectionProps> = ({
         setBlinkOn(s.blinkOn);
       }
 
-      // Auto sequence state machine (built-in PLC only; skipped when coupled to external PlcRuntime)
-      if (!runtime && controlMode === 'auto' && opMode === 'day' && !conflictTripped) {
+      // Auto sequence state machine (runs in day mode when no conflict lock)
+      if (controlMode === 'auto' && opMode === 'day' && !conflictTripped) {
         // If pedestrian requested while main green has plenty of time, shorten green to max 3s
         if (s.pedRequest && (s.phase === 'EW_GREEN' || s.phase === 'NS_GREEN') && s.phaseRemainingMs > 3000) {
           s.phaseRemainingMs = 3000;
@@ -434,22 +322,12 @@ export const TrafficIntersectionTwin: React.FC<TrafficIntersectionProps> = ({
         } else {
           setPedProgress(0);
         }
-      } else if (isExtAuto) {
-        if (lampsRef.current.pedWalk) {
-          s.extPedProgress = (s.extPedProgress + dt / 6.0) % 1;
-          setPedProgress(s.extPedProgress);
-        } else if (s.extPedProgress !== 0) {
-          s.extPedProgress = 0;
-          setPedProgress(0);
-        }
       }
 
       // Vehicle Physics (Red-light stopping & car-following queue)
       const lamps = lampsRef.current;
-      const ewCanGo =
-        lamps.ewG || (opMode === 'night' && !conflictTripped && (!isExtAuto || !lamps.ewR));
-      const nsCanGo =
-        lamps.nsG || (opMode === 'night' && !conflictTripped && (!isExtAuto || !lamps.nsR));
+      const ewCanGo = lamps.ewG || (opMode === 'night' && !conflictTripped);
+      const nsCanGo = lamps.nsG || (opMode === 'night' && !conflictTripped);
 
       const palette = ['#38bdf8', '#f59e0b', '#a78bfa', '#34d399', '#e2e8f0', '#fb7185'];
       s.spawnAccumMs += dtMs;
@@ -526,17 +404,7 @@ export const TrafficIntersectionTwin: React.FC<TrafficIntersectionProps> = ({
     }, dtMs);
 
     return () => window.clearInterval(timer);
-  }, [
-    paused,
-    runtime,
-    isExtAuto,
-    controlMode,
-    opMode,
-    conflictTripped,
-    ewGreenSec,
-    nsGreenSec,
-    trafficDensity,
-  ]);
+  }, [paused, controlMode, opMode, conflictTripped, ewGreenSec, nsGreenSec, trafficDensity]);
 
   const handleResetConflict = () => {
     setFaultGreenConflict(false);
@@ -555,21 +423,15 @@ export const TrafficIntersectionTwin: React.FC<TrafficIntersectionProps> = ({
     setTrafficDensity(65);
     simRef.current.phase = 'EW_GREEN';
     simRef.current.phaseRemainingMs = 10000;
-    simRef.current.extPedProgress = 0;
     setPhase('EW_GREEN');
     setCountdown(10);
-    setPedProgress(0);
-    lastSentInputsRef.current = {};
-    setSyncEpoch((e) => e + 1);
   };
 
   const banner = useMemo(() => {
     if (conflictTripped) {
       return {
         tone: 'danger' as const,
-        text: isExtAuto
-          ? '🚨 硬件绿灯冲突安全联锁动作！(外部博途 PLC 程序或故障注入导致 EW_Green & NS_Green 同时为 1)：独立安全继电器已切断绿灯并降级全向黄闪，请修复 SCL 逻辑后点击复位！'
-          : '🚨 硬件绿灯冲突安全联锁动作！(EW_Green & NS_Green 同时为 1)：独立冲突监控继电器已立即切断所有绿灯主回路，并强制降级为全向黄灯闪烁故障安全模式！',
+        text: '🚨 硬件绿灯冲突安全联锁动作！(EW_Green & NS_Green 同时为 1)：独立冲突监控继电器已立即切断所有绿灯主回路，并强制降级为全向黄灯闪烁故障安全模式！',
         actionLabel: '清除冲突源并复位安全继电器',
         onAction: handleResetConflict,
       };
@@ -577,9 +439,7 @@ export const TrafficIntersectionTwin: React.FC<TrafficIntersectionProps> = ({
     if (opMode === 'emergency') {
       return {
         tone: 'warn' as const,
-        text: isExtAuto
-          ? '🚒 🔗 外部博途 PLC 受控 · 紧急消防绿波信号 (%I0.3 Emerg_Green = TRUE) 已送入 PLC，观察您的博途程序是否锁定东西向绿波放行！'
-          : '🚒 紧急消防绿波通道 (%I0.3 = 1) 已激活：东西主干道强制锁定绿灯放行，南北向强制全红拦截，保障应急车辆零延误通过！',
+        text: '🚒 紧急消防绿波通道 (%I0.3 = 1) 已激活：东西主干道强制锁定绿灯放行，南北向强制全红拦截，保障应急车辆零延误通过！',
         actionLabel: '退出应急绿波',
         onAction: () => setOpMode('day'),
       };
@@ -587,19 +447,11 @@ export const TrafficIntersectionTwin: React.FC<TrafficIntersectionProps> = ({
     if (pedRequest) {
       return {
         tone: 'ok' as const,
-        text: isExtAuto
-          ? '🚶 🔗 外部博途 PLC 受控 · 行人过街请求 (%I0.2 Ped_Request = TRUE) 已送入 PLC，待程序输出 %Q0.6 Ped_Walk 放行后将自动复位！'
-          : '🚶 行人过街优先请求 (%I0.2) 已锁存：当前相位安全倒计时结束后将自动切入全红 + 斑马线行人专用放行相位！',
-      };
-    }
-    if (isExtAuto) {
-      return {
-        tone: 'ok' as const,
-        text: '🔗 已连接外部博途 PLC 程序受控模式：夜间/行人/消防开关实时写入 %I0.1~%I0.3，四向红黄绿灯与行人灯直接由博途 SCL 输出 %Q0.0~%Q0.6 驱动（硬件绿灯冲突联锁实时守护）！',
+        text: '🚶 行人过街优先请求 (%I0.2) 已锁存：当前相位安全倒计时结束后将自动切入全红 + 斑马线行人专用放行相位！',
       };
     }
     return undefined;
-  }, [isExtAuto, conflictTripped, opMode, pedRequest]);
+  }, [conflictTripped, opMode, pedRequest]);
 
   const ioSignals: IoSignalItem[] = [
     { address: '%I0.1', symbol: 'Night_Mode', label: '夜间黄闪模式开关', kind: 'I', value: opMode === 'night' },
@@ -711,9 +563,7 @@ export const TrafficIntersectionTwin: React.FC<TrafficIntersectionProps> = ({
       ? '--'
       : opMode === 'emergency'
         ? 'GO'
-        : isExtAuto
-          ? '--'
-          : String(countdown).padStart(2, '0');
+        : String(countdown).padStart(2, '0');
 
   const shellStatus: 'run' | 'stop' | 'fault' = conflictTripped
     ? 'fault'
@@ -760,23 +610,13 @@ export const TrafficIntersectionTwin: React.FC<TrafficIntersectionProps> = ({
       subtitle="2.5D 俯视十字路口 · 车辆队列刹车仿真 + 行人过街优先 + 消防绿波 + 绿灯冲突硬件安全联锁检测"
       status={shellStatus}
       statusText={
-        isExtAuto
-          ? conflictTripped
-            ? '🔗 外部 PLC · 硬件冲突保护黄闪'
-            : effectiveLamps.pedWalk
-              ? '🔗 外部博途 PLC 受控 · 行人放行'
-              : opMode === 'emergency'
-                ? '🔗 外部博途 PLC 受控 · 消防绿波'
-                : opMode === 'night'
-                  ? '🔗 外部博途 PLC 受控 · 夜间模式'
-                  : '🔗 外部博途 PLC 受控 · RUN'
-          : conflictTripped
-            ? 'FAIL-SAFE · 冲突保护黄闪'
-            : opMode === 'emergency'
-              ? 'EMERGENCY GREEN WAVE'
-              : opMode === 'night'
-                ? 'NIGHT FLASH 1Hz'
-                : `PHASE · ${phase}`
+        conflictTripped
+          ? 'FAIL-SAFE · 冲突保护黄闪'
+          : opMode === 'emergency'
+            ? 'EMERGENCY GREEN WAVE'
+            : opMode === 'night'
+              ? 'NIGHT FLASH 1Hz'
+              : `PHASE · ${phase}`
       }
       mode={controlMode}
       onModeChange={setControlMode}
@@ -810,14 +650,14 @@ export const TrafficIntersectionTwin: React.FC<TrafficIntersectionProps> = ({
             </button>
             <button
               type="button"
-              className={`dt-btn ${pedRequest || effectiveLamps.pedWalk ? 'dt-btn--success' : ''}`}
+              className={`dt-btn ${pedRequest || phase === 'PED_CROSS' ? 'dt-btn--success' : ''}`}
               onClick={() => {
                 setOpMode('day');
                 setPedRequest(true);
               }}
             >
               <Footprints size={13} />
-              {effectiveLamps.pedWalk ? '行人放行中...' : pedRequest ? '已按下行人请求' : '行人过街优先请求'}
+              {phase === 'PED_CROSS' ? '行人放行中...' : pedRequest ? '已按下行人请求' : '行人过街优先请求'}
             </button>
             <button
               type="button"

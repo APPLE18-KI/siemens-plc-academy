@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Power, Radio, ShieldAlert, Zap } from 'lucide-react';
-import type { PlcRuntime, ScanMetrics, TagValue } from '../../types/plc';
+import type { PlcRuntime } from '../../types/plc';
 import {
   TwinShell,
   type FaultSwitchItem,
@@ -44,9 +44,10 @@ export const S71200WiringTwin: React.FC<TwinModelProps> = ({ runtime, embedded =
   const [faultLatched, setFaultLatched] = useState(false);
   const [manualQ, setManualQ] = useState({ q00: false, q01: false, q02: false });
 
-  // Motor fan animation angle & RPM
+  // Motor fan animation angle & RPM (useRef avoids tearing down 30fps interval every tick)
   const [fanAngle, setFanAngle] = useState(0);
   const [motorRpm, setMotorRpm] = useState(0);
+  const motorRpmRef = useRef(0);
   const [lanBlink, setLanBlink] = useState(false);
 
   // Electrical optocoupler conductivity physics
@@ -66,113 +67,30 @@ export const S71200WiringTwin: React.FC<TwinModelProps> = ({ runtime, embedded =
   const i03 = powerHealthy && sensorWiringValid && targetPresent; // Photo_BG1
   const i04 = powerHealthy && buttonWiringValid && !frOverload; // FR1_OK (NC)
 
-  // External PLC runtime output mirror (used when runtime is passed & mode === 'auto')
-  const [extOut, setExtOut] = useState({
-    q00: false,
-    q01: false,
-    q02: false,
-    cpuRunning: true,
-  });
-  const [syncEpoch, setSyncEpoch] = useState(0);
-  const lastSentInputsRef = useRef<Record<string, TagValue>>({});
-  const syncEpochRef = useRef(0);
-  const prevCycleRef = useRef(0);
-  const startPulseTimerRef = useRef<number | null>(null);
-  const stopPulseTimerRef = useRef<number | null>(null);
-
-  const isExtAuto = Boolean(runtime) && mode === 'auto';
-  const effectiveCpuRun = runtime ? extOut.cpuRunning : cpuRun;
-
   // PLC Output image (%Q0.0 ~ %Q0.2)
-  const q00 =
-    powerHealthy &&
-    (mode === 'manual' ? manualQ.q00 : runtime ? extOut.q00 : cpuRun && motorLatched); // KA1 -> KM1 -> Motor
-  const q01 =
-    powerHealthy &&
-    (mode === 'manual' ? manualQ.q01 : runtime ? extOut.q01 : cpuRun && motorLatched); // HL_RUN
-  const q02 =
-    powerHealthy &&
-    (mode === 'manual' ? manualQ.q02 : runtime ? extOut.q02 : cpuRun && faultLatched); // HL_FAULT
+  const q00 = powerHealthy && (mode === 'manual' ? manualQ.q00 : cpuRun && motorLatched); // KA1 -> KM1 -> Motor
+  const q01 = powerHealthy && (mode === 'manual' ? manualQ.q01 : cpuRun && motorLatched); // HL_RUN
+  const q02 = powerHealthy && (mode === 'manual' ? manualQ.q02 : cpuRun && faultLatched); // HL_FAULT
 
-  // 1. Subscribe to external PlcRuntime outputs (PLC -> Plant)
+  // Sync with external PlcRuntime if supplied
+  const prevExternalRef = useRef<boolean | null>(null);
   useEffect(() => {
-    if (!runtime) {
-      lastSentInputsRef.current = {};
-      return;
-    }
-
-    lastSentInputsRef.current = {};
-    prevCycleRef.current = runtime.getMetrics?.().cycleCount ?? 0;
-
-    const applySnapshot = (tags: Record<string, TagValue>, metrics?: ScanMetrics) => {
-      const nextQ00 = Boolean(
-        tags['KM1_Motor'] ?? tags['Motor_Run'] ?? tags['KM_Motor'] ?? tags['Q0.0']
-      );
-      const nextQ01 = Boolean(tags['HL_Run'] ?? tags['Q0.1']);
-      const nextQ02 = Boolean(tags['HL_Fault'] ?? tags['Q0.2']);
-      const nextRunning = metrics
-        ? metrics.running
-        : runtime.getMetrics
-          ? runtime.getMetrics().running
-          : true;
-
-      if (metrics) {
-        if (metrics.cycleCount < prevCycleRef.current) {
-          setSyncEpoch((e) => e + 1);
-        }
-        prevCycleRef.current = metrics.cycleCount;
+    if (!runtime) return;
+    const unsub = runtime.subscribe((tags) => {
+      const extRun = Boolean(tags['Motor_Run'] ?? tags['KM_Motor'] ?? tags['Q0.0']);
+      if (prevExternalRef.current !== extRun) {
+        prevExternalRef.current = extRun;
+        setMotorLatched(extRun);
       }
-
-      setExtOut((prev) =>
-        prev.q00 === nextQ00 &&
-        prev.q01 === nextQ01 &&
-        prev.q02 === nextQ02 &&
-        prev.cpuRunning === nextRunning
-          ? prev
-          : { q00: nextQ00, q01: nextQ01, q02: nextQ02, cpuRunning: nextRunning }
-      );
-    };
-
-    applySnapshot(runtime.tags, runtime.getMetrics?.());
-    return runtime.subscribe(applySnapshot);
+    });
+    return unsub;
   }, [runtime]);
 
-  // 2. Sync electrical/polarity-validated field inputs to external PlcRuntime (Plant -> PLC)
-  useEffect(() => {
-    if (!runtime || mode !== 'auto') {
-      lastSentInputsRef.current = {};
-      return;
-    }
-    if (syncEpochRef.current !== syncEpoch) {
-      syncEpochRef.current = syncEpoch;
-      lastSentInputsRef.current = {};
-    }
-
-    const inputPairs: Array<[string, boolean]> = [
-      ['Start_PB', i00],
-      ['Stop_PB', i01],
-      ['EStop_OK', i02],
-      ['Photo_BG1', i03],
-      ['FR1_OK', i04],
-    ];
-
-    for (const [name, nextVal] of inputPairs) {
-      if (lastSentInputsRef.current[name] !== nextVal) {
-        lastSentInputsRef.current[name] = nextVal;
-        if (runtime.getTag(name) !== nextVal) {
-          runtime.setTag(name, nextVal);
-        }
-      }
-    }
-  }, [runtime, mode, syncEpoch, i00, i01, i02, i03, i04]);
-
-  // Built-in PLC OB1 scan logic (runs every 60ms; skipped when coupled to external PlcRuntime)
+  // Built-in PLC OB1 scan logic (runs every 60ms)
   useEffect(() => {
     if (paused) return;
     const timer = window.setInterval(() => {
       setLanBlink((b) => !b);
-
-      if (runtime) return;
 
       if (!powerHealthy) {
         setMotorLatched(false);
@@ -198,47 +116,44 @@ export const S71200WiringTwin: React.FC<TwinModelProps> = ({ runtime, embedded =
     }, 60);
 
     return () => window.clearInterval(timer);
-  }, [paused, runtime, powerHealthy, mode, cpuRun, i00, i01, i02, i04, faultLatched]);
+  }, [paused, powerHealthy, mode, cpuRun, i00, i01, i02, i04, faultLatched]);
 
-  // Clean up momentary pushbutton timers on unmount
-  useEffect(() => {
-    return () => {
-      if (startPulseTimerRef.current !== null) window.clearTimeout(startPulseTimerRef.current);
-      if (stopPulseTimerRef.current !== null) window.clearTimeout(stopPulseTimerRef.current);
-    };
-  }, []);
-
-  // Motor mechanical inertia & fan rotation loop (30fps)
+  // Motor mechanical inertia & fan rotation loop (30fps without interval thrashing)
   useEffect(() => {
     if (paused) return;
     const targetRpm = q00 ? Math.round((motorFreqHz / 50) * 1450) : 0;
     const timer = window.setInterval(() => {
-      setMotorRpm((prev) => {
-        const diff = targetRpm - prev;
-        if (Math.abs(diff) < 12) return targetRpm;
-        return Math.round(prev + diff * 0.14);
-      });
-      setFanAngle((ang) => (ang + (q00 ? (motorFreqHz / 50) * 18 : motorRpm > 40 ? 4 : 0)) % 360);
+      const prev = motorRpmRef.current;
+      const diff = targetRpm - prev;
+      const nextRpm = Math.abs(diff) < 12 ? targetRpm : Math.round(prev + diff * 0.14);
+      if (nextRpm !== prev) {
+        motorRpmRef.current = nextRpm;
+        setMotorRpm(nextRpm);
+      }
+      const stepDeg = q00 ? (motorFreqHz / 50) * 18 : nextRpm > 40 ? 4 : 0;
+      if (stepDeg > 0) {
+        setFanAngle((ang) => (ang + stepDeg) % 360);
+      }
     }, 33);
     return () => window.clearInterval(timer);
-  }, [paused, q00, motorFreqHz, motorRpm]);
+  }, [paused, q00, motorFreqHz]);
 
-  // Momentary pushbutton click helper (physical button state -> validated by power/polarity -> synced to PLC)
+  // Momentary pushbutton click helper
   const pulseStart = () => {
-    if (startPulseTimerRef.current !== null) window.clearTimeout(startPulseTimerRef.current);
     setSb1Pressed(true);
-    startPulseTimerRef.current = window.setTimeout(() => {
+    if (runtime) runtime.setTag('Start_PB', true);
+    window.setTimeout(() => {
       setSb1Pressed(false);
-      startPulseTimerRef.current = null;
+      if (runtime) runtime.setTag('Start_PB', false);
     }, 450);
   };
 
   const pulseStop = () => {
-    if (stopPulseTimerRef.current !== null) window.clearTimeout(stopPulseTimerRef.current);
     setSb2Pressed(true);
-    stopPulseTimerRef.current = window.setTimeout(() => {
+    if (runtime) runtime.setTag('Stop_PB', false);
+    window.setTimeout(() => {
       setSb2Pressed(false);
-      stopPulseTimerRef.current = null;
+      if (runtime) runtime.setTag('Stop_PB', true);
     }, 450);
   };
 
@@ -274,8 +189,6 @@ export const S71200WiringTwin: React.FC<TwinModelProps> = ({ runtime, embedded =
     setMotorFreqHz(50);
     setCpuRun(true);
     setMode('auto');
-    lastSentInputsRef.current = {};
-    setSyncEpoch((e) => e + 1);
   };
 
   // Determine diagnostic banner
@@ -322,7 +235,7 @@ export const S71200WiringTwin: React.FC<TwinModelProps> = ({ runtime, embedded =
         onAction: () => setButtonRail(common1M === 'M' ? 'L+' : 'M'),
       };
     }
-    if (eStopLatched || frOverload || (!runtime && faultLatched)) {
+    if (eStopLatched || frOverload || faultLatched) {
       const reason = eStopLatched
         ? '急停蘑菇头 SB_EMG (%I0.2) 已拍下'
         : frOverload
@@ -330,21 +243,13 @@ export const S71200WiringTwin: React.FC<TwinModelProps> = ({ runtime, embedded =
           : '安全故障自锁中，需人工确认复位';
       return {
         tone: 'danger' as const,
-        text: isExtAuto
-          ? `🔗 外部博途 PLC 受控模式 · 现场安全信号触发：${reason}，已实时同步至外部 PLC 输入映像区，由您的博途 SCL 程序决定联锁输出！`
-          : `安全联锁触发：${reason}，PLC 已强制切断 %Q0.0 (KA1/KM1) 并点亮红色故障灯 %Q0.2。`,
+        text: `安全联锁触发：${reason}，PLC 已强制切断 %Q0.0 (KA1/KM1) 并点亮红色故障灯 %Q0.2。`,
         actionLabel: !eStopLatched && !frOverload ? '复位故障锁存' : '解除现场故障并复位',
         onAction: () => {
           setEStopLatched(false);
           setFrOverload(false);
           setFaultLatched(false);
         },
-      };
-    }
-    if (isExtAuto) {
-      return {
-        tone: 'ok' as const,
-        text: `🔗 已连接外部博途 PLC 程序受控模式 [${sensorType} / 1M→${common1M}]：按钮、急停、光电与热继经接线极性校验后实时写入 %I0.0~%I0.4，KM1 电机与运行/故障指示灯直接受博途 SCL 输出 %Q0.0~%Q0.2 驱动！`,
       };
     }
     return {
@@ -354,48 +259,23 @@ export const S71200WiringTwin: React.FC<TwinModelProps> = ({ runtime, embedded =
           ? '接线校验通过 [欧标源型 PNP]：1M → M (0V)，电流流向 L+ → 传感器/按钮 → %I0.x → CPU 双向光耦 → 1M → M。点击 SB1 启动电机，或切换 NPN 对比回路电流方向！'
           : '接线校验通过 [漏型 NPN]：1M → L+ (+24V)，电流反向流向 L+ → 1M → CPU 双向光耦 → %I0.x → NPN 传感器集电极 → M (0V)。',
     };
-  }, [
-    qfPowerOn,
-    supplyVoltage,
-    sensorWiringValid,
-    sensorType,
-    buttonWiringValid,
-    buttonRail,
-    common1M,
-    eStopLatched,
-    frOverload,
-    faultLatched,
-    runtime,
-    isExtAuto,
-  ]);
+  }, [qfPowerOn, supplyVoltage, sensorWiringValid, sensorType, buttonWiringValid, buttonRail, common1M, eStopLatched, frOverload, faultLatched]);
 
   const cpuStatus: 'run' | 'stop' | 'fault' = !powerHealthy
     ? 'stop'
-    : !sensorWiringValid ||
-        eStopLatched ||
-        frOverload ||
-        (!runtime && faultLatched) ||
-        (isExtAuto && q02)
+    : !sensorWiringValid || eStopLatched || frOverload || faultLatched
       ? 'fault'
-      : effectiveCpuRun
+      : cpuRun
         ? 'run'
         : 'stop';
 
   const statusText = !powerHealthy
-    ? isExtAuto
-      ? 'POWER OFF · 外部 PLC 联调'
-      : 'POWER OFF'
-    : isExtAuto
-      ? cpuStatus === 'fault'
-        ? '🔗 外部博途 PLC 受控 · 告警'
-        : effectiveCpuRun
-          ? '🔗 外部博途 PLC 受控 · RUN'
-          : '🔗 外部博途 PLC 受控 · STOP'
-      : cpuStatus === 'fault'
-        ? 'CPU FAULT / 接线告警'
-        : cpuRun
-          ? 'CPU 1214C · RUN'
-          : 'CPU 1214C · STOP';
+    ? 'POWER OFF'
+    : cpuStatus === 'fault'
+      ? 'CPU FAULT / 接线告警'
+      : cpuRun
+        ? 'CPU 1214C · RUN'
+        : 'CPU 1214C · STOP';
 
   const ioSignals: IoSignalItem[] = [
     { address: '%I0.0', symbol: 'Start_PB', label: '启动按钮 SB1 (NO)', kind: 'I', value: i00 },
@@ -552,16 +432,10 @@ export const S71200WiringTwin: React.FC<TwinModelProps> = ({ runtime, embedded =
             </button>
             <button
               type="button"
-              className={`dt-btn ${!effectiveCpuRun ? 'dt-btn--danger' : ''}`}
-              onClick={() => {
-                if (runtime?.setRunning) {
-                  runtime.setRunning(!effectiveCpuRun);
-                } else {
-                  setCpuRun((r) => !r);
-                }
-              }}
+              className={`dt-btn ${!cpuRun ? 'dt-btn--danger' : ''}`}
+              onClick={() => setCpuRun((r) => !r)}
             >
-              CPU 拨码：{effectiveCpuRun ? 'RUN' : 'STOP'}
+              CPU 拨码：{cpuRun ? 'RUN' : 'STOP'}
             </button>
           </div>
 
@@ -1159,8 +1033,8 @@ export const S71200WiringTwin: React.FC<TwinModelProps> = ({ runtime, embedded =
               cx="15"
               cy="15"
               r="4.5"
-              fill={!powerHealthy ? '#334155' : effectiveCpuRun ? '#10b981' : '#f59e0b'}
-              filter={powerHealthy && effectiveCpuRun ? 'url(#glowGreen)' : undefined}
+              fill={!powerHealthy ? '#334155' : cpuRun ? '#10b981' : '#f59e0b'}
+              filter={powerHealthy && cpuRun ? 'url(#glowGreen)' : undefined}
             />
             <text x="26" y="19" fill="#e2e8f0" fontSize="11.2" fontWeight="700">
               RUN/STOP

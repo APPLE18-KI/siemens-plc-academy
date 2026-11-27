@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -6,11 +6,17 @@ import {
   ArrowRight,
   Boxes,
   BriefcaseBusiness,
+  Check,
+  CheckCircle2,
   ChevronRight,
   ClipboardList,
   Cpu,
   ExternalLink,
+  FileCode2,
+  FileSpreadsheet,
   FolderKanban,
+  RotateCcw,
+  ShieldCheck,
   Sparkles,
 } from 'lucide-react';
 import { examples, modelRegistry, simPresets } from '../../registry';
@@ -19,6 +25,18 @@ import { IoTable } from '../../components/IoTable';
 import { CodeViewer } from '../../components/CodeViewer';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { renderInline } from '../../components/MarkdownRenderer';
+import {
+  buildTiaIoCsvFile,
+  buildTiaSclFile,
+  EXAMPLE_META_MAP,
+  FAT_STEP_TITLES,
+  loadFatChecklistMap,
+  saveFatChecklistForExample,
+  triggerTextDownload,
+} from '../../content/examples/engineeringPack';
+import './examples-v3.css';
+
+const EMPTY_FAT: boolean[] = [false, false, false, false, false];
 
 export const ExampleDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,13 +58,58 @@ export const ExampleDetailPage: React.FC = () => {
   const hasSim = Boolean(example?.linkedSimPreset && simPresets?.[example.linkedSimPreset]);
 
   const [rightStage, setRightStage] = useState<'model' | 'sim'>('model');
+  const [downloadToast, setDownloadToast] = useState<string | null>(null);
+  const [fatChecks, setFatChecks] = useState<boolean[]>(EMPTY_FAT);
 
   useEffect(() => {
     if (example) {
       markExampleVisited(example.id);
       setRightStage(hasModel ? 'model' : 'sim');
+      const saved = loadFatChecklistMap()[example.id];
+      setFatChecks(
+        Array.isArray(saved) && saved.length === FAT_STEP_TITLES.length ? saved : EMPTY_FAT
+      );
+      setDownloadToast(null);
     }
   }, [example, hasModel, markExampleVisited]);
+
+  useEffect(() => {
+    if (!downloadToast) return;
+    const t = window.setTimeout(() => setDownloadToast(null), 4500);
+    return () => window.clearTimeout(t);
+  }, [downloadToast]);
+
+  const handleDownloadScl = useCallback(() => {
+    if (!example) return;
+    const { filename, content } = buildTiaSclFile(example);
+    triggerTextDownload(filename, content, 'text/plain;charset=utf-8');
+    setDownloadToast(`已下载博途外部源文件 ${filename}（在 TIA Portal 外部源文件导入即可生成块）`);
+  }, [example]);
+
+  const handleDownloadCsv = useCallback(() => {
+    if (!example) return;
+    const { filename, content } = buildTiaIoCsvFile(example);
+    triggerTextDownload(filename, content, 'text/csv;charset=utf-8');
+    setDownloadToast(`已下载标准 I/O 变量表 ${filename}（含 UTF-8 BOM，Excel 与博途打开中文零乱码）`);
+  }, [example]);
+
+  const toggleFatStep = useCallback(
+    (stepIdx: number) => {
+      if (!example) return;
+      setFatChecks((prev) => {
+        const next = prev.map((v, i) => (i === stepIdx ? !v : v));
+        saveFatChecklistForExample(example.id, next);
+        return next;
+      });
+    },
+    [example]
+  );
+
+  const resetFatSteps = useCallback(() => {
+    if (!example) return;
+    setFatChecks(EMPTY_FAT);
+    saveFatChecklistForExample(example.id, EMPTY_FAT);
+  }, [example]);
 
   if (!example) {
     return (
@@ -74,6 +137,12 @@ export const ExampleDetailPage: React.FC = () => {
   const activeStage: 'model' | 'sim' =
     rightStage === 'model' && ModelComp ? 'model' : SimComp ? 'sim' : 'model';
 
+  const fatFocus = EXAMPLE_META_MAP[example.id]?.fatFocus;
+  const fatDoneCount = fatChecks.filter(Boolean).length;
+  const fatPct = Math.round((fatDoneCount / FAT_STEP_TITLES.length) * 100);
+  const safetySkippedWarn =
+    (fatChecks[3] || fatChecks[4]) && (!fatChecks[0] || !fatChecks[1] || !fatChecks[2]);
+
   return (
     <div className="example-workbench-page">
       <nav className="reader-breadcrumb" aria-label="面包屑">
@@ -97,7 +166,7 @@ export const ExampleDetailPage: React.FC = () => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-            <span className="badge badge-teal badge-mono">INDUSTRIAL WORKBENCH</span>
+            <span className="badge badge-teal badge-mono">工程实例工作台</span>
             <span className="badge badge-amber">{example.difficulty}</span>
             <span className="badge">{example.industry}</span>
             <span className="badge badge-mono" style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
@@ -127,11 +196,45 @@ export const ExampleDetailPage: React.FC = () => {
             ))}
           </div>
         )}
+
+        {/* v3.0 TIA Portal Engineering Delivery Pack */}
+        <div className="ex3-delivery-bar" aria-label="博途工程文件一键下载">
+          <div className="ex3-delivery-info">
+            <span className="ex3-delivery-kicker">
+              TIA PORTAL DELIVERY PACK · 工程源文件与标准变量表一键导出
+            </span>
+            <span className="ex3-delivery-hint">
+              支持直接导入西门子博途外部源文件，CSV 内置 UTF-8 BOM 防止 Excel 与 TIA 打开中文注释乱码。
+            </span>
+          </div>
+
+          <div className="ex3-delivery-actions">
+            <button
+              type="button"
+              className="ex3-dl-btn ex3-dl-btn--primary"
+              onClick={handleDownloadScl}
+            >
+              <FileCode2 size={15} />
+              一键下载博途 .scl 源文件
+            </button>
+            <button type="button" className="ex3-dl-btn" onClick={handleDownloadCsv}>
+              <FileSpreadsheet size={15} />
+              一键下载 I/O 变量表 .csv (BOM)
+            </button>
+          </div>
+
+          {downloadToast ? (
+            <div className="ex3-dl-toast" role="status" aria-live="polite">
+              <CheckCircle2 size={15} />
+              <span>{downloadToast}</span>
+            </div>
+          ) : null}
+        </div>
       </header>
 
       {/* Dual-Column Industrial Workbench */}
       <div className="example-detail-grid">
-        {/* LEFT COLUMN: Process Requirements, I/O Allocation, Pitfalls, Interview Points */}
+        {/* LEFT COLUMN: Process Requirements, I/O Allocation, FAT Checklist, Pitfalls, Interview Points */}
         <div style={{ minWidth: 0 }}>
           <section className="workbench-panel">
             <h2 className="workbench-panel-title">
@@ -149,6 +252,78 @@ export const ExampleDetailPage: React.FC = () => {
           </section>
 
           <IoTable title="标准 PLC I/O 分配表 (TIA Portal PLC Tags)" tags={example.ioTags} />
+
+          {/* v3.0 Interactive 5-Step FAT Commissioning Safety Checklist */}
+          <section className="workbench-panel" aria-label="现场上电调试五步安全点检表">
+            <div className="ex3-fat-head">
+              <h2 className="workbench-panel-title" style={{ margin: 0 }}>
+                <ShieldCheck size={17} color="var(--power-green)" />
+                现场上电调试五步安全点检表 (FAT Checklist)
+              </h2>
+              <div className="ex3-fat-meta">
+                <span className="ex3-fat-count">
+                  {fatDoneCount} / {FAT_STEP_TITLES.length} 步
+                </span>
+                {fatDoneCount > 0 ? (
+                  <button type="button" className="ex3-fat-reset" onClick={resetFatSteps}>
+                    <RotateCcw size={12} />
+                    重置
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="ex3-fat-bar" aria-hidden="true">
+              <div className="ex3-fat-bar-fill" style={{ width: `${fatPct}%` }} />
+            </div>
+
+            <div className="ex3-fat-list">
+              {FAT_STEP_TITLES.map((step, idx) => {
+                const done = Boolean(fatChecks[idx]);
+                const detail = fatFocus?.[idx] ?? '按标准西门子现场调试规程逐项验电、核对信号与安全联锁。';
+                return (
+                  <button
+                    key={step.code}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={done}
+                    className={`ex3-fat-item ${done ? 'is-done' : ''}`}
+                    onClick={() => toggleFatStep(idx)}
+                  >
+                    <span className="ex3-fat-check" aria-hidden="true">
+                      <Check size={14} strokeWidth={3} />
+                    </span>
+                    <div className="ex3-fat-body">
+                      <div className="ex3-fat-row-top">
+                        <span className="ex3-fat-code">{step.code}</span>
+                        <span className="ex3-fat-name">{step.name}</span>
+                        {step.safetyCritical ? (
+                          <span className="ex3-fat-safety-tag">安全必检</span>
+                        ) : null}
+                      </div>
+                      <span className="ex3-fat-desc">{detail}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {safetySkippedWarn ? (
+              <div className="ex3-fat-warn" role="alert">
+                <AlertTriangle size={15} color="var(--alarm-amber)" style={{ flexShrink: 0, marginTop: 2 }} />
+                <span>
+                  安全规程提示：现场上电调试必须先完成 Step 01~03（绝缘/极性、I/O 对点、急停与硬互锁验证），严禁跳过安全前置项直接空载或带载试车！
+                </span>
+              </div>
+            ) : null}
+
+            {fatDoneCount === FAT_STEP_TITLES.length ? (
+              <div className="ex3-fat-pass" role="status">
+                <CheckCircle2 size={16} />
+                <span>FAT 五步安全点检已全部通过（进度已自动保存至本机）</span>
+              </div>
+            ) : null}
+          </section>
 
           {example.pitfalls && example.pitfalls.length > 0 && (
             <section className="workbench-panel">

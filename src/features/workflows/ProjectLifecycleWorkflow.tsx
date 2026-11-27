@@ -331,7 +331,7 @@ export const ProjectLifecycleWorkflow: React.FC<{ embedded?: boolean }> = ({ emb
                 onClick={() => setSelectedIdx(idx)}
               >
                 <div className="wf-life-step-num">
-                  <span>STEP {s.num}</span>
+                  <span>第 {s.num} 步</span>
                   {allDone ? (
                     <CheckCircle2 size={14} color="#10b981" />
                   ) : (
