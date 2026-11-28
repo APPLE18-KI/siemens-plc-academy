@@ -11,16 +11,17 @@ import {
   Plus,
   Sparkles,
   Trash2,
+  Trophy,
   Upload,
   Wrench,
 } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import type { TagDef, TagValue } from '../../../types/plc';
 import {
   useLadderSimulation,
   type LadderNetwork,
   type LadderNode,
   type LadderProgram,
-  type TimerType,
   type TraceChannelDef,
 } from '../../../core/plc';
 import type { FieldInputMeta, FieldOutputMeta } from '../presets';
@@ -30,7 +31,6 @@ import {
   serializeSandboxProject,
   type SandboxCoilKind,
   type SandboxContactDraft,
-  type SandboxContactKind,
   type SandboxNetworkDraft,
 } from '../sandboxCodec';
 import { CpuStatusBar } from './CpuStatusBar';
@@ -41,6 +41,17 @@ import { SclCodePanel } from './SclCodePanel';
 import { ShortcutHintBar } from './ShortcutHintBar';
 import { TraceViewer } from './TraceViewer';
 import { useSimulatorShortcuts } from '../hooks/useSimulatorShortcuts';
+import {
+  LADDER_CHALLENGES,
+  loadPassedLadChallenges,
+  runLadderChallengeTestBench,
+  savePassedLadChallenge,
+  type ChallengeVerifyReport,
+  type LadderChallenge,
+} from '../sandboxChallenges';
+import { SandboxChallengePanel } from './SandboxChallengePanel';
+import { ContactBlockPill, QuickAddContactButton } from './ContactBlockPill';
+import { haptic } from '../../../app/native/platform';
 
 const SANDBOX_TAG_DEFS: TagDef[] = [
   { name: 'I_Btn1', address: '%I0.0', type: 'Bool', area: 'I', init: false, comment: '启动按钮 1 (NO)' },
@@ -78,11 +89,6 @@ const SANDBOX_TRACE_CHANNELS: TraceChannelDef[] = [
   { id: 's4', tag: 'Q_Motor', label: '电机 Q0.0', address: '%Q0.0', kind: 'bool', color: '#10b981' },
   { id: 's5', tag: 'Q_Valve', label: '电磁阀 Q0.1', address: '%Q0.1', kind: 'bool', color: '#f59e0b' },
 ];
-
-const ALL_CONTACT_TAGS = SANDBOX_TAG_DEFS.map((d) => ({
-  name: d.name,
-  label: `${d.address} "${d.name}"`,
-}));
 
 const COIL_TAGS = SANDBOX_TAG_DEFS.filter((d) => d.area === 'Q' || d.area === 'M').map((d) => ({
   name: d.name,
@@ -298,10 +304,22 @@ function downloadTextFile(filename: string, content: string, mime = 'text/plain;
 }
 
 export const LadderSandbox: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const [sandboxMode, setSandboxMode] = useState<'challenge' | 'free'>(() =>
+    searchParams.get('mode') === 'free' ? 'free' : 'challenge',
+  );
+  const [activeChallengeId, setActiveChallengeId] = useState<string>(LADDER_CHALLENGES[0].id);
+  const [passedChallenges, setPassedChallenges] = useState<string[]>(() => loadPassedLadChallenges());
+  const [verifyReport, setVerifyReport] = useState<ChallengeVerifyReport | null>(null);
+
   const [activeTemplateId, setActiveTemplateId] = useState<string>('seal-in');
   const [drafts, setDrafts] = useState<SandboxNetworkDraft[]>(() =>
-    cloneDrafts(SANDBOX_TEMPLATES[0].drafts),
+    searchParams.get('mode') === 'free'
+      ? cloneDrafts(SANDBOX_TEMPLATES[0].drafts)
+      : cloneDrafts(LADDER_CHALLENGES[0].starterDrafts),
   );
+  const activeChallenge: LadderChallenge =
+    LADDER_CHALLENGES.find((c) => c.id === activeChallengeId) ?? LADDER_CHALLENGES[0];
   const [inputMode, setInputMode] = useState<InputOperationMode>('momentary');
   const [jsonDrawerOpen, setJsonDrawerOpen] = useState(false);
   const [jsonInput, setJsonInput] = useState('');
@@ -346,10 +364,55 @@ export const LadderSandbox: React.FC = () => {
   }, []);
 
   const loadTemplate = (tpl: SandboxTemplate) => {
+    setSandboxMode('free');
     setActiveTemplateId(tpl.id);
     setDrafts(cloneDrafts(tpl.drafts));
+    setVerifyReport(null);
     setJsonError(null);
     runtime.reset();
+  };
+
+  const handleSelectChallenge = (ch: LadderChallenge) => {
+    setSandboxMode('challenge');
+    setActiveChallengeId(ch.id);
+    setDrafts(cloneDrafts(ch.starterDrafts));
+    setVerifyReport(null);
+    setJsonError(null);
+    runtime.reset();
+  };
+
+  const handleSwitchMode = (mode: 'challenge' | 'free') => {
+    if (mode === sandboxMode) return;
+    setSandboxMode(mode);
+    setVerifyReport(null);
+    if (mode === 'challenge') {
+      setDrafts(cloneDrafts(activeChallenge.starterDrafts));
+    } else {
+      const tpl = SANDBOX_TEMPLATES.find((t) => t.id === activeTemplateId) ?? SANDBOX_TEMPLATES[0];
+      setDrafts(cloneDrafts(tpl.drafts));
+    }
+    runtime.reset();
+  };
+
+  const handleRunChallengeVerify = () => {
+    const report = runLadderChallengeTestBench(activeChallenge, compiledProgram, SANDBOX_TAG_DEFS);
+    setVerifyReport(report);
+    if (report.passed) {
+      haptic('success');
+      const nextPassed = savePassedLadChallenge(activeChallenge.id);
+      setPassedChallenges(nextPassed);
+      flashNotice(`🎉 ${activeChallenge.title} 自动时序验收通过！`);
+    } else {
+      haptic('error');
+      flashNotice('部分工况未通过，请看下方波形与分步诊断。');
+    }
+  };
+
+  const handleLoadChallengeReference = () => {
+    setDrafts(cloneDrafts(activeChallenge.referenceDrafts));
+    setVerifyReport(null);
+    runtime.reset();
+    flashNotice('已载入本关参考电路，点「运行自动时序验收」可立即查看通过波形！');
   };
 
   const addNetwork = () => {
@@ -529,29 +592,50 @@ export const LadderSandbox: React.FC = () => {
 
       <ShortcutHintBar items={shortcutItems} variant="instrument" />
 
-      {/* Sandbox Starter Templates & Engineering Export/Import Bar */}
+      {/* Sandbox Mode Switch + Starter Templates & Engineering Export/Import Bar */}
       <div className="plc-sim-sandbox-banner">
         <div className="plc-sim-sb-top">
           <div className="plc-sim-sb-title">
             <Wrench size={15} />
-            <strong>自定义梯形图搭建沙盒 (在线改图 · 实时编译监控)</strong>
+            <strong>自定义梯形图搭建沙盒（可视化快选元件 · 实时编译监控）</strong>
           </div>
-          <div className="plc-sim-sb-tpls">
-            {SANDBOX_TEMPLATES.map((tpl) => (
-              <button
-                key={tpl.id}
-                type="button"
-                className={`plc-sim-tpl-btn ${activeTemplateId === tpl.id ? 'active' : ''}`}
-                onClick={() => loadTemplate(tpl)}
-              >
-                <Sparkles size={12} />
-                {tpl.label}
-              </button>
-            ))}
+          <div className="v32-sb-mode-switch" role="group" aria-label="沙盒模式切换">
+            <button
+              type="button"
+              className={sandboxMode === 'challenge' ? 'is-on' : ''}
+              onClick={() => handleSwitchMode('challenge')}
+            >
+              <Trophy size={13} /> 6 关自动验收闯关 ({passedChallenges.length}/{LADDER_CHALLENGES.length})
+            </button>
+            <button
+              type="button"
+              className={sandboxMode === 'free' ? 'is-on' : ''}
+              onClick={() => handleSwitchMode('free')}
+            >
+              <Sparkles size={13} /> 自由模板沙盒
+            </button>
           </div>
         </div>
-        {activeTemplate && (
-          <div className="plc-sim-sb-hint">{activeTemplate.hint}</div>
+
+        {sandboxMode === 'free' && (
+          <>
+            <div className="plc-sim-sb-tpls">
+              {SANDBOX_TEMPLATES.map((tpl) => (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  className={`plc-sim-tpl-btn ${activeTemplateId === tpl.id ? 'active' : ''}`}
+                  onClick={() => loadTemplate(tpl)}
+                >
+                  <Sparkles size={12} />
+                  {tpl.label}
+                </button>
+              ))}
+            </div>
+            {activeTemplate && (
+              <div className="plc-sim-sb-hint">{activeTemplate.hint}</div>
+            )}
+          </>
         )}
 
         {/* Engineering Productivity Toolbar: .scl Export + Project JSON Copy/Import */}
@@ -655,6 +739,23 @@ export const LadderSandbox: React.FC = () => {
         )}
       </div>
 
+      {/* 6-Level Guided Ladder Challenge Auto-Test-Bench */}
+      {sandboxMode === 'challenge' && (
+        <SandboxChallengePanel
+          activeChallenge={activeChallenge}
+          passedIds={passedChallenges}
+          report={verifyReport}
+          onSelectChallenge={handleSelectChallenge}
+          onRunVerify={handleRunChallengeVerify}
+          onResetStarter={() => {
+            setDrafts(cloneDrafts(activeChallenge.starterDrafts));
+            setVerifyReport(null);
+            runtime.reset();
+          }}
+          onLoadReference={handleLoadChallengeReference}
+        />
+      )}
+
       {/* Live TIA-grade Static Double-Coil & Address Health Diagnostics + Expandable Cross-Ref (F11) */}
       <CrossRefSandboxPanel
         program={compiledProgram}
@@ -723,6 +824,9 @@ export const LadderSandbox: React.FC = () => {
               </div>
 
               <div className="plc-sim-nwe-rows">
+                <div className="v32-nwe-tip">
+                  提示：点击元件左侧符号（<code>-| |-</code>）可直接循环切换常开/常闭/边沿；点击地址标签可分组快选 %I / %Q / %M
+                </div>
                 {/* Primary / Top Branch Row */}
                 <div className="plc-sim-nwe-group">
                   <span className="plc-sim-nwe-label">
@@ -730,73 +834,42 @@ export const LadderSandbox: React.FC = () => {
                   </span>
                   <div className="plc-sim-chip-row">
                     {nw.topBranch.map((c) => (
-                      <div key={c.id} className="plc-sim-elem-pill">
-                        <select
-                          value={c.kind}
-                          onChange={(e) =>
-                            updateNetwork(nw.id, (cur) => ({
-                              ...cur,
-                              topBranch: cur.topBranch.map((x) =>
-                                x.id === c.id ? { ...x, kind: e.target.value as SandboxContactKind } : x
-                              ),
-                            }))
-                          }
-                        >
-                          <option value="NO">NO (| |)</option>
-                          <option value="NC">NC (|/|)</option>
-                          <option value="P_TRIG">P_TRIG (|P|)</option>
-                          <option value="N_TRIG">N_TRIG (|N|)</option>
-                        </select>
-                        <select
-                          value={c.tag}
-                          onChange={(e) =>
-                            updateNetwork(nw.id, (cur) => ({
-                              ...cur,
-                              topBranch: cur.topBranch.map((x) =>
-                                x.id === c.id ? { ...x, tag: e.target.value } : x
-                              ),
-                            }))
-                          }
-                        >
-                          {ALL_CONTACT_TAGS.map((t) => (
-                            <option key={t.name} value={t.name}>
-                              {t.label}
-                            </option>
-                          ))}
-                        </select>
-                        {nw.topBranch.length > 1 && (
-                          <button
-                            type="button"
-                            className="plc-sim-pill-del"
-                            onClick={() =>
-                              updateNetwork(nw.id, (cur) => ({
-                                ...cur,
-                                topBranch: cur.topBranch.filter((x) => x.id !== c.id),
-                              }))
-                            }
-                            aria-label="删除触点"
-                          >
-                            ×
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    {nw.topBranch.length < 4 && (
-                      <button
-                        type="button"
-                        className="plc-sim-add-chip"
-                        onClick={() =>
+                      <ContactBlockPill
+                        key={c.id}
+                        contact={c}
+                        tagDefs={SANDBOX_TAG_DEFS}
+                        canDelete={nw.topBranch.length > 1}
+                        onChangeKind={(kind) =>
                           updateNetwork(nw.id, (cur) => ({
                             ...cur,
-                            topBranch: [
-                              ...cur.topBranch,
-                              { id: nextUid('c'), kind: 'NO', tag: 'I_Stop_NC' },
-                            ],
+                            topBranch: cur.topBranch.map((x) => (x.id === c.id ? { ...x, kind } : x)),
                           }))
                         }
-                      >
-                        + 触点
-                      </button>
+                        onChangeTag={(tag) =>
+                          updateNetwork(nw.id, (cur) => ({
+                            ...cur,
+                            topBranch: cur.topBranch.map((x) => (x.id === c.id ? { ...x, tag } : x)),
+                          }))
+                        }
+                        onDelete={() =>
+                          updateNetwork(nw.id, (cur) => ({
+                            ...cur,
+                            topBranch: cur.topBranch.filter((x) => x.id !== c.id),
+                          }))
+                        }
+                      />
+                    ))}
+                    {nw.topBranch.length < 4 && (
+                      <QuickAddContactButton
+                        label="添加触点"
+                        defaultTag="I_Stop_NC"
+                        onAdd={(kind, tag) =>
+                          updateNetwork(nw.id, (cur) => ({
+                            ...cur,
+                            topBranch: [...cur.topBranch, { id: nextUid('c'), kind, tag }],
+                          }))
+                        }
+                      />
                     )}
                   </div>
                 </div>
@@ -807,74 +880,46 @@ export const LadderSandbox: React.FC = () => {
                     <span className="plc-sim-nwe-label">并联 OR 支路 (下)</span>
                     <div className="plc-sim-chip-row">
                       {nw.parallelBranch.map((c) => (
-                        <div key={c.id} className="plc-sim-elem-pill">
-                          <select
-                            value={c.kind}
-                            onChange={(e) =>
-                              updateNetwork(nw.id, (cur) => ({
-                                ...cur,
-                                parallelBranch: cur.parallelBranch.map((x) =>
-                                  x.id === c.id
-                                    ? { ...x, kind: e.target.value as SandboxContactKind }
-                                    : x
-                                ),
-                              }))
-                            }
-                          >
-                            <option value="NO">NO (| |)</option>
-                            <option value="NC">NC (|/|)</option>
-                            <option value="P_TRIG">P_TRIG (|P|)</option>
-                            <option value="N_TRIG">N_TRIG (|N|)</option>
-                          </select>
-                          <select
-                            value={c.tag}
-                            onChange={(e) =>
-                              updateNetwork(nw.id, (cur) => ({
-                                ...cur,
-                                parallelBranch: cur.parallelBranch.map((x) =>
-                                  x.id === c.id ? { ...x, tag: e.target.value } : x
-                                ),
-                              }))
-                            }
-                          >
-                            {ALL_CONTACT_TAGS.map((t) => (
-                              <option key={t.name} value={t.name}>
-                                {t.label}
-                              </option>
-                            ))}
-                          </select>
-                          {nw.parallelBranch.length > 1 && (
-                            <button
-                              type="button"
-                              className="plc-sim-pill-del"
-                              onClick={() =>
-                                updateNetwork(nw.id, (cur) => ({
-                                  ...cur,
-                                  parallelBranch: cur.parallelBranch.filter((x) => x.id !== c.id),
-                                }))
-                              }
-                            >
-                              ×
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      {nw.parallelBranch.length < 3 && (
-                        <button
-                          type="button"
-                          className="plc-sim-add-chip"
-                          onClick={() =>
+                        <ContactBlockPill
+                          key={c.id}
+                          contact={c}
+                          tagDefs={SANDBOX_TAG_DEFS}
+                          canDelete={nw.parallelBranch.length > 1}
+                          onChangeKind={(kind) =>
                             updateNetwork(nw.id, (cur) => ({
                               ...cur,
-                              parallelBranch: [
-                                ...cur.parallelBranch,
-                                { id: nextUid('p'), kind: 'NO', tag: 'I_Btn2' },
-                              ],
+                              parallelBranch: cur.parallelBranch.map((x) =>
+                                x.id === c.id ? { ...x, kind } : x,
+                              ),
                             }))
                           }
-                        >
-                          + 支路触点
-                        </button>
+                          onChangeTag={(tag) =>
+                            updateNetwork(nw.id, (cur) => ({
+                              ...cur,
+                              parallelBranch: cur.parallelBranch.map((x) =>
+                                x.id === c.id ? { ...x, tag } : x,
+                              ),
+                            }))
+                          }
+                          onDelete={() =>
+                            updateNetwork(nw.id, (cur) => ({
+                              ...cur,
+                              parallelBranch: cur.parallelBranch.filter((x) => x.id !== c.id),
+                            }))
+                          }
+                        />
+                      ))}
+                      {nw.parallelBranch.length < 3 && (
+                        <QuickAddContactButton
+                          label="支路触点"
+                          defaultTag="Q_Motor"
+                          onAdd={(kind, tag) =>
+                            updateNetwork(nw.id, (cur) => ({
+                              ...cur,
+                              parallelBranch: [...cur.parallelBranch, { id: nextUid('p'), kind, tag }],
+                            }))
+                          }
+                        />
                       )}
                     </div>
                   </div>
@@ -886,72 +931,46 @@ export const LadderSandbox: React.FC = () => {
                     <span className="plc-sim-nwe-label">汇合后串联 (停机/互锁)</span>
                     <div className="plc-sim-chip-row">
                       {nw.seriesAfter.map((c) => (
-                        <div key={c.id} className="plc-sim-elem-pill">
-                          <select
-                            value={c.kind}
-                            onChange={(e) =>
-                              updateNetwork(nw.id, (cur) => ({
-                                ...cur,
-                                seriesAfter: cur.seriesAfter.map((x) =>
-                                  x.id === c.id
-                                    ? { ...x, kind: e.target.value as SandboxContactKind }
-                                    : x
-                                ),
-                              }))
-                            }
-                          >
-                            <option value="NO">NO (| |)</option>
-                            <option value="NC">NC (|/|)</option>
-                            <option value="P_TRIG">P_TRIG (|P|)</option>
-                            <option value="N_TRIG">N_TRIG (|N|)</option>
-                          </select>
-                          <select
-                            value={c.tag}
-                            onChange={(e) =>
-                              updateNetwork(nw.id, (cur) => ({
-                                ...cur,
-                                seriesAfter: cur.seriesAfter.map((x) =>
-                                  x.id === c.id ? { ...x, tag: e.target.value } : x
-                                ),
-                              }))
-                            }
-                          >
-                            {ALL_CONTACT_TAGS.map((t) => (
-                              <option key={t.name} value={t.name}>
-                                {t.label}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            className="plc-sim-pill-del"
-                            onClick={() =>
-                              updateNetwork(nw.id, (cur) => ({
-                                ...cur,
-                                seriesAfter: cur.seriesAfter.filter((x) => x.id !== c.id),
-                              }))
-                            }
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                      {nw.seriesAfter.length < 3 && (
-                        <button
-                          type="button"
-                          className="plc-sim-add-chip"
-                          onClick={() =>
+                        <ContactBlockPill
+                          key={c.id}
+                          contact={c}
+                          tagDefs={SANDBOX_TAG_DEFS}
+                          canDelete
+                          onChangeKind={(kind) =>
                             updateNetwork(nw.id, (cur) => ({
                               ...cur,
-                              seriesAfter: [
-                                ...cur.seriesAfter,
-                                { id: nextUid('s'), kind: 'NO', tag: 'I_Stop_NC' },
-                              ],
+                              seriesAfter: cur.seriesAfter.map((x) =>
+                                x.id === c.id ? { ...x, kind } : x,
+                              ),
                             }))
                           }
-                        >
-                          + 串联互锁
-                        </button>
+                          onChangeTag={(tag) =>
+                            updateNetwork(nw.id, (cur) => ({
+                              ...cur,
+                              seriesAfter: cur.seriesAfter.map((x) =>
+                                x.id === c.id ? { ...x, tag } : x,
+                              ),
+                            }))
+                          }
+                          onDelete={() =>
+                            updateNetwork(nw.id, (cur) => ({
+                              ...cur,
+                              seriesAfter: cur.seriesAfter.filter((x) => x.id !== c.id),
+                            }))
+                          }
+                        />
+                      ))}
+                      {nw.seriesAfter.length < 3 && (
+                        <QuickAddContactButton
+                          label="串联停机/互锁"
+                          defaultTag="I_Stop_NC"
+                          onAdd={(kind, tag) =>
+                            updateNetwork(nw.id, (cur) => ({
+                              ...cur,
+                              seriesAfter: [...cur.seriesAfter, { id: nextUid('s'), kind, tag }],
+                            }))
+                          }
+                        />
                       )}
                     </div>
                   </div>
@@ -961,20 +980,23 @@ export const LadderSandbox: React.FC = () => {
                 <div className="plc-sim-nwe-footer">
                   <div className="plc-sim-nwe-inline">
                     <span className="plc-sim-nwe-label">IEC 定时器</span>
-                    <select
-                      value={nw.timerMode}
-                      onChange={(e) =>
-                        updateNetwork(nw.id, (cur) => ({
-                          ...cur,
-                          timerMode: e.target.value as 'NONE' | TimerType,
-                        }))
-                      }
-                    >
-                      <option value="NONE">无定时器</option>
-                      <option value="TON">TON 接通延时</option>
-                      <option value="TOF">TOF 断开延时</option>
-                      <option value="TP">TP 脉冲定时</option>
-                    </select>
+                    <div className="v32-seg-pills" role="group" aria-label="定时器类型">
+                      {(['NONE', 'TON', 'TOF', 'TP'] as const).map((tm) => (
+                        <button
+                          key={tm}
+                          type="button"
+                          className={nw.timerMode === tm ? 'is-on' : ''}
+                          onClick={() =>
+                            updateNetwork(nw.id, (cur) => ({
+                              ...cur,
+                              timerMode: tm,
+                            }))
+                          }
+                        >
+                          {tm === 'NONE' ? '无' : tm}
+                        </button>
+                      ))}
+                    </div>
                     {nw.timerMode !== 'NONE' && (
                       <label className="plc-sim-pt-input">
                         PT:
@@ -998,19 +1020,27 @@ export const LadderSandbox: React.FC = () => {
 
                   <div className="plc-sim-nwe-inline">
                     <span className="plc-sim-nwe-label">输出线圈</span>
-                    <select
-                      value={nw.coilKind}
-                      onChange={(e) =>
-                        updateNetwork(nw.id, (cur) => ({
-                          ...cur,
-                          coilKind: e.target.value as SandboxCoilKind,
-                        }))
-                      }
-                    >
-                      <option value="OTE">OTE 普通线圈 ( )</option>
-                      <option value="SET">SET 置位线圈 (S)</option>
-                      <option value="RESET">RESET 复位线圈 (R)</option>
-                    </select>
+                    <div className="v32-seg-pills" role="group" aria-label="线圈类型">
+                      {([
+                        { k: 'OTE', label: '-( )- 普通' },
+                        { k: 'SET', label: '-(S)- 置位' },
+                        { k: 'RESET', label: '-(R)- 复位' },
+                      ] as const).map((co) => (
+                        <button
+                          key={co.k}
+                          type="button"
+                          className={nw.coilKind === co.k ? 'is-on' : ''}
+                          onClick={() =>
+                            updateNetwork(nw.id, (cur) => ({
+                              ...cur,
+                              coilKind: co.k as SandboxCoilKind,
+                            }))
+                          }
+                        >
+                          {co.label}
+                        </button>
+                      ))}
+                    </div>
                     <select
                       value={nw.coilTag}
                       onChange={(e) =>
@@ -1019,6 +1049,7 @@ export const LadderSandbox: React.FC = () => {
                           coilTag: e.target.value,
                         }))
                       }
+                      aria-label="输出线圈地址"
                     >
                       {COIL_TAGS.map((t) => (
                         <option key={t.name} value={t.name}>
@@ -1072,6 +1103,7 @@ export const LadderSandbox: React.FC = () => {
             inputMode={inputMode}
             onInputModeChange={setInputMode}
             onSetInput={handleSetFieldInput}
+            intervalMs={intervalMs}
           />
         </aside>
       </div>

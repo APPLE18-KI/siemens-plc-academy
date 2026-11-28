@@ -11,11 +11,13 @@ import {
   Circle,
   Clock,
   Copy,
+  FileText,
   ListTree,
   NotebookPen,
   PlayCircle,
   Star,
   Target,
+  X,
 } from 'lucide-react';
 import { chapters, lessons } from '../../registry';
 import { useProgress } from '../store/progressStore';
@@ -77,6 +79,7 @@ export const LessonReaderPage: React.FC = () => {
   };
   const [lectureOpen, setLectureOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [cheatSheetOpen, setCheatSheetOpen] = useState(false);
   const [copiedCard, setCopiedCard] = useState(false);
   const [copyToast, setCopyToast] = useState('');
   const progressBarRef = useRef<HTMLSpanElement>(null);
@@ -114,6 +117,7 @@ export const LessonReaderPage: React.FC = () => {
     }
     setMobileTocOpen(false);
     setLectureOpen(false);
+    setCheatSheetOpen(false);
     setCopiedCard(false);
   }, [lesson, setLastVisitedLesson]);
 
@@ -434,11 +438,15 @@ export const LessonReaderPage: React.FC = () => {
             </button>
             <button
               type="button"
-              className={`v3-fold-tool press${copiedCard ? ' is-done' : ''}`}
-              onClick={handleCopyCheatSheet}
+              className={`v3-fold-tool press${cheatSheetOpen ? ' is-active' : ''}`}
+              aria-expanded={cheatSheetOpen}
+              onClick={() => {
+                haptic('tap');
+                setCheatSheetOpen(true);
+              }}
             >
-              {copiedCard ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />}
-              <span>{copiedCard ? '已复制' : '速查卡'}</span>
+              <FileText size={14} aria-hidden />
+              <span>预览速查卡</span>
             </button>
           </div>
         </div>
@@ -529,6 +537,55 @@ export const LessonReaderPage: React.FC = () => {
           onCopyCheatSheet={handleCopyCheatSheet}
           copied={copiedCard}
         />
+
+        {cheatSheetOpen && (
+          <div
+            className="v32-modal-backdrop"
+            role="dialog"
+            aria-modal="true"
+            aria-label="本讲速查卡预览"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setCheatSheetOpen(false);
+            }}
+          >
+            <div className="v32-cheatsheet-modal">
+              <header className="v32-modal-head">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <FileText size={16} color="var(--siemens-teal-bright)" />
+                  <strong>第 {lesson.order} 讲速查卡 · {lesson.title}</strong>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${copiedCard ? 'btn-success' : 'btn-primary'}`}
+                    onClick={handleCopyCheatSheet}
+                  >
+                    {copiedCard ? <Check size={14} /> : <Copy size={14} />}
+                    {copiedCard ? '已复制 Markdown' : '一键复制 Markdown'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    onClick={() => setCheatSheetOpen(false)}
+                    aria-label="关闭速查卡预览"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+              </header>
+              <div className="v32-cheatsheet-body">
+                <MarkdownRenderer
+                  content={buildLessonCheatSheetMarkdown(lesson, currentChapter, currentNote?.text ?? '')}
+                />
+              </div>
+              {copyToast && (
+                <div className="v32-modal-foot" role="status">
+                  {copyToast}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {lectureOpen && script && (
           <LecturePlayer script={script} lessonTitle={lesson.title} onClose={closeLecture} />

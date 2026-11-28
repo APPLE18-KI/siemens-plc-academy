@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   BookOpen,
@@ -18,6 +18,7 @@ import { SclCodePanel } from './SclCodePanel';
 import { TraceViewer } from './TraceViewer';
 import { ShortcutHintBar } from './ShortcutHintBar';
 import { useSimulatorShortcuts } from '../hooks/useSimulatorShortcuts';
+import { emitSimTelemetry } from '../lessonPracticeBridge';
 
 interface PresetSimulatorProps {
   presetId: SimPresetId;
@@ -74,6 +75,17 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
       traceCapacity: 120,
       onAfterScan: handleAfterScan,
     });
+
+  // 向课程内嵌动手清单广播实时 I/O 遥测，实现操作仿真器自动打勾验收
+  useEffect(() => {
+    emitSimTelemetry({
+      presetId,
+      running: snapshot.metrics.running,
+      fieldInputs: snapshot.fieldInputs,
+      fieldOutputs: snapshot.fieldOutputs,
+      tags: snapshot.tags,
+    });
+  }, [presetId, snapshot.metrics.running, snapshot.fieldInputs, snapshot.fieldOutputs, snapshot.tags]);
 
   const handleToggleRun = useCallback(() => {
     const isRunning = runtime.getMetrics?.().running ?? true;
@@ -223,6 +235,7 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
               closedLoopTank={closedLoopTank}
               onToggleClosedLoopTank={setClosedLoopTank}
               compact
+              intervalMs={intervalMs}
             />
           </div>
         </div>
@@ -327,6 +340,7 @@ export const PresetSimulator: React.FC<PresetSimulatorProps> = ({
             onSetInput={handleSetInput}
             closedLoopTank={closedLoopTank}
             onToggleClosedLoopTank={setClosedLoopTank}
+            intervalMs={intervalMs}
           />
         </aside>
       </div>

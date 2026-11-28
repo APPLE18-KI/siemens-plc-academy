@@ -31,7 +31,7 @@ function parseTabParam(value: string | null): CapstoneTabId {
   if (value && VALID_TAB_IDS.has(value)) {
     return value as CapstoneTabId;
   }
-  return 'scada';
+  return 'arch';
 }
 
 const STORAGE_KEY = 'siemens_plc_academy_capstone_v1';
@@ -182,7 +182,7 @@ export const CapstoneStudio: React.FC = () => {
         </nav>
 
         {/* Active Tab Workspace */}
-        <main>
+        <section className="cap-workspace" role="tabpanel" aria-label="毕业项目当前工作台">
           {activeTab === 'arch' && <ArchitectureTab />}
           {activeTab === 'challenges' && (
             <ChallengesTab
@@ -198,7 +198,39 @@ export const CapstoneStudio: React.FC = () => {
               onToggleMasteredQa={handleToggleMasteredQa}
             />
           )}
-        </main>
+          {(() => {
+            const idx = TABS.findIndex((t) => t.id === activeTab);
+            const prevTab = idx > 0 ? TABS[idx - 1] : null;
+            const nextTab = idx >= 0 && idx < TABS.length - 1 ? TABS[idx + 1] : null;
+            return (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 12,
+                  marginTop: 20,
+                  paddingTop: 16,
+                  borderTop: '1px solid var(--border-hairline)',
+                  flexWrap: 'wrap',
+                }}
+              >
+                {prevTab ? (
+                  <button type="button" className="btn btn-sm" onClick={() => handleSelectTab(prevTab.id)}>
+                    ← 上一步：{prevTab.num} · {prevTab.label}
+                  </button>
+                ) : (
+                  <span style={{ fontSize: 12.5, color: 'var(--ink-muted)' }}>建议按 1 → 5 步顺序依次完成毕业项目</span>
+                )}
+                {nextTab && (
+                  <button type="button" className="btn btn-primary btn-sm" onClick={() => handleSelectTab(nextTab.id)}>
+                    下一步：{nextTab.num} · {nextTab.label} →
+                  </button>
+                )}
+              </div>
+            );
+          })()}
+        </section>
       </div>
     </div>
   );

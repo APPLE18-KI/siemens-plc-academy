@@ -1,6 +1,7 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
+  Compass,
   Glasses,
   ListChecks,
   Lock,
@@ -8,6 +9,8 @@ import {
   Play,
   RotateCcw,
   ScrollText,
+  SlidersHorizontal,
+  Sparkles,
   Square,
   StepForward,
   Table2,
@@ -19,14 +22,17 @@ import type { SimPresetId } from '../../../types/content';
 import type { TagDef, TagValue } from '../../../types/plc';
 import {
   analyzeProgramCrossRef,
+  buildCycleMicroTrace,
   inferTagArea,
   useLadderSimulation,
+  type MicroStepFrame,
   type ScanIntervalOption,
 } from '../../../core/plc';
 import { SIM_PRESET_DEFINITIONS, type FieldInputMeta } from '../presets';
 import { TiaLadder, TiaLegend } from './TiaLadder';
 import { CrossRefWorkbenchPanel } from './CrossRefInspector';
 import { ShortcutHintBar } from './ShortcutHintBar';
+import { SimulatorSpotlight, SIM_SPOTLIGHT_STEPS } from './SimulatorSpotlight';
 import { useSimulatorShortcuts } from '../hooks/useSimulatorShortcuts';
 import { haptic } from '../../../app/native/platform';
 
@@ -97,20 +103,28 @@ function fmtClock(ts: number): string {
   return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(), 3)}`;
 }
 
-/** 现场按钮：常开按下=1；常闭平时=1、按下=0；保持型点一下切换 */
+/** 现场按钮：常开按下=1；常闭平时=1、按下=0；保持型点一下切换（含慢放最小脉宽防漏采保护） */
 const FieldButton = memo<{
   meta: FieldInputMeta;
   def?: TagDef;
   value: boolean;
   forceLatch?: boolean;
+  intervalMs?: number;
   onSet: (tag: string, v: boolean) => void;
-}>(function FieldButton({ meta, def, value, forceLatch = false, onSet }) {
+}>(function FieldButton({ meta, def, value, forceLatch = false, intervalMs = 50, onSet }) {
   const momentary = !forceLatch && meta.defaultMomentary !== false;
   const pressedVal = meta.physicalType === 'NC' ? false : true;
   const restVal = !pressedVal;
   const pressed = momentary ? value === pressedVal : value !== (meta.physicalType === 'NC');
+  const downAtRef = useRef<number>(0);
+  const relTimerRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => () => window.clearTimeout(relTimerRef.current), []);
+
   const down = (e: React.PointerEvent<HTMLButtonElement>) => {
     if (!momentary) return;
+    window.clearTimeout(relTimerRef.current);
+    downAtRef.current = Date.now();
     try {
       e.currentTarget.setPointerCapture?.(e.pointerId);
     } catch {
@@ -122,7 +136,14 @@ const FieldButton = memo<{
   const up = () => {
     if (!momentary) return;
     haptic('tap');
-    onSet(meta.tag, restVal);
+    const elapsed = Date.now() - downAtRef.current;
+    const minHold = Math.max(110, Math.round(intervalMs * 1.4));
+    const remain = minHold - elapsed;
+    if (remain > 12) {
+      relTimerRef.current = window.setTimeout(() => onSet(meta.tag, restVal), remain);
+    } else {
+      onSet(meta.tag, restVal);
+    }
   };
   return (
     <button
@@ -176,7 +197,20 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
   const [forceRows, setForceRows] = useState<Record<string, { on: boolean; value: string }>>({});
   const [openDiag, setOpenDiag] = useState<number | null>(null);
   const [focusedNetwork, setFocusedNetwork] = useState<number | null>(null);
+  const [microFrames, setMicroFrames] = useState<MicroStepFrame[] | null>(null);
+  const [microIdx, setMicroIdx] = useState<number>(0);
   const [latchMode, setLatchMode] = useState(false);
+  const [noviceMode, setNoviceMode] = useState<boolean>(() => {
+    try {
+      const saved = window.localStorage.getItem('plc_sim_novice_mode_v1');
+      if (saved === 'full') return false;
+      if (saved === 'novice') return true;
+      return true;
+    } catch {
+      return true;
+    }
+  });
+  const [spotlightStep, setSpotlightStep] = useState<number | null>(null);
   const [hideCoach, setHideCoach] = useState<boolean>(() => {
     try {
       return window.localStorage.getItem('plc_sim_coach_hide_v1') === '1';
@@ -190,6 +224,39 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
   const toastTimer = useRef<number | undefined>(undefined);
   const focusTimer = useRef<number | undefined>(undefined);
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const cpuRef = useRef<HTMLElement | null>(null);
+  const fieldRef = useRef<HTMLElement | null>(null);
+
+  const toggleNoviceMode = useCallback((nextNovice: boolean) => {
+    setNoviceMode(nextNovice);
+    if (nextNovice && tab !== 'ob1' && tab !== 'tags') {
+      setTab('ob1');
+    }
+    try {
+      window.localStorage.setItem('plc_sim_novice_mode_v1', nextNovice ? 'novice' : 'full');
+    } catch {
+      /* ignore */
+    }
+  }, [tab]);
+
+  const startSpotlight = useCallback(() => {
+    haptic('tap');
+    setTab('ob1');
+    setSpotlightStep(0);
+    cpuRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, []);
+
+  const advanceSpotlight = useCallback(() => {
+    haptic('tap');
+    setSpotlightStep((prev) => {
+      if (prev === null) return null;
+      const next = prev + 1;
+      if (next >= SIM_SPOTLIGHT_STEPS.length) return null;
+      if (next === 1) fieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (next === 2) panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return next;
+    });
+  }, []);
 
   const running = snapshot.metrics.running;
   const cpu = snapshot.cpu;
@@ -222,7 +289,67 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
     return () => window.clearTimeout(t);
   }, [mresArmed]);
 
+  const doMicroStep = useCallback(() => {
+    if (running) {
+      runtime.setRunning?.(false);
+    }
+    haptic('tap');
+    setTab('ob1');
+    setCoachTriedStepOrStop(true);
+
+    if (!microFrames) {
+      const trace = buildCycleMicroTrace(
+        preset.program,
+        defs,
+        snapshot.tags,
+        snapshot.fieldInputs,
+        snapshot.fieldOutputs,
+        cpu.forces,
+        intervalMs,
+        snapshot.metrics.cycleCount + 1,
+      );
+      setMicroFrames(trace);
+      setMicroIdx(0);
+      setFocusedNetwork(trace[0]?.networkNumber ?? null);
+      say('已开启 X 光逐段微步：当前停在 ① PII 输入锁存，再点一次看程序段 1！');
+      return;
+    }
+
+    const nextIdx = microIdx + 1;
+    if (nextIdx < microFrames.length) {
+      setMicroIdx(nextIdx);
+      const frame = microFrames[nextIdx];
+      setFocusedNetwork(frame.networkNumber);
+      if (frame.kind === 'PIQ') {
+        // 走到最后一步 PIQ 写回时，真正提交该周期到 CPU 运行时，保证状态完全同步！
+        runtime.singleScan(intervalMs);
+        say('已刷写 PIQ 至外部输出端子！本周期 X 光拆解完成，继续点可开始下一周期。');
+      } else if (frame.networkNumber !== null) {
+        say(`X 光聚焦程序段 ${frame.networkNumber}（共 ${preset.program.networks.length} 段）。`);
+      }
+      return;
+    }
+
+    // 已经走完本周期，立即基于最新快照开启下一个周期的 X 光微步
+    const trace = buildCycleMicroTrace(
+      preset.program,
+      defs,
+      snapshot.tags,
+      snapshot.fieldInputs,
+      snapshot.fieldOutputs,
+      cpu.forces,
+      intervalMs,
+      snapshot.metrics.cycleCount + 1,
+    );
+    setMicroFrames(trace);
+    setMicroIdx(0);
+    setFocusedNetwork(trace[0]?.networkNumber ?? null);
+  }, [running, runtime, microFrames, microIdx, preset.program, defs, snapshot, cpu.forces, intervalMs, say]);
+
+  const activeMicroFrame = microFrames ? microFrames[microIdx] ?? null : null;
+
   const doRun = useCallback(() => {
+    setMicroFrames(null);
     if (running || starting) return;
     haptic('success');
     setStarting(true);
@@ -274,8 +401,9 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
   }, [running, doStop, doRun]);
 
   const handleOpenCrossRef = useCallback(() => {
+    setNoviceMode(false);
     setTab('xref');
-    say('已切换到交叉引用表 (Cross-Reference · F11)。');
+    say('已切换到博途完整模式并打开交叉引用表 (Cross-Reference · F11)。');
   }, [say]);
 
   const handleJumpToNetwork = useCallback(
@@ -317,13 +445,20 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
   const leds = {
     run: starting ? 'flash-ry' : running ? 'green' : 'yellow',
     err: cpu.errorActive ? 'flash-red' : 'off',
-    maint: 'off',
+    maint: forcedCount > 0 ? 'yellow' : 'off',
   };
 
   const writeInput = useCallback(
     (name: string, v: TagValue) => {
       setCoachTriedInput(true);
       runtime.setFieldInput(name, v);
+      setSpotlightStep((prev) => {
+        if (prev === 1) {
+          panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return 2;
+        }
+        return prev;
+      });
     },
     [runtime],
   );
@@ -372,10 +507,56 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
     say(n ? `已强制 ${n} 个地址。调试完请记得“停止强制”。` : '没有勾选 F 的行：已取消全部强制。');
   };
 
+  const visibleTabs = useMemo(
+    () => (noviceMode ? TABS.filter((t) => t.id === 'ob1' || t.id === 'tags') : TABS),
+    [noviceMode],
+  );
+  const spotlightTarget =
+    spotlightStep !== null ? SIM_SPOTLIGHT_STEPS[spotlightStep]?.target ?? null : null;
+
   return (
     <div className="ps-root">
+      {/* ── 复杂度模式切换条：新手精简模式 vs 博途完整模式 + 3 步交互导览 ── */}
+      <div className="v32-sim-modebar" role="region" aria-label="仿真界面难度模式与交互导览">
+        <div className="v32-sim-mode-group" role="group" aria-label="界面复杂度模式">
+          <button
+            type="button"
+            className={`v32-mode-pill${noviceMode ? ' is-active' : ''}`}
+            aria-pressed={noviceMode}
+            onClick={() => toggleNoviceMode(true)}
+          >
+            <Sparkles size={13} />
+            新手精简模式
+            <small>只留按钮 + 梯形图</small>
+          </button>
+          <button
+            type="button"
+            className={`v32-mode-pill${!noviceMode ? ' is-active' : ''}`}
+            aria-pressed={!noviceMode}
+            onClick={() => toggleNoviceMode(false)}
+          >
+            <SlidersHorizontal size={13} />
+            博途完整模式
+            <small>解锁 F11 / 强制表 / 诊断</small>
+          </button>
+        </div>
+
+        <button
+          type="button"
+          className={`v32-tour-launch-btn${spotlightStep !== null ? ' is-running' : ''}`}
+          onClick={startSpotlight}
+        >
+          <Compass size={14} />
+          {spotlightStep !== null ? '正在 3 步导览中…' : '3 步手把手交互导览'}
+        </button>
+      </div>
+
       {/* ── CPU 操作面板 ── */}
-      <section className="ps-cpu" aria-label="仿真 CPU 操作面板">
+      <section
+        ref={cpuRef}
+        className={`ps-cpu${spotlightTarget === 'cpu' ? ' v32-spotlight-target' : ''}`}
+        aria-label="仿真 CPU 操作面板"
+      >
         <div className="ps-cpu-id">
           <div className="ps-cpu-name">PLC_1 [CPU 1214C DC/DC/DC]</div>
           <div className="ps-cpu-ip">PROFINET 接口 · 192.168.0.1</div>
@@ -402,44 +583,64 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
             {forcedCount > 0 && <span className="ps-mode-pill force">强制中 ×{forcedCount}</span>}
             {cpu.errorActive && <span className="ps-mode-pill err">时间错误</span>}
           </div>
-          <div className="ps-cpu-btns">
+          <div className="ps-cpu-btns" style={noviceMode ? { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } : undefined}>
             <button type="button" className="ps-btn run" onClick={doRun} disabled={running || starting}>
               <Play size={15} /> RUN
             </button>
             <button type="button" className="ps-btn stop" onClick={doStop} disabled={!running}>
               <Square size={14} /> STOP
             </button>
-            <button type="button" className={`ps-btn mres${mresArmed ? ' armed' : ''}`} onClick={doMres}>
-              <RotateCcw size={14} /> {mresArmed ? '再点确认' : 'MRES'}
-            </button>
+            {!noviceMode && (
+              <button type="button" className={`ps-btn mres${mresArmed ? ' armed' : ''}`} onClick={doMres}>
+                <RotateCcw size={14} /> {mresArmed ? '再点确认' : 'MRES'}
+              </button>
+            )}
           </div>
         </div>
+        {cpu.errorActive && (
+          <div className="ps-error-recovery" role="alert">
+            <span>
+              已触发 OB80 超时故障锁存（ERROR 闪烁）：先查看诊断缓冲区，再点上方 <b>RUN</b> 暖启动或 <b>MRES</b> 清除故障灯。
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                toggleNoviceMode(false);
+                setTab('diag');
+              }}
+            >
+              打开诊断缓冲区
+            </button>
+          </div>
+        )}
         <div className="ps-cycle" aria-label="扫描周期">
           <div className={`ps-phases${running ? ' is-running' : ''}`} style={{ ['--ps-cycle' as string]: `${intervalMs * 3}ms` }}>
             <span>① 写输出</span>
             <span>② 读输入</span>
             <span>③ 执行 OB1</span>
           </div>
-          <dl className="ps-cycle-stats">
-            <div>
-              <dt>循环次数</dt>
-              <dd>{snapshot.metrics.cycleCount}</dd>
-            </div>
-            <div>
-              <dt>当前循环</dt>
-              <dd>{snapshot.metrics.lastScanMs.toFixed(2)} ms</dd>
-            </div>
-            <div>
-              <dt>最短 / 最长</dt>
-              <dd>
-                {cpu.cycleMinMs.toFixed(2)} / {cpu.cycleMaxMs.toFixed(2)} ms
-              </dd>
-            </div>
-            <div>
-              <dt>最大循环时间</dt>
-              <dd>{cpu.maxCycleLimitMs} ms</dd>
-            </div>
-          </dl>
+          {!noviceMode && (
+            <dl className="ps-cycle-stats">
+              <div>
+                <dt>循环次数</dt>
+                <dd>{snapshot.metrics.cycleCount}</dd>
+              </div>
+              <div>
+                <dt>当前循环</dt>
+                <dd>{snapshot.metrics.lastScanMs.toFixed(2)} ms</dd>
+              </div>
+              <div>
+                <dt>最短 / 最长</dt>
+                <dd>
+                  {cpu.cycleMinMs.toFixed(2)} / {cpu.cycleMaxMs.toFixed(2)} ms
+                </dd>
+              </div>
+              <div>
+                <dt>最大循环时间</dt>
+                <dd>{cpu.maxCycleLimitMs} ms</dd>
+              </div>
+            </dl>
+          )}
           <div className="ps-cycle-tools">
             <div className="ps-seg" role="group" aria-label="演示速度">
               <span className="ps-seg-label">演示速度</span>
@@ -459,19 +660,92 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
             </button>
             <button
               type="button"
-              className="ps-btn ghost danger"
-              disabled={!running}
-              onClick={() => {
-                haptic('error');
-                runtime.simulateCycleOverrun();
-                say('模拟了一次严重超时：CPU 转入 STOP，ERROR 灯闪烁。去“诊断缓冲区”看看记录。');
-              }}
+              className={`ps-btn ghost${microFrames ? ' on' : ''}`}
+              onClick={doMicroStep}
+              title="Python Tutor 风格周期内微步拆解：PII 锁存 → 逐段求值 → PIQ 写回，并高亮变量 0→1 跳变"
             >
-              <AlertTriangle size={14} /> 模拟循环超时
+              <Zap size={14} /> {microFrames ? `微步下一步 (${microIdx + 1}/${microFrames.length})` : '逐段微步 (X光)'}
             </button>
+            {!noviceMode && (
+              <button
+                type="button"
+                className="ps-btn ghost danger"
+                disabled={!running}
+                onClick={() => {
+                  haptic('error');
+                  runtime.simulateCycleOverrun();
+                  say('模拟了一次严重超时：CPU 转入 STOP，ERROR 灯闪烁。去“诊断缓冲区”看看记录，再点 RUN 可暖启动恢复。');
+                }}
+              >
+                <AlertTriangle size={14} /> 模拟循环超时
+              </button>
+            )}
           </div>
         </div>
       </section>
+
+      {/* ── Python Tutor 风格：周期内逐段微步 X 光面板与变量跳变 Diff ── */}
+      {microFrames && activeMicroFrame && (
+        <section className="v32-micro-panel" aria-label="扫描周期逐段微步 X 光追踪">
+          <div className="v32-micro-head">
+            <span className="v32-micro-title">
+              <Zap size={14} />
+              X 光逐段拆解：{activeMicroFrame.title}
+            </span>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <button type="button" className="ps-btn run" onClick={doMicroStep} style={{ minHeight: 34, padding: '4px 10px' }}>
+                {microIdx < microFrames.length - 1 ? '前进半步 →' : '开始下一周期 →'}
+              </button>
+              <button
+                type="button"
+                className="ps-btn ghost"
+                style={{ minHeight: 34, padding: '4px 10px' }}
+                onClick={() => {
+                  setMicroFrames(null);
+                  setFocusedNetwork(null);
+                }}
+              >
+                退出微步
+              </button>
+            </div>
+          </div>
+
+          <div className="v32-micro-steps" role="tablist" aria-label="当前周期微步进度">
+            {microFrames.map((f, i) => (
+              <button
+                key={f.stepIndex}
+                type="button"
+                role="tab"
+                aria-selected={i === microIdx}
+                className={`v32-micro-pill${i === microIdx ? ' active' : ''}${f.diffs.length > 0 ? ' has-diff' : ''}`}
+                onClick={() => {
+                  setMicroIdx(i);
+                  setFocusedNetwork(f.networkNumber);
+                }}
+              >
+                {f.kind === 'PII' ? '① PII 锁存' : f.kind === 'PIQ' ? '③ PIQ 刷写' : `② NW${f.networkNumber}`}
+                {f.diffs.length > 0 ? ` (${f.diffs.length}变)` : ''}
+              </button>
+            ))}
+          </div>
+
+          <p className="v32-micro-narration">{activeMicroFrame.narration}</p>
+
+          <div className="v32-micro-diffs" role="status" aria-live="polite">
+            {activeMicroFrame.diffs.length === 0 ? (
+              <span style={{ fontSize: 12, color: 'var(--ink-muted)' }}>
+                本小步暂无变量发生跳变（可以试着先拨动下方现场按钮，再点「前进半步」观察跳变轨迹！）
+              </span>
+            ) : (
+              activeMicroFrame.diffs.map((d) => (
+                <span key={`${d.address}-${d.tag}`} className={`v32-micro-diff-chip${d.changedToTrue ? '' : ' is-off'}`}>
+                  <strong>{d.address}</strong> ({d.tag}): {d.before} → <b>{d.after}</b>
+                </span>
+              ))
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ── 新手 30 秒跟做引导条（可一键收起） ── */}
       {!hideCoach ? (
@@ -528,7 +802,11 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
       )}
 
       {/* ── 现场 I/O ── */}
-      <section className="ps-field" aria-label="现场按钮与输出">
+      <section
+        ref={fieldRef}
+        className={`ps-field${spotlightTarget === 'field' ? ' v32-spotlight-target' : ''}`}
+        aria-label="现场按钮与输出"
+      >
         <div className="ps-field-toolbar">
           <span className="ps-field-title">
             现场电柜按钮与指示灯
@@ -554,6 +832,7 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
               def={defMap.get(m.tag)}
               value={Boolean(snapshot.fieldInputs[m.tag])}
               forceLatch={latchMode}
+              intervalMs={intervalMs}
               onSet={writeInput}
             />
           ))}
@@ -574,7 +853,7 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
 
       {/* ── 项目树式标签页 ── */}
       <nav className="ps-tabs" role="tablist" aria-label="仿真工具">
-        {TABS.map(({ id, label, icon: Icon }) => (
+        {visibleTabs.map(({ id, label, icon: Icon }) => (
           <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>
             <Icon size={14} /> {label}
             {id === 'xref' && xrefBadgeCount > 0 && (
@@ -584,9 +863,22 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
             {id === 'force' && forcedCount > 0 && <span className="ps-count warn">{forcedCount}</span>}
           </button>
         ))}
+        {noviceMode && (
+          <button
+            type="button"
+            className="v32-unlock-pro-tab"
+            onClick={() => toggleNoviceMode(false)}
+          >
+            + 展开博途高级工具（强制表 / F11 / 诊断）
+          </button>
+        )}
       </nav>
 
-      <div className="ps-panel" role="tabpanel" ref={panelRef}>
+      <div
+        className={`ps-panel${spotlightTarget === 'ladder' ? ' v32-spotlight-target' : ''}`}
+        role="tabpanel"
+        ref={panelRef}
+      >
         {tab === 'ob1' && (
           <>
             <div className="ps-toolbar">
@@ -923,6 +1215,12 @@ export const PlcsimWorkbench: React.FC<{ presetId: SimPresetId }> = ({ presetId 
           </span>
         </div>
       </div>
+
+      <SimulatorSpotlight
+        stepIndex={spotlightStep}
+        onNext={advanceSpotlight}
+        onClose={() => setSpotlightStep(null)}
+      />
 
       {toast && (
         <div className="ps-toast" role="status">

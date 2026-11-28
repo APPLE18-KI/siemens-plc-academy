@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { haptic } from '../../../app/native/platform';
 import {
   AlertOctagon,
@@ -34,6 +34,8 @@ interface FieldPanelProps {
   closedLoopTank?: boolean;
   onToggleClosedLoopTank?: (enabled: boolean) => void;
   compact?: boolean;
+  /** 当前扫描周期（ms）：用于给点动按钮做最小脉宽防漏采保护与教学提示 */
+  intervalMs?: number;
 }
 
 const EMPTY_ANALOG: AnalogInputMeta[] = [];
@@ -54,8 +56,21 @@ export const FieldPanel: React.FC<FieldPanelProps> = memo(function FieldPanel({
   closedLoopTank = false,
   onToggleClosedLoopTank,
   compact = false,
+  intervalMs = 50,
 }) {
   const defByName = useMemo(() => new Map(tagDefs.map((d) => [d.name, d])), [tagDefs]);
+  const pressStartRef = useRef<Record<string, number>>({});
+  const releaseTimersRef = useRef<Record<string, number>>({});
+  const [pulseCoachTip, setPulseCoachTip] = useState<string | null>(null);
+  const pulseTipTimerRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    const timers = releaseTimersRef.current;
+    return () => {
+      Object.values(timers).forEach((t) => window.clearTimeout(t));
+      window.clearTimeout(pulseTipTimerRef.current);
+    };
+  }, []);
 
   const renderOutputIcon = (role: FieldOutputMeta['role'], active: boolean) => {
     switch (role) {
@@ -123,6 +138,11 @@ export const FieldPanel: React.FC<FieldPanelProps> = memo(function FieldPanel({
             标着“常闭”的按钮平时就是接通的（显示 24V · 1），按下才变成 0——这是正常现象，不是故障。
           </p>
         )}
+        {pulseCoachTip && (
+          <div className="v32-pulse-tip" role="status">
+            <span>⚡ {pulseCoachTip}</span>
+          </div>
+        )}
         <div className="plc-sim-io-grid">
           {fieldInputMetas.map((meta) => {
             const def = defByName.get(meta.tag);
@@ -141,8 +161,18 @@ export const FieldPanel: React.FC<FieldPanelProps> = memo(function FieldPanel({
 
             const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
               if (useMomentary) {
+                // 取消尚未执行的延迟释放，防止连续快按打架
+                if (releaseTimersRef.current[meta.tag]) {
+                  window.clearTimeout(releaseTimersRef.current[meta.tag]);
+                  delete releaseTimersRef.current[meta.tag];
+                }
+                pressStartRef.current[meta.tag] = Date.now();
                 // 捕获指针：手指轻微移动也不会被当作“松开”
-                e.currentTarget.setPointerCapture?.(e.pointerId);
+                try {
+                  e.currentTarget.setPointerCapture?.(e.pointerId);
+                } catch {
+                  /* synthetic event fallback */
+                }
                 haptic('press');
                 onSetInput(meta.tag, pressedVal);
               }
@@ -150,7 +180,25 @@ export const FieldPanel: React.FC<FieldPanelProps> = memo(function FieldPanel({
             const handlePointerUp = () => {
               if (useMomentary) {
                 haptic('tap'); // 松手时轻一下：模拟按钮回弹
-                onSetInput(meta.tag, releasedVal);
+                const elapsed = Date.now() - (pressStartRef.current[meta.tag] ?? 0);
+                // 保证至少覆盖 1.4 个扫描周期（下限 110ms），避免新手轻点在慢放周期里被漏采
+                const minHoldMs = Math.max(110, Math.round(intervalMs * 1.4));
+                const remain = minHoldMs - elapsed;
+                if (remain > 12) {
+                  if (intervalMs >= 200 && elapsed < intervalMs) {
+                    setPulseCoachTip(
+                      `你刚按得比当前 ${intervalMs}ms 扫描周期还快！系统已帮你补足脉宽防止漏采；真实 PLC 中信号短于扫描周期就会出现“漏采”。`,
+                    );
+                    window.clearTimeout(pulseTipTimerRef.current);
+                    pulseTipTimerRef.current = window.setTimeout(() => setPulseCoachTip(null), 4600);
+                  }
+                  releaseTimersRef.current[meta.tag] = window.setTimeout(() => {
+                    delete releaseTimersRef.current[meta.tag];
+                    onSetInput(meta.tag, releasedVal);
+                  }, remain);
+                } else {
+                  onSetInput(meta.tag, releasedVal);
+                }
               }
             };
             const handleClick = () => {

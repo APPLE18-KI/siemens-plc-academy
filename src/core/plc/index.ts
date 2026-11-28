@@ -212,7 +212,7 @@ export function createLadderRuntime(options: CreateLadderRuntimeOptions): Ladder
   /** 诊断缓冲区（最新在前，最多 50 条） */
   let diag: DiagEntry[] = [];
   let diagSeq = 0;
-  let errorUntil = 0;
+  let errorLatched = false;
   const pushDiag = (text: string, kind: DiagEntry['kind'] = 'info', detail?: string) => {
     diagSeq += 1;
     diag = [{ seq: diagSeq, time: Date.now(), text, kind, detail }, ...diag].slice(0, 50);
@@ -253,7 +253,7 @@ export function createLadderRuntime(options: CreateLadderRuntimeOptions): Ladder
     maxCycleLimitMs: 150,
     forces: { ...forces },
     diag: diag.slice(),
-    errorActive: Date.now() < errorUntil,
+    errorActive: errorLatched,
   });
 
 
@@ -397,6 +397,7 @@ export function createLadderRuntime(options: CreateLadderRuntimeOptions): Ladder
       traceBuffer.clear();
       cycleCount = 0;
       elapsedSimMs = 0;
+      errorLatched = false;
       evalSnapshot = evaluateLadderProgram(currentProgram, tags, tagDefs, internal, 0, {
         cycle: 0,
         phase: running ? 'IDLE' : 'STOPPED',
@@ -481,7 +482,7 @@ export function createLadderRuntime(options: CreateLadderRuntimeOptions): Ladder
       notifyAll();
     },
     warmRestart() {
-      // STARTUP：Q 映像清零、非保持 M 与定时器/计数器回到初值，输入保持现场状态
+      // STARTUP：Q 映像清零、非保持 M 与定时器/计数器回到初值，输入保持现场状态，并清除故障锁存
       const defaults = buildDefaults();
       for (const d of tagDefs) {
         const area = inferTagArea(d);
@@ -489,6 +490,10 @@ export function createLadderRuntime(options: CreateLadderRuntimeOptions): Ladder
       }
       piq = pickSubset(tags, outputDefs);
       internal = createLadderInternalState();
+      if (errorLatched) {
+        errorLatched = false;
+        pushDiag('故障锁存已清除：CPU 暖启动恢复正常', 'mode', '清除时间错误报警灯，重新按正常周期扫描 OB1。');
+      }
       notifyAll();
     },
     memoryReset() {
@@ -502,9 +507,10 @@ export function createLadderRuntime(options: CreateLadderRuntimeOptions): Ladder
       cycleCount = 0;
       cycleMin = Infinity;
       cycleMax = 0;
+      errorLatched = false;
       running = false;
       activePhase = 'STOPPED';
-      pushDiag('存储器复位（MRES）完成', 'mode', '清除工作存储器中的数据，重新从装载存储器复制程序；诊断缓冲区不会被清除。');
+      pushDiag('存储器复位（MRES）完成', 'mode', '清除工作存储器中的数据并复位故障锁存，重新从装载存储器复制程序；诊断缓冲区不会被清除。');
       notifyAll();
     },
     simulateCycleOverrun(ms = 320) {
@@ -514,7 +520,7 @@ export function createLadderRuntime(options: CreateLadderRuntimeOptions): Ladder
       running = false;
       activePhase = 'STOPPED';
       fieldOutputs = buildSafeOutputs();
-      errorUntil = Date.now() + 6000;
+      errorLatched = true;
       pushDiag('运行模式转换：RUN → STOP（时间错误）', 'mode');
       notifyAll();
     },
@@ -597,3 +603,5 @@ export function useLadderSimulation(options: CreateLadderRuntimeOptions) {
     toggleTracePaused,
   };
 }
+
+export { buildCycleMicroTrace, type MicroStepFrame, type MicroTagDiff } from './microStep';

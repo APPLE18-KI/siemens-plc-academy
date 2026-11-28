@@ -8,6 +8,7 @@ import {
   type ParamSliderItem,
   type TwinControlMode,
 } from './components/TwinShell';
+import { InteractiveWiringLab } from './components/InteractiveWiringLab';
 
 export interface TwinModelProps {
   runtime?: PlcRuntime;
@@ -18,6 +19,7 @@ type SensorType = 'PNP' | 'NPN';
 type CommonWiring = 'M' | 'L+';
 
 export const S71200WiringTwin: React.FC<TwinModelProps> = ({ runtime, embedded = false }) => {
+  const [workbenchView, setWorkbenchView] = useState<'twin' | 'wiring-lab'>('twin');
   const [mode, setMode] = useState<TwinControlMode>('auto');
   const [cpuRun, setCpuRun] = useState(true);
   const [paused, setPaused] = useState(false);
@@ -396,7 +398,32 @@ export const S71200WiringTwin: React.FC<TwinModelProps> = ({ runtime, embedded =
         : '';
 
   return (
-    <TwinShell
+    <div className="v32-wiring-switcher-shell">
+      <div className="v32-wiring-mode-bar" role="tablist" aria-label="接线实训模式切换">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={workbenchView === 'twin'}
+          className={`v32-wiring-mode-tab${workbenchView === 'twin' ? ' active' : ''}`}
+          onClick={() => setWorkbenchView('twin')}
+        >
+          原理演示台：一键对比 NPN / PNP 电流与硬件拆解
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={workbenchView === 'wiring-lab'}
+          className={`v32-wiring-mode-tab${workbenchView === 'wiring-lab' ? ' active' : ''}`}
+          onClick={() => setWorkbenchView('wiring-lab')}
+        >
+          ⚡ 亲手点端子拉线闯关（3 关 · 含 24V 短路跳闸保护）
+        </button>
+      </div>
+
+      {workbenchView === 'wiring-lab' ? (
+        <InteractiveWiringLab />
+      ) : (
+        <TwinShell
       title="S7-1200 CPU 1214C DC/DC/DC 硬件拆解与外围接线实训台"
       subtitle="实景还原顶/底端子排、双向光耦 PNP/NPN 源漏型极性校验、KA 中间继电器与 KM 接触器主回路"
       status={cpuStatus}
@@ -1446,5 +1473,7 @@ export const S71200WiringTwin: React.FC<TwinModelProps> = ({ runtime, embedded =
         <line x1="810" y1="424" x2="810" y2="526" stroke={powerHealthy ? '#38bdf8' : '#475569'} strokeWidth="1.8" />
       </svg>
     </TwinShell>
+      )}
+    </div>
   );
 };

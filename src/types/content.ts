@@ -74,6 +74,17 @@ export type LessonBlock =
       scenario: string;
       steps: string[];
       checkPoints: string[];
+    }
+  | {
+      kind: 'predict';
+      title: string;
+      scenario: string;
+      ladSnippet?: string;
+      question: string;
+      options: string[];
+      answer: number;
+      explain: string;
+      simHint?: string;
     };
 
 export type LessonLevel = '入门' | '基础' | '进阶' | '实战';

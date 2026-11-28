@@ -6,6 +6,7 @@ import { IoTable } from '../IoTable';
 import { CalloutBlock } from './CalloutBlock';
 import { EmbeddedStageBlock } from './EmbeddedStageBlock';
 import { PracticeTaskBlock } from './PracticeTaskBlock';
+import { PredictCard } from './PredictCard';
 import { QuizBlock } from './QuizBlock';
 import { DemoBlock } from './DemoBlock';
 import { pickKeys, useFold } from '../fold';
@@ -147,6 +148,20 @@ export const LessonBlockRenderer: React.FC<LessonBlockRendererProps> = ({
 
     case 'quiz':
       return <QuizBlock lessonId={lessonId} title={block.title} items={block.items} />;
+
+    case 'predict':
+      return (
+        <PredictCard
+          title={block.title}
+          scenario={block.scenario}
+          ladSnippet={block.ladSnippet}
+          question={block.question}
+          options={block.options}
+          answer={block.answer}
+          explain={block.explain}
+          simHint={block.simHint}
+        />
+      );
 
     default: {
       const _exhaustive: never = block;

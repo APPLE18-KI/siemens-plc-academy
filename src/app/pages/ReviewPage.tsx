@@ -1,19 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { BookOpenCheck, CalendarCheck2, Flame, Layers3, MessageSquareText, NotebookPen, RotateCcw, X } from 'lucide-react';
+import { BookOpenCheck, CalendarCheck2, Flame, Layers3, MessageSquareText, NotebookPen, RotateCcw, X, Zap } from 'lucide-react';
 import { chapters, lessons } from '../../registry';
 import { useProgress } from '../store/progressStore';
 import { buildDeck, type Flashcard } from '../../features/study/deck';
 import { removeMistake, retryMistake, reviewCard, setDailyNew, streak, today, useStudy } from '../../features/study/studyStore';
 import { ExplainBack } from '../../features/study/ExplainBack';
 import { ChapterDiagnosisPanel } from '../../features/study/ChapterDiagnosisPanel';
+import { InteractiveDrills, loadTodayDrillProgress } from '../../features/study/InteractiveDrills';
 import { renderInline } from '../../components/MarkdownRenderer';
 import { haptic } from '../native/platform';
 import '../../features/study/study-v3.css';
 
-type Tab = 'today' | 'cards' | 'mistakes' | 'explain';
+type Tab = 'today' | 'drills' | 'cards' | 'mistakes' | 'explain';
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'today', label: '今日', icon: CalendarCheck2 },
+  { id: 'drills', label: '15 秒互动微练', icon: Zap },
   { id: 'cards', label: '记忆卡片', icon: Layers3 },
   { id: 'mistakes', label: '错题本', icon: NotebookPen },
   { id: 'explain', label: '讲给自己听', icon: MessageSquareText },
@@ -361,6 +363,9 @@ export const ReviewPage: React.FC = () => {
   const sorted = useMemo(() => [...lessons].sort((a, b) => a.order - b.order), []);
   const next = sorted.find((l) => !isLessonCompleted(l.id));
   const openMistakes = Object.values(st.mistakes).filter((m) => !m.resolved).length;
+  const [todayDrillCount, setTodayDrillCount] = useState<number>(
+    () => loadTodayDrillProgress().doneIds.length,
+  );
   const s = streak(st.days);
   const [explainId, setExplainId] = useState<string>(() => params.get('lesson') || progress.lastVisitedLessonId || sorted[0]?.id);
   const paramLesson = params.get('lesson');
@@ -382,6 +387,7 @@ export const ReviewPage: React.FC = () => {
         {TABS.map(({ id, label, icon: Icon }) => (
           <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>
             <Icon size={15} /> {label}
+            {id === 'drills' && <span className="rv-badge">{Math.min(3, todayDrillCount)}/3</span>}
             {id === 'cards' && due.length + fresh.length > 0 && <span className="rv-badge">{due.length + fresh.length}</span>}
             {id === 'mistakes' && openMistakes > 0 && <span className="rv-badge warn">{openMistakes}</span>}
           </button>
@@ -427,6 +433,16 @@ export const ReviewPage: React.FC = () => {
             <li>
               <span className="rv-plan-no">2</span>
               <div>
+                <b>刷 3 道 15 秒互动微练（读图速判 · 看图挑刺 · 地址速译）</b>
+                <span>今日已完成 {todayDrillCount} 题，比纯背卡片更练现场直觉</span>
+              </div>
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => setTab('drills')}>
+                {todayDrillCount >= 3 ? '再刷几题' : '开始速练'}
+              </button>
+            </li>
+            <li>
+              <span className="rv-plan-no">3</span>
+              <div>
                 <b>复习卡片</b>
                 <span>
                   到期 {due.length} 张，新卡 {fresh.length} 张（约 {Math.max(1, Math.round((due.length + fresh.length) * 0.25))} 分钟）
@@ -437,7 +453,7 @@ export const ReviewPage: React.FC = () => {
               </button>
             </li>
             <li>
-              <span className="rv-plan-no">3</span>
+              <span className="rv-plan-no">4</span>
               <div>
                 <b>重做错题</b>
                 <span>{openMistakes ? `还有 ${openMistakes} 道待巩固` : '没有待巩固的错题'}</span>
@@ -447,7 +463,7 @@ export const ReviewPage: React.FC = () => {
               </button>
             </li>
             <li>
-              <span className="rv-plan-no">4</span>
+              <span className="rv-plan-no">5</span>
               <div>
                 <b>讲给自己听</b>
                 <span>挑刚学完的一讲，用自己的话讲一遍</span>
@@ -460,6 +476,7 @@ export const ReviewPage: React.FC = () => {
         </div>
       )}
 
+      {tab === 'drills' && <InteractiveDrills onProgressChange={setTodayDrillCount} />}
       {tab === 'cards' && <CardsTab deck={deck} />}
       {tab === 'mistakes' && (
         <MistakesTab chapterFilter={mistakeChapter} onClearChapter={clearMistakeChapter} />

@@ -1,0 +1,706 @@
+/* ============================================================================
+   v3.2 互动教学增强样式（词条即点即译 + 双栏联动 + 端子拉线 + 逐段微步 + SCL 积木）
+   ============================================================================ */
+
+/* ── 1. CodeViewer 词条即点即译 & LAD ⇄ SCL 双栏同步高亮 ── */
+.code-interact-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 11.5px;
+  color: #93a8bf;
+  background: rgba(15, 23, 34, 0.72);
+  border-bottom: 1px solid rgba(148, 179, 206, 0.14);
+}
+
+.code-interact-hint > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.code-interact-hint code {
+  font-family: var(--font-mono);
+  color: #2dd4bf;
+}
+
+.code-sync-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(148, 179, 206, 0.1);
+  border: 1px solid rgba(148, 179, 206, 0.22);
+  color: #a8bdd3;
+}
+
+.code-sync-badge.is-live {
+  background: rgba(20, 184, 166, 0.2);
+  border-color: rgba(45, 212, 191, 0.5);
+  color: #5eead4;
+  font-weight: 600;
+}
+
+.code-tok-btn {
+  display: inline;
+  padding: 0 2px;
+  margin: 0;
+  border: none;
+  border-bottom: 1px dotted rgba(94, 234, 212, 0.55);
+  border-radius: 3px;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.code-tok-btn:hover,
+.code-tok-btn:focus-visible {
+  background: rgba(20, 184, 166, 0.24);
+  outline: none;
+}
+
+.code-line.is-sync-src {
+  background: rgba(20, 184, 166, 0.22);
+  box-shadow: inset 3px 0 0 #2dd4bf;
+}
+
+.code-line.is-sync-peer {
+  background: rgba(16, 185, 129, 0.16);
+  box-shadow: inset 3px 0 0 #10b981;
+}
+
+.code-token-popover {
+  margin: 10px 12px 6px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--siemens-teal-border);
+  color: var(--ink-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: var(--shadow-md);
+}
+
+.code-token-popover-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.code-token-popover-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  font-size: 13px;
+}
+
+.code-token-pill {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 12.5px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--bg-code);
+  color: #34d399;
+}
+
+.code-token-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--siemens-teal-soft);
+  color: var(--teal-text, var(--siemens-teal-bright));
+}
+
+.code-token-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface-2);
+  color: var(--ink-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.code-token-summary {
+  margin: 0;
+  font-size: 12.8px;
+  line-height: 1.55;
+  color: var(--ink-secondary);
+}
+
+.code-token-tip {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: var(--alarm-amber-soft);
+  border: 1px solid var(--alarm-amber-border);
+  font-size: 12px;
+  color: var(--ink-primary);
+}
+
+.code-token-link {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--teal-text, var(--siemens-teal-bright));
+}
+
+/* ── 2. QuizBlock 逐题即时核对切换 & EmbeddedStageBlock 通电前先押注 ── */
+.v32-quiz-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  min-height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface-2);
+  color: var(--ink-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.v32-quiz-mode-pill.is-on {
+  background: var(--siemens-teal-soft);
+  border-color: var(--siemens-teal-border);
+  color: var(--teal-text, var(--siemens-teal-bright));
+}
+
+.v32-quiz-mode-pill:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.v32-quickbet {
+  margin: 10px 14px 4px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--siemens-teal-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.v32-quickbet.is-ok {
+  background: var(--power-green-soft);
+  border-color: var(--power-green-border);
+}
+
+.v32-quickbet.is-nudge {
+  background: var(--alarm-amber-soft);
+  border-color: var(--alarm-amber-border);
+}
+
+.v32-quickbet-q {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-primary);
+}
+
+.v32-quickbet-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.v32-quickbet-btn {
+  min-height: 38px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  color: var(--ink-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.v32-quickbet-btn.is-correct {
+  background: var(--power-green-soft);
+  border-color: var(--power-green);
+  color: var(--ink-primary);
+}
+
+.v32-quickbet-btn.is-wrong {
+  background: var(--fault-red-soft);
+  border-color: var(--fault-red);
+}
+
+.v32-quickbet-explain {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-primary);
+}
+
+/* ── 3. S7-1200 点对点端子拉线闯关盘 ── */
+.v32-wiring-switcher-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.v32-wiring-mode-bar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v32-wiring-mode-tab {
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  color: var(--ink-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+}
+
+.v32-wiring-mode-tab.active {
+  background: var(--siemens-teal-soft);
+  border-color: var(--siemens-teal-border);
+  color: var(--teal-text, var(--siemens-teal-bright));
+}
+
+.v32-wlab-root {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.v32-wlab-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.v32-wlab-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--teal-text, var(--siemens-teal-bright));
+  margin-bottom: 4px;
+}
+
+.v32-wlab-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: var(--ink-primary);
+}
+
+.v32-wlab-goal {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-secondary);
+}
+
+.v32-wlab-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--power-green-soft);
+  border: 1px solid var(--power-green-border);
+  color: var(--ink-primary);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.v32-wlab-levels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.v32-wlab-lvbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface-2);
+  color: var(--ink-secondary);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.v32-wlab-lvbtn.active {
+  background: var(--siemens-teal-soft);
+  border-color: var(--siemens-teal-border);
+  color: var(--ink-primary);
+}
+
+.v32-wlab-lvbtn.is-done {
+  border-color: var(--power-green-border);
+}
+
+.v32-wlab-stage-wrap {
+  background: #0a1017;
+  border: 1px solid rgba(148, 179, 206, 0.22);
+  border-radius: 12px;
+  padding: 10px;
+  overflow-x: auto;
+}
+
+.v32-wlab-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.v32-wlab-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.v32-wlab-diag {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.55;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface-2);
+  color: var(--ink-primary);
+}
+
+.v32-wlab-diag.tone-ok {
+  background: var(--power-green-soft);
+  border-color: var(--power-green-border);
+}
+
+.v32-wlab-diag.tone-warn {
+  background: var(--alarm-amber-soft);
+  border-color: var(--alarm-amber-border);
+}
+
+.v32-wlab-diag.tone-err {
+  background: var(--fault-red-soft);
+  border-color: var(--fault-red-border);
+}
+
+.v32-wlab-hint {
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: var(--siemens-teal-soft);
+  border: 1px solid var(--siemens-teal-border);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-primary);
+}
+
+/* ── 4. Python Tutor 风格逐段微步 X 光面板 ── */
+.v32-micro-panel {
+  margin: 10px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--siemens-teal-border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.v32-micro-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.v32-micro-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--teal-text, var(--siemens-teal-bright));
+}
+
+.v32-micro-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.v32-micro-pill {
+  padding: 4px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-surface-2);
+  color: var(--ink-secondary);
+  font-size: 11.5px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+
+.v32-micro-pill.active {
+  background: var(--siemens-teal-soft);
+  border-color: var(--siemens-teal-border);
+  color: var(--ink-primary);
+  font-weight: 700;
+}
+
+.v32-micro-pill.has-diff {
+  border-color: var(--power-green-border);
+}
+
+.v32-micro-narration {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-primary);
+}
+
+.v32-micro-diffs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.v32-micro-diff-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--power-green-soft);
+  border: 1px solid var(--power-green-border);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-primary);
+}
+
+.v32-micro-diff-chip.is-off {
+  background: var(--alarm-amber-soft);
+  border-color: var(--alarm-amber-border);
+}
+
+/* ── 5. 毕业项目 SCL 积木拼句模式 ── */
+.v32-scl-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.v32-scl-mode-tab {
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--cap-border);
+  background: var(--cap-panel);
+  color: var(--cap-text-muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.v32-scl-mode-tab.active {
+  background: rgba(20, 184, 166, 0.16);
+  border-color: rgba(20, 184, 166, 0.6);
+  color: var(--cap-text);
+}
+
+.v32-scl-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.v32-scl-builder-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.v32-scl-builder-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cap-text);
+}
+
+.v32-scl-slot-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.v32-scl-slot-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--cap-border);
+  background: var(--cap-panel);
+  color: var(--cap-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.v32-scl-slot-btn.active {
+  border-color: #14b8a6;
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.2);
+}
+
+.v32-scl-slot-btn.is-filled {
+  border-color: rgba(16, 185, 129, 0.55);
+}
+
+.v32-scl-slot-lbl {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #14b8a6;
+}
+
+.v32-scl-slot-val {
+  font-family: var(--cap-mono);
+  font-size: 11.5px;
+  color: var(--cap-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.v32-scl-choices-box {
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--cap-panel);
+  border: 1px solid var(--cap-border);
+}
+
+.v32-scl-choices-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #14b8a6;
+  margin-bottom: 8px;
+}
+
+.v32-scl-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.v32-scl-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 44px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--cap-border);
+  background: var(--cap-bg);
+  color: var(--cap-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.v32-scl-chip:hover {
+  border-color: #14b8a6;
+}
+
+.v32-scl-chip.is-picked {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: #10b981;
+}
+
+.v32-scl-chip code {
+  font-family: var(--cap-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--cap-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.v32-scl-chip small {
+  font-size: 11.5px;
+  color: var(--cap-text-muted);
+}
+
+.v32-scl-preview-wrap {
+  border-radius: 10px;
+  border: 1px solid var(--cap-border);
+  overflow: hidden;
+  background: var(--cap-code-bg);
+}
+
+.v32-scl-preview-bar {
+  padding: 6px 12px;
+  font-size: 11.5px;
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(148, 179, 206, 0.16);
+}
+
+.v32-scl-preview {
+  margin: 0;
+  padding: 12px;
+  font-family: var(--cap-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: #cbd5e1;
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .v32-wiring-mode-bar,
+  .v32-wlab-levels,
+  .v32-scl-mode-switch {
+    grid-template-columns: 1fr;
+  }
+}

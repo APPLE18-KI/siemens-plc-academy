@@ -548,11 +548,23 @@
   color: #94a3b8;
 }
 
+/* 课程内嵌仿真器采用纵向全宽排版：梯形图独享完整栏宽，在 1440px 桌面不再水平截断 */
 .plc-sim-embedded-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.9fr);
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
   align-items: start;
+}
+.plc-sim-embedded-side {
+  order: -1;
+}
+.plc-sim-embedded-side .plc-sim-io-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.plc-sim-embedded-side .plc-sim-out-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+  gap: 8px;
 }
 
 /* ─── SVG Ladder Networks ─── */
@@ -1405,13 +1417,26 @@
 
 /* ─── Custom Ladder Sandbox Builder ─── */
 .plc-sim-sandbox-banner {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(17, 27, 46, 0.94));
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: linear-gradient(135deg, #25202e 0%, #151e31 52%, #0f1b2d 100%);
+  border: 1px solid rgba(245, 158, 11, 0.46);
   border-radius: 12px;
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  color: #f8fafc;
+  box-shadow: 0 8px 24px rgba(2, 6, 23, 0.24);
+}
+[data-theme='light'] .sim-vs-tia {
+  color: var(--ink-primary);
+  background: var(--bg-surface);
+  border-color: var(--border-medium);
+}
+[data-theme='light'] .sim-vs-tia summary {
+  color: var(--ink-primary);
+}
+[data-theme='light'] .sim-vs-tia li {
+  color: var(--ink-secondary);
 }
 
 .plc-sim-sb-top {
@@ -1915,13 +1940,13 @@
   color: #fff;
 }
 .plc-sb-tool-btn.is-primary {
-  background: rgba(0, 153, 153, 0.26);
+  background: #0f766e;
   border-color: #14b8a6;
-  color: #99f6e4;
+  color: #ffffff;
 }
 .plc-sb-tool-btn.is-primary:hover {
-  background: rgba(0, 153, 153, 0.42);
-  color: #fff;
+  background: #0d9488;
+  color: #ffffff;
 }
 .plc-sb-tool-btn.is-open {
   border-color: #38bdf8;

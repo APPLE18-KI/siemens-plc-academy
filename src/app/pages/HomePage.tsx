@@ -21,6 +21,7 @@ import { chapters, formatDuration, lessons, totalLessonMinutes } from '../../con
 import { FaqSection } from '../../components/FaqSection';
 import { Term } from '../../components/Term';
 import { HomeStudyStrip } from '../../features/study/HomeStudyStrip';
+import { loadOnboardingProfile, OnboardingQuiz } from '../../features/study/OnboardingQuiz';
 import { preloadRoute } from '../layout/routePreload';
 import { triggerCommandPaletteOpen } from '../layout/shortcuts';
 import { useProgress } from '../store/progressStore';
@@ -238,7 +239,9 @@ const WORKFLOW_ANIM_COUNT = 3;
 export const HomePage: React.FC = () => {
   const { state, getStats } = useProgress();
   const [activePipeIdx, setActivePipeIdx] = useState(0);
-  const [activeTrackId, setActiveTrackId] = useState<CustomTrack['id']>('beginner');
+  const [activeTrackId, setActiveTrackId] = useState<CustomTrack['id']>(
+    () => loadOnboardingProfile()?.trackId ?? 'beginner',
+  );
 
   const safeChapters = Array.isArray(chapters) && chapters.length > 0 ? chapters : FALLBACK_STAGES;
   const safeLessons = useMemo(
@@ -506,6 +509,8 @@ export const HomePage: React.FC = () => {
               </p>
             </div>
           </div>
+
+          <OnboardingQuiz onResult={(trackId) => setActiveTrackId(trackId)} />
 
           <div className="track-planner-shell">
             <div className="track-switcher" role="tablist" aria-label="选择你的学习起点">

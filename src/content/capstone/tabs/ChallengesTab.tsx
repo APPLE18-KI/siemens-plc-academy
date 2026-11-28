@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { CODING_CHALLENGES } from '../data/projectData';
 import { renderInline } from '../../../components/MarkdownRenderer';
+import { SclBlockBuilder } from '../components/SclBlockBuilder';
 
 interface ChallengesTabProps {
   passedIds: string[];
@@ -42,6 +43,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ passedIds, onPassC
     return init;
   });
   const [evalMap, setEvalMap] = useState<Record<string, EvalResult>>({});
+  const [editorMode, setEditorMode] = useState<'blocks' | 'code'>('blocks');
   const [showHint, setShowHint] = useState<boolean>(false);
   const [showSolution, setShowSolution] = useState<boolean>(false);
 
@@ -173,20 +175,52 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({ passedIds, onPassC
             </ol>
           </div>
 
-          {/* Code Editor */}
-          <label
-            htmlFor={`scl-editor-${challenge.id}`}
-            style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 6, color: 'var(--cap-text-muted)' }}
-          >
-            TIA Portal SCL 源码编辑区（按要求补全或修复 Bug 后点击“运行规则编译与评测”）：
-          </label>
-          <textarea
-            id={`scl-editor-${challenge.id}`}
-            className="cap-code-editor"
-            spellCheck={false}
-            value={currentCode}
-            onChange={(e) => setCodeMap((prev) => ({ ...prev, [challenge.id]: e.target.value }))}
-          />
+          {/* Mode Switch: Beginner SCL Block Builder vs Raw Code Editor */}
+          <div className="v32-scl-mode-switch" role="tablist" aria-label="作答方式切换">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={editorMode === 'blocks'}
+              className={`v32-scl-mode-tab${editorMode === 'blocks' ? ' active' : ''}`}
+              onClick={() => setEditorMode('blocks')}
+            >
+              🧩 积木拼句模式（新手 / 手机免敲符号推荐）
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={editorMode === 'code'}
+              className={`v32-scl-mode-tab${editorMode === 'code' ? ' active' : ''}`}
+              onClick={() => setEditorMode('code')}
+            >
+              ⌨️ 纯代码手写模式（进阶自写）
+            </button>
+          </div>
+
+          {editorMode === 'blocks' ? (
+            <SclBlockBuilder
+              challengeId={challenge.id}
+              onCodeChange={(assembled) =>
+                setCodeMap((prev) => ({ ...prev, [challenge.id]: assembled }))
+              }
+            />
+          ) : (
+            <>
+              <label
+                htmlFor={`scl-editor-${challenge.id}`}
+                style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 6, color: 'var(--cap-text-muted)' }}
+              >
+                TIA Portal SCL 源码编辑区（按要求补全或修复 Bug 后点击“运行规则编译与评测”）：
+              </label>
+              <textarea
+                id={`scl-editor-${challenge.id}`}
+                className="cap-code-editor"
+                spellCheck={false}
+                value={currentCode}
+                onChange={(e) => setCodeMap((prev) => ({ ...prev, [challenge.id]: e.target.value }))}
+              />
+            </>
+          )}
 
           {/* Action Buttons */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12, alignItems: 'center' }}>
